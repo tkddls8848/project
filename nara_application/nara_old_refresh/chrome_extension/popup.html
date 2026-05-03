@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>공공데이터포털 자동 승인</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>공공데이터포털 자동 승인</h1>
+      <p class="subtitle">API 활용 신청 자동 연장 도구</p>
+    </header>
+
+    <div class="status-section">
+      <div class="status-item">
+        <span class="label">상태:</span>
+        <span id="status" class="value">대기 중</span>
+      </div>
+      <div class="status-item">
+        <span class="label">현재 페이지:</span>
+        <span id="currentPage" class="value">-</span>
+      </div>
+      <div class="status-item">
+        <span class="label">처리된 항목:</span>
+        <span id="processedCount" class="value">0</span>
+      </div>
+      <div class="status-item">
+        <span class="label">성공:</span>
+        <span id="successCount" class="value success">0</span>
+      </div>
+      <div class="status-item">
+        <span class="label">실패:</span>
+        <span id="failCount" class="value fail">0</span>
+      </div>
+    </div>
+
+    <div class="progress-section">
+      <div class="progress-bar">
+        <div id="progressBar" class="progress-fill"></div>
+      </div>
+      <p id="progressText" class="progress-text">0%</p>
+    </div>
+
+    <div class="controls">
+      <button id="startBtn" class="btn btn-primary">
+        <span class="btn-icon">▶</span> 자동 승인 시작
+      </button>
+      <button id="stopBtn" class="btn btn-danger" disabled>
+        <span class="btn-icon">■</span> 중지
+      </button>
+      <button id="resetBtn" class="btn btn-secondary">
+        <span class="btn-icon">↻</span> 초기화
+      </button>
+    </div>
+
+    <div class="log-section">
+      <div class="log-header">
+        <h3>처리 로그</h3>
+        <button id="clearLogBtn" class="btn-mini">지우기</button>
+      </div>
+      <div id="logContainer" class="log-container"></div>
+    </div>
+
+    <div class="settings-section">
+      <h3>설정</h3>
+    <div class="settings">
+      <div class="setting-item">
+        <label for="strategySelect">갱신 전략:</label>
+        <select id="strategySelect">
+          <option value="lastItem">끝번부터 갱신 (추천)</option>
+          <option value="sequential">순차 갱신 (1페이지부터)</option>
+        </select>
+      </div>
+      <div class="setting-item">
+        <input type="checkbox" id="autoConfirm" checked>
+        <label for="autoConfirm">확인창 자동 수락</label>
+      </div>
+      <label class="checkbox-label">
+        <input type="checkbox" id="delayBetweenItems" checked>
+        <span>항목 간 대기 시간 (1초)</span>
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" id="stopOnError">
+        <span>오류 발생 시 중지</span>
+      </label>
+    </div>
+
+    <footer>
+      <p class="footer-text">공공데이터포털 자동화 v1.0.0</p>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

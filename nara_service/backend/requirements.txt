@@ -1,0 +1,58 @@
+# ============================================================
+# NARA Service - 공공데이터 지능형 검색 시스템
+# Requirements for Backend API Server
+# ============================================================
+
+# PyTorch with CUDA 12.6 support (Python 3.12 compatible)
+--extra-index-url https://download.pytorch.org/whl/cu126
+torch>=2.2.0
+
+# ============================================================
+# Web Framework & API
+# ============================================================
+fastapi==0.115.6              # Modern async web framework
+uvicorn[standard]==0.34.0     # ASGI server with websocket support
+pydantic==2.10.5              # Data validation
+pydantic-settings==2.7.0      # Settings management
+python-dotenv==1.0.1          # Environment variable loading
+httpx==0.27.0                 # HTTP client for async requests
+slowapi==0.1.9                # Rate limiting middleware
+
+# ============================================================
+# Phase 1: RAG (Retrieval-Augmented Generation)
+# ============================================================
+openai==1.52.0                # OpenAI API client (GPT models)
+sentence-transformers==3.0.1  # Sentence embeddings
+
+# FAISS: Vector similarity search
+faiss-cpu==1.13.2           # CPU 버전
+
+
+numpy>=2.0.0                  # Numerical computing
+transformers>=4.36.0          # Hugging Face transformers
+
+# ============================================================
+# Phase 5: Performance Optimization & Caching
+# ============================================================
+redis==5.0.1                  # Redis client for caching
+
+# hiredis: Optional C extension for Redis performance boost
+# Windows 사용자는 Visual C++ Build Tools 필요
+# 선택적 설치: pip install hiredis (성능 향상 10-15%)
+# hiredis==2.3.2
+
+# ============================================================
+# Neo4j & Graph Analysis (for Insights - Prometheus only)
+# ============================================================
+neo4j==5.14.0                 # Neo4j database driver
+networkx==3.2.1               # Graph algorithms
+python-louvain==0.16          # Community detection (Louvain algorithm)
+
+# ============================================================
+# Optional Development Dependencies (uncomment if needed)
+# ============================================================
+# pytest==7.4.3               # Testing framework
+# pytest-asyncio==0.21.1      # Async testing support
+# black==23.12.1              # Code formatter
+# flake8==6.1.0               # Linter
+# mypy==1.7.1                 # Type checker

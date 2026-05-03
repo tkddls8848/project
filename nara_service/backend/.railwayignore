@@ -1,0 +1,21 @@
+# Railway 배포 시 제외할 파일/폴더
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.env
+.venv
+*.log
+.git/
+.gitignore
+README.md
+RAG_SETUP.md
+.pytest_cache/
+.coverage
+htmlcov/
+*.db
+*.sqlite3

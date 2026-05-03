@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>고속 데이터 연장</title>
+    <style>
+        body { width: 320px; font-family: 'Malgun Gothic', sans-serif; padding: 15px; background-color: #f8f9fa; }
+        h2 { margin-top: 0; color: #333; font-size: 18px; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
+        .btn-group { display: flex; gap: 10px; margin-bottom: 15px; }
+        button { flex: 1; padding: 10px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
+        #startBtn { background-color: #007bff; color: white; }
+        #startBtn:hover { background-color: #0056b3; }
+        #startBtn:disabled { background-color: #ccc; cursor: not-allowed; }
+        #stopBtn { background-color: #dc3545; color: white; }
+        #stopBtn:hover { background-color: #a71d2a; }
+        #stopBtn:disabled { background-color: #ccc; cursor: not-allowed; }
+        .log-area { height: 200px; overflow-y: auto; background: white; border: 1px solid #ddd; padding: 10px; font-size: 12px; line-height: 1.4; border-radius: 4px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); }
+        .log-item { margin-bottom: 4px; border-bottom: 1px solid #eee; padding-bottom: 2px; }
+        .log-item:last-child { border-bottom: none; }
+        .status { font-size: 13px; font-weight: bold; color: #555; margin-bottom: 5px; }
+        .status span { color: #007bff; }
+    </style>
+</head>
+<body>
+    <h2>🚀 고속 연장기 (API 모드)</h2>
+    
+    <div class="status">상태: <span id="statusText">대기 중</span></div>
+    
+    <div class="btn-group">
+        <button id="startBtn">시작 (Start)</button>
+        <button id="stopBtn" disabled>중지 (Stop)</button>
+    </div>
+
+    <div class="log-area" id="logArea">
+        <div class="log-item" style="color:#888;">로그가 여기에 표시됩니다...</div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>
