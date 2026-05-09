@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Nara API Search</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="search-band">
+        <div class="brand">
+          <span class="brand-mark">N</span>
+          <div>
+            <h1>공공데이터 API 문서 검색</h1>
+            <p id="healthText">인덱스 확인 중</p>
+          </div>
+        </div>
+        <form id="searchForm" class="search-form">
+          <input
+            id="queryInput"
+            name="query"
+            type="search"
+            minlength="2"
+            maxlength="300"
+            autocomplete="off"
+            placeholder="예: 여행경보 목록, 문화시설 식당 정보, 버스 정류소 위치"
+          />
+          <select id="topKInput" aria-label="결과 수">
+            <option value="5">5</option>
+            <option value="10">10</option>
+            <option value="15">15</option>
+          </select>
+          <button type="submit" id="searchButton">검색</button>
+        </form>
+      </section>
+
+      <section class="workspace">
+        <aside class="results-pane">
+          <div class="pane-header">
+            <h2>추천 API 문서</h2>
+            <span id="resultCount">0</span>
+          </div>
+          <div id="statusLine" class="status-line">검색어를 입력하세요.</div>
+          <div id="resultsList" class="results-list"></div>
+        </aside>
+
+        <section class="detail-pane">
+          <div id="detailEmpty" class="empty-state">결과를 선택하면 endpoint와 필드가 표시됩니다.</div>
+          <article id="detailView" class="detail-view hidden"></article>
+        </section>
+      </section>
+    </main>
+    <script src="/static/app.js"></script>
+  </body>
+</html>
+

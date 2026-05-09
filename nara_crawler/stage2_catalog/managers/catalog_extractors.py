@@ -28,6 +28,148 @@ def _split_keywords(value: Any) -> list[str]:
     return [part.strip() for part in re.split(r"[,;/|]", str(value)) if part.strip()]
 
 
+def _safe_field_key(value: Any) -> str:
+    text = _clean_text(value)
+    text = re.sub(r"\s+", "_", text)
+    text = re.sub(r"[^0-9A-Za-z가-힣_.\[\]:-]+", "_", text)
+    return text.strip("._:-") or "unknown"
+
+
+def _required(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    text = str(value or "").strip().lower()
+    return text in {"true", "1", "y", "yes", "required", "필수"}
+
+
+def _field_type_from_schema(schema: Any, default: str = "string") -> str:
+    if not isinstance(schema, dict):
+        return default
+    if schema.get("type"):
+        return str(schema["type"])
+    if schema.get("$ref"):
+        return "object"
+    return default
+
+
+def _resolve_ref(swagger: Dict[str, Any], ref: str) -> Dict[str, Any]:
+    if not ref.startswith("#/"):
+        return {}
+    current: Any = swagger
+    for part in ref[2:].split("/"):
+        if not isinstance(current, dict):
+            return {}
+        current = current.get(part)
+    return current if isinstance(current, dict) else {}
+
+
+def _iter_schema_properties(
+    swagger: Dict[str, Any],
+    schema: Dict[str, Any],
+    parent_path: str = "",
+    visited_refs: Optional[set[str]] = None,
+):
+    visited_refs = visited_refs or set()
+    if not isinstance(schema, dict):
+        return
+
+    ref = schema.get("$ref")
+    if ref:
+        if ref in visited_refs:
+            return
+        visited_refs.add(ref)
+        resolved = _resolve_ref(swagger, ref)
+        yield from _iter_schema_properties(swagger, resolved, parent_path, visited_refs)
+        return
+
+    if schema.get("type") == "array" and isinstance(schema.get("items"), dict):
+        yield from _iter_schema_properties(swagger, schema["items"], parent_path, visited_refs)
+        return
+
+    properties = schema.get("properties")
+    if not isinstance(properties, dict):
+        return
+
+    required_names = set(schema.get("required") or [])
+    for name, child_schema in properties.items():
+        if not isinstance(child_schema, dict):
+            child_schema = {}
+        field_path = f"{parent_path}.{name}" if parent_path else str(name)
+        yield {
+            "name": str(name),
+            "field_path": field_path,
+            "field_type": _field_type_from_schema(child_schema),
+            "description": child_schema.get("description", ""),
+            "required": name in required_names,
+        }
+        yield from _iter_schema_properties(swagger, child_schema, field_path, visited_refs.copy())
+
+
+def _iter_operation_param_fields(params: list[dict], parent_path: str = ""):
+    for param in params or []:
+        if not isinstance(param, dict):
+            continue
+        name = param.get("paramtrNm") or param.get("name") or param.get("field_name")
+        if not name:
+            continue
+        field_path = f"{parent_path}.{name}" if parent_path else str(name)
+        yield {
+            "name": str(name),
+            "field_path": field_path,
+            "field_type": param.get("paramtrTy") or param.get("type") or "string",
+            "description": param.get("paramtrDc") or param.get("description") or "",
+            "required": _required(param.get("paramtrDivision") or param.get("required")),
+        }
+        yield from _iter_operation_param_fields(param.get("subParam") or [], field_path)
+
+
+def _make_field_record(
+    service_id: str,
+    endpoint_id: str,
+    field_name: str,
+    field_role: str,
+    field_type: str,
+    required: bool,
+    description: str,
+    source_path: str,
+    field_path: str | None = None,
+    field_location: str | None = None,
+    source_detail: str | None = None,
+) -> Dict[str, Any]:
+    field_path = field_path or field_name
+    record = {
+        "field_id": f"field:{endpoint_id}:{field_role}:{_safe_field_key(field_path)}",
+        "service_id": service_id,
+        "endpoint_id": endpoint_id,
+        "field_name": _clean_text(field_name),
+        "field_role": field_role,
+        "field_type": _clean_text(field_type) or "string",
+        "required": bool(required),
+        "description": _clean_text(description),
+        "source_path": source_path,
+    }
+    if field_path and field_path != field_name:
+        record["field_path"] = _clean_text(field_path)
+    if field_location:
+        record["field_location"] = _clean_text(field_location)
+    if source_detail:
+        record["source_detail"] = source_detail
+    return record
+
+
+def _upsert_field(records: list[Dict[str, Any]], seen: dict[str, Dict[str, Any]], record: Dict[str, Any]) -> None:
+    key = record["field_id"]
+    existing = seen.get(key)
+    if not existing:
+        seen[key] = record
+        records.append(record)
+        return
+    for field in ("description", "field_type", "field_location", "field_path", "source_detail", "source_path"):
+        if not existing.get(field) and record.get(field):
+            existing[field] = record[field]
+    existing["required"] = bool(existing.get("required") or record.get("required"))
+
+
 def normalize_agency_name(name: str) -> str:
     name = re.sub(r"\([^)]*\)", "", name or "")
     name = re.sub(r"\s+", "", name.strip())
@@ -209,7 +351,13 @@ def extract_field_records(refined: Dict[str, Any], raw_ref: RawFileRef) -> list[
     service_id = make_service_id(raw_ref.data_type, refined["api_id"])
     endpoint_records = extract_endpoint_records(refined, raw_ref)
     endpoint_by_path = {(e["method"], e["path"]): e["endpoint_id"] for e in endpoint_records}
+    endpoint_by_operation = {e.get("operation_id"): e["endpoint_id"] for e in endpoint_records if e.get("operation_id")}
+    endpoint_by_path_only = {e["path"]: e["endpoint_id"] for e in endpoint_records}
+    default_endpoint_id = endpoint_records[0]["endpoint_id"] if endpoint_records else f"endpoint:{service_id}:get:/"
+    source_path = refined.get("raw_path", "")
     records = []
+    seen: dict[str, Dict[str, Any]] = {}
+
     for endpoint in refined.get("content", {}).get("endpoints", []) or []:
         path = endpoint.get("path") or endpoint.get("url") or ""
         method = str(endpoint.get("method") or "GET").upper()
@@ -218,17 +366,124 @@ def extract_field_records(refined: Dict[str, Any], raw_ref: RawFileRef) -> list[
             name = param.get("name") or param.get("field_name")
             if not name:
                 continue
-            role = param.get("in") or param.get("field_role") or "request"
-            records.append(
-                {
-                    "field_id": f"field:{service_id}:{endpoint_id}:{role}:{name}",
-                    "service_id": service_id,
-                    "endpoint_id": endpoint_id,
-                    "field_name": name,
-                    "field_role": role,
-                    "field_type": param.get("type") or param.get("param_type") or "string",
-                    "required": bool(param.get("required", False)),
-                    "description": param.get("description", ""),
-                }
+            _upsert_field(
+                records,
+                seen,
+                _make_field_record(
+                    service_id=service_id,
+                    endpoint_id=endpoint_id,
+                    field_name=name,
+                    field_role="request",
+                    field_type=param.get("type") or param.get("param_type") or "string",
+                    required=_required(param.get("required")),
+                    description=param.get("description", ""),
+                    source_path=source_path,
+                    field_location=param.get("in") or param.get("field_location") or "query",
+                    source_detail="content.endpoints.parameters",
+                ),
             )
+
+    swagger = refined.get("swagger_json") if isinstance(refined.get("swagger_json"), dict) else {}
+    for path, path_spec in (swagger.get("paths") or {}).items():
+        if not isinstance(path_spec, dict):
+            continue
+        path_parameters = path_spec.get("parameters") or []
+        for method, method_spec in path_spec.items():
+            if method.lower() not in {"get", "post", "put", "delete", "patch"}:
+                continue
+            method_spec = method_spec if isinstance(method_spec, dict) else {}
+            endpoint_id = endpoint_by_path.get((method.upper(), path), endpoint_by_path_only.get(path, default_endpoint_id))
+            parameters = list(path_parameters) + list(method_spec.get("parameters") or [])
+            for param in parameters:
+                if not isinstance(param, dict):
+                    continue
+                name = param.get("name")
+                if not name:
+                    continue
+                schema = param.get("schema") if isinstance(param.get("schema"), dict) else {}
+                _upsert_field(
+                    records,
+                    seen,
+                    _make_field_record(
+                        service_id=service_id,
+                        endpoint_id=endpoint_id,
+                        field_name=name,
+                        field_role="request",
+                        field_type=param.get("type") or _field_type_from_schema(schema),
+                        required=_required(param.get("required")),
+                        description=param.get("description", ""),
+                        source_path=source_path,
+                        field_location=param.get("in") or "query",
+                        source_detail=f"swagger.paths.{path}.{method}.parameters",
+                    ),
+                )
+
+            for response_code, response in (method_spec.get("responses") or {}).items():
+                if not isinstance(response, dict):
+                    continue
+                schema = response.get("schema")
+                if not isinstance(schema, dict):
+                    continue
+                for field in _iter_schema_properties(swagger, schema):
+                    _upsert_field(
+                        records,
+                        seen,
+                        _make_field_record(
+                            service_id=service_id,
+                            endpoint_id=endpoint_id,
+                            field_name=field["name"],
+                            field_role="response",
+                            field_type=field["field_type"],
+                            required=field["required"],
+                            description=field["description"],
+                            source_path=source_path,
+                            field_path=field["field_path"],
+                            source_detail=f"swagger.paths.{path}.{method}.responses.{response_code}.schema",
+                        ),
+                    )
+
+    for operation in swagger.get("swaggerOprtinVOs") or []:
+        if not isinstance(operation, dict):
+            continue
+        endpoint_id = (
+            endpoint_by_operation.get(operation.get("operationId"))
+            or endpoint_by_operation.get(operation.get("gwSvcNm"))
+            or default_endpoint_id
+        )
+        for field in _iter_operation_param_fields(operation.get("reqList") or []):
+            _upsert_field(
+                records,
+                seen,
+                _make_field_record(
+                    service_id=service_id,
+                    endpoint_id=endpoint_id,
+                    field_name=field["name"],
+                    field_role="request",
+                    field_type=field["field_type"],
+                    required=field["required"],
+                    description=field["description"],
+                    source_path=source_path,
+                    field_path=field["field_path"],
+                    field_location="query",
+                    source_detail="swagger.swaggerOprtinVOs.reqList",
+                ),
+            )
+        for field in _iter_operation_param_fields(operation.get("resList") or []):
+            _upsert_field(
+                records,
+                seen,
+                _make_field_record(
+                    service_id=service_id,
+                    endpoint_id=endpoint_id,
+                    field_name=field["name"],
+                    field_role="response",
+                    field_type=field["field_type"],
+                    required=field["required"],
+                    description=field["description"],
+                    source_path=source_path,
+                    field_path=field["field_path"],
+                    source_detail="swagger.swaggerOprtinVOs.resList",
+                ),
+            )
+
     return records

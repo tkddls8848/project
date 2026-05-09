@@ -1,7 +1,7 @@
 import csv
 import re
 from pathlib import Path
-from typing import ClassVar, Dict, List, Optional, Tuple
+from typing import Callable, ClassVar, Dict, List, Optional, Tuple
 
 
 class MetadataCsvReader:
@@ -32,18 +32,27 @@ class MetadataCsvReader:
                 return min(all_nums), max(all_nums)
         return None, None
 
-    def get_numbers_in_range(self, start: int, end: int) -> Tuple[List[int], Dict[int, Dict]]:
+    def get_numbers_in_range(
+        self,
+        start: int,
+        end: int,
+        row_filter: Optional[Callable[[Dict], bool]] = None,
+    ) -> Tuple[List[int], Dict[int, Dict]]:
         for encoding, headers, rows in self._read_candidates():
-            print(f"Trying encoding {encoding}. Headers: {headers[:3]}...")
+            header_preview = [str(header).lstrip("\ufeff") for header in headers[:3]]
+            print(f"Trying encoding {encoding}. Headers: {header_preview}...")
 
             id_col = self._find_id_column(headers)
-            print(f"Using ID column: {id_col}")
+            display_id_col = str(id_col).lstrip("\ufeff") if id_col is not None else None
+            print(f"Using ID column: {display_id_col}")
 
             valid_numbers = []
             csv_data = {}
             for row in rows:
                 doc_num = self._extract_doc_num(row, id_col)
                 if doc_num is not None and start <= doc_num <= end:
+                    if row_filter and not row_filter(row):
+                        continue
                     valid_numbers.append(doc_num)
                     csv_data[doc_num] = self._clean_row(row)
 
@@ -88,7 +97,7 @@ class MetadataCsvReader:
 
     def _find_id_column(self, headers: List[str]) -> Optional[str]:
         for header in headers:
-            header_text = str(header)
+            header_text = str(header).lstrip("\ufeff")
             header_lower = header_text.lower()
             for marker in self.ID_COLUMN_MARKERS:
                 if marker in header_text or marker in header_lower:

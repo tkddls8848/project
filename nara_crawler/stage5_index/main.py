@@ -15,6 +15,7 @@ import argparse
 import json
 import os
 import sys
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Iterable
 
@@ -29,6 +30,22 @@ from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunct
 COLLECTION_NAME = "public_services"
 DEFAULT_MODEL = "paraphrase-multilingual-MiniLM-L12-v2"
 DEFAULT_BATCH_SIZE = 500
+KST = timezone(timedelta(hours=9))
+EVAL_QUERIES = [
+    "연료 도입 실적",
+    "연료 소비량",
+    "버스 정류소 위치",
+    "문화시설 식당 정보",
+    "여행경보 목록",
+    "사업자등록번호",
+    "법인등록번호",
+    "endpoint path",
+    "응답 필드",
+]
+
+
+def now_iso() -> str:
+    return datetime.now(KST).isoformat()
 
 
 # ── 파일 읽기 ──────────────────────────────────────────────────────────────
@@ -47,6 +64,14 @@ def read_jsonl(path: Path) -> list[dict]:
     return records
 
 
+def atomic_write_json(path: Path, payload: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = path.with_suffix(path.suffix + ".tmp")
+    with tmp_path.open("w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, indent=2)
+    os.replace(tmp_path, path)
+
+
 # ── 메타데이터 변환 ────────────────────────────────────────────────────────
 # ChromaDB metadata는 list 미지원 → comma 구분 문자열로 저장
 # 조회: where={"agency_ids": {"$contains": "B552520"}}
@@ -63,6 +88,7 @@ def build_metadata(chunk: dict) -> dict:
     return {
         "service_id":  service_id,
         "chunk_type":  chunk.get("chunk_type", "overview"),
+        "parent_chunk_id": chunk.get("parent_chunk_id") or "",
         "data_type":   data_type,
         "agency_ids":  _list_to_str(chunk.get("agency_ids")),
         "domain_ids":  _list_to_str(chunk.get("domain_ids")),
@@ -108,16 +134,21 @@ class ChromaLoader:
     def load(self, chunks: list[dict]) -> dict:
         total_input = len(chunks)
 
+        eligible = [c for c in chunks if c.get("indexable", True) is not False]
+        skipped_not_indexable = total_input - len(eligible)
+
         # 텍스트 비어 있는 청크 제외
-        valid = [c for c in chunks if c.get("text", "").strip()]
-        skipped_empty = total_input - len(valid)
+        valid = [c for c in eligible if c.get("text", "").strip()]
+        skipped_empty = len(eligible) - len(valid)
 
         # chunk_id 누락 청크 제외
         valid = [c for c in valid if c.get("chunk_id")]
-        skipped_no_id = (total_input - skipped_empty) - len(valid)
+        skipped_no_id = (len(eligible) - skipped_empty) - len(valid)
 
         total = len(valid)
         print(f"\n  전체 청크: {total_input}")
+        if skipped_not_indexable:
+            print(f"  indexable=false 제외: {skipped_not_indexable}")
         if skipped_empty:
             print(f"  텍스트 없음(인코딩 깨짐 등) 제외: {skipped_empty}")
         if skipped_no_id:
@@ -137,6 +168,7 @@ class ChromaLoader:
         print(f"\n  완료. 컬렉션 전체 문서 수: {final_count}")
         return {
             "total_input": total_input,
+            "skipped_not_indexable": skipped_not_indexable,
             "skipped_empty_text": skipped_empty,
             "skipped_no_id": skipped_no_id,
             "upserted": upserted,
@@ -158,10 +190,79 @@ def run_sample_query(collection, query: str, n: int = 3) -> None:
         print(f"  {i}. [{meta.get('service_id')}] {snippet}...")
 
 
+def build_chunk_lookup(chunks: list[dict]) -> dict[str, dict]:
+    return {chunk.get("chunk_id"): chunk for chunk in chunks if chunk.get("chunk_id")}
+
+
+def run_eval_report(base_dir: Path, collection, chunks: list[dict], top_k: int = 5) -> dict:
+    chunk_by_id = build_chunk_lookup(chunks)
+    collection_count = collection.count()
+    query_reports = []
+    if collection_count == 0:
+        report = {
+            "generated_at": now_iso(),
+            "collection": COLLECTION_NAME,
+            "collection_total": 0,
+            "queries": [],
+        }
+        atomic_write_json(base_dir / "data" / "99_reports" / "rag" / "retrieval_eval_report.json", report)
+        return report
+
+    for query in EVAL_QUERIES:
+        n_results = min(max(top_k * 4, top_k), collection_count)
+        results = collection.query(
+            query_texts=[query],
+            n_results=n_results,
+            include=["documents", "metadatas", "distances"],
+        )
+        ids = results.get("ids", [[]])[0]
+        docs = results.get("documents", [[]])[0]
+        metas = results.get("metadatas", [[]])[0]
+        distances = results.get("distances", [[]])[0]
+
+        seen_services = set()
+        deduped = []
+        for doc_id, doc, meta, distance in zip(ids, docs, metas, distances):
+            service_id = meta.get("service_id")
+            if service_id in seen_services:
+                continue
+            seen_services.add(service_id)
+            chunk = chunk_by_id.get(doc_id, {})
+            parent = chunk_by_id.get(chunk.get("parent_chunk_id"), {})
+            deduped.append(
+                {
+                    "rank": len(deduped) + 1,
+                    "chunk_id": doc_id,
+                    "service_id": service_id,
+                    "chunk_type": meta.get("chunk_type"),
+                    "distance": distance,
+                    "display_text": chunk.get("display_text") or (doc or "")[:300],
+                    "parent_chunk_id": chunk.get("parent_chunk_id"),
+                    "parent_display_text": parent.get("display_text", ""),
+                    "domain_ids": meta.get("domain_ids", ""),
+                    "concept_ids": meta.get("concept_ids", ""),
+                }
+            )
+            if len(deduped) >= top_k:
+                break
+        query_reports.append({"query": query, "top_k": deduped})
+
+    report = {
+        "generated_at": now_iso(),
+        "collection": COLLECTION_NAME,
+        "collection_total": collection_count,
+        "top_k": top_k,
+        "dedupe": "service_id",
+        "queries": query_reports,
+    }
+    atomic_write_json(base_dir / "data" / "99_reports" / "rag" / "retrieval_eval_report.json", report)
+    return report
+
+
 # ── 진입점 ────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Stage 4: retrieval_chunks → ChromaDB")
+    parser = argparse.ArgumentParser(description="Stage 5: retrieval_chunks → ChromaDB")
     parser.add_argument("--reset",      action="store_true", help="기존 컬렉션 삭제 후 재생성")
     parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE, metavar="N")
     parser.add_argument("--model",      default=DEFAULT_MODEL, help="sentence-transformers 모델명")
@@ -181,7 +282,9 @@ def main() -> None:
     print(f"  파싱된 청크 수: {len(chunks)}")
 
     if args.dry_run:
-        valid = [c for c in chunks if c.get("text", "").strip() and c.get("chunk_id")]
+        eligible = [c for c in chunks if c.get("indexable", True) is not False]
+        valid = [c for c in eligible if c.get("text", "").strip() and c.get("chunk_id")]
+        print(f"  [dry-run] indexable 청크: {len(eligible)} / {len(chunks)}")
         print(f"  [dry-run] 적재 대상: {len(valid)} / {len(chunks)}")
         print("  실제 적재 없이 종료합니다.")
         return
@@ -198,8 +301,11 @@ def main() -> None:
     if stats["upserted"] > 0:
         run_sample_query(loader.collection, "소상공인 지원")
         run_sample_query(loader.collection, "도로 교통 정보")
+        report = run_eval_report(base_dir, loader.collection, chunks)
+        print(f"  eval_report: {base_dir / 'data' / '99_reports' / 'rag' / 'retrieval_eval_report.json'}")
+        print(f"  eval_queries: {len(report.get('queries', []))}")
 
-    print("\nStage 4 complete")
+    print("\nStage 5 complete")
     for k, v in stats.items():
         print(f"  {k}: {v}")
 

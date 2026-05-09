@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -11,10 +12,18 @@ class RawFileRef:
     raw_path: Path
     crawl_run_id: Optional[str]
     is_legacy: bool
+    is_refined: bool = False
 
 
 def _source_id_from_path(path: Path) -> str:
     return path.stem.split("_", 1)[0]
+
+
+def _source_id_from_refined_path(path: Path) -> str:
+    match = re.search(r"_(\d+)_refined$", path.stem)
+    if match:
+        return match.group(1)
+    return _source_id_from_path(path)
 
 
 def _iter_json_files(path: Path):
@@ -35,7 +44,7 @@ def discover_raw_files(
     refs: list[RawFileRef] = []
     data_root = base_dir / "data"
 
-    runs_root = data_root / "01_raw" / "crawl_runs"
+    runs_root = data_root / "01_raw"
     run_dirs = []
     if crawl_run_id:
         run_dirs = [runs_root / crawl_run_id]
@@ -89,3 +98,39 @@ def discover_raw_files(
                 )
 
     return sorted(refs, key=lambda r: (r.crawl_run_id or "", r.data_type, r.api_type, r.source_object_id))
+
+
+def discover_refined_files(
+    base_dir: Path,
+    data_type: str | None = None,
+) -> list[RawFileRef]:
+    refs: list[RawFileRef] = []
+    refined_root = base_dir / "data" / "refined_data"
+    if not refined_root.exists():
+        return refs
+
+    for folder in refined_root.iterdir():
+        if not folder.is_dir():
+            continue
+        if folder.name.startswith("openapi"):
+            candidate_type = "openapi"
+            api_type = folder.name
+        else:
+            candidate_type = folder.name
+            api_type = folder.name
+        if data_type and data_type != candidate_type:
+            continue
+        for file_path in _iter_json_files(folder) or []:
+            refs.append(
+                RawFileRef(
+                    data_type=candidate_type,
+                    api_type=api_type,
+                    source_object_id=_source_id_from_refined_path(file_path),
+                    raw_path=file_path,
+                    crawl_run_id="refined",
+                    is_legacy=False,
+                    is_refined=True,
+                )
+            )
+
+    return sorted(refs, key=lambda r: (r.data_type, r.api_type, r.source_object_id))

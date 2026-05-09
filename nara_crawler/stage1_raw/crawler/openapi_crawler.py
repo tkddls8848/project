@@ -24,6 +24,8 @@ class OpenAPICrawler(BaseCrawler):
     def __init__(self, config):
         super().__init__(config)
         self.semaphore = asyncio.Semaphore(config.max_workers)
+        self.target_api_type = config.target_api_type
+        self.skipped_by_api_type = 0
 
     async def create_session(self) -> aiohttp.ClientSession:
         return self.create_http_session()
@@ -61,6 +63,9 @@ class OpenAPICrawler(BaseCrawler):
                 operation_ids = self._extract_public_data_detail_pk(soup)
                 swagger_json = self._extract_swagger_json_from_html(html)
                 api_type = self._detect_api_type(merged_info, soup, swagger_json)
+                if self.target_api_type and api_type != self.target_api_type:
+                    self.skipped_by_api_type += 1
+                    return CrawlResult(url=url, success=True, data=None)
 
                 data_payload: Dict[str, Any] = {}
                 if api_type == 'openapi_new':

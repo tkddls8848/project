@@ -25,26 +25,40 @@ from stage1_raw.utils.url_utils import URLGenerator
 DATA_TYPE_OUTPUT_DIRS = {
     "fileData": "02_fileData_results",
     "openapi": "01_openapi_results",
+    "openapi_new": "01_openapi_results",
+    "openapi_old": "01_openapi_results",
+    "openapi_link": "01_openapi_results",
     "standard": "03_standard_results",
 }
 
 DEFAULT_WORKERS_BY_TYPE = {
     "fileData": 30,
     "openapi": 16,
+    "openapi_new": 16,
+    "openapi_old": 16,
+    "openapi_link": 16,
     "standard": 30,
 }
 
 CSV_PREFIX_MAP = {
     "fileData": "metadata_file",
     "openapi": "metadata_api",
+    "openapi_new": "metadata_api",
+    "openapi_old": "metadata_api",
+    "openapi_link": "metadata_api",
     "standard": "metadata_std",
 }
 
 CRAWLER_CLASSES = {
     "fileData": FileDataCrawler,
     "openapi": OpenAPICrawler,
+    "openapi_new": OpenAPICrawler,
+    "openapi_old": OpenAPICrawler,
+    "openapi_link": OpenAPICrawler,
     "standard": StandardCrawler,
 }
+
+OPENAPI_SUBTYPES = {"openapi_new", "openapi_old", "openapi_link"}
 
 
 def find_latest_metadata_csv(base_dir: str, prefix: str) -> Optional[str]:
@@ -58,14 +72,49 @@ def get_csv_range(csv_path: str) -> tuple[Optional[int], Optional[int]]:
     return MetadataCsvReader(csv_path).get_range()
 
 
-def get_numbers_from_csv(csv_path: str, start: int, end: int) -> tuple[List[int], Dict[int, Dict]]:
+def get_numbers_from_csv(csv_path: str, start: int, end: int, data_type: str) -> tuple[List[int], Dict[int, Dict]]:
     """Return document numbers and row metadata from a metadata CSV."""
-    return MetadataCsvReader(csv_path).get_numbers_in_range(start, end)
+    return MetadataCsvReader(csv_path).get_numbers_in_range(start, end, row_filter=get_csv_row_filter(data_type))
+
+
+def is_openapi_type(data_type: str) -> bool:
+    return data_type == "openapi" or data_type in OPENAPI_SUBTYPES
+
+
+def storage_data_type(data_type: str) -> str:
+    return "openapi" if data_type in OPENAPI_SUBTYPES else data_type
+
+
+def url_data_type(data_type: str) -> str:
+    return "openapi" if is_openapi_type(data_type) else data_type
+
+
+def target_api_type(data_type: str) -> Optional[str]:
+    return data_type if data_type in OPENAPI_SUBTYPES else None
+
+
+def get_api_type_value(row: Dict) -> str:
+    value = row.get("API 유형") or row.get("API유형") or row.get("API 타입") or row.get("API타입")
+    if value is None:
+        values = list(row.values())
+        if len(values) >= 30:
+            value = values[29]
+    return str(value or "").strip().upper()
+
+
+def get_csv_row_filter(data_type: str):
+    if data_type == "openapi_link":
+        return lambda row: "LINK" in get_api_type_value(row)
+    if data_type in {"openapi_new", "openapi_old"}:
+        return lambda row: "LINK" not in get_api_type_value(row)
+    return None
 
 
 def get_default_output_dir(data_type: str, crawl_run_id: str) -> str:
     run_manager = CrawlRunManager(BASE_DIR)
-    return str(run_manager.get_raw_output_dir(crawl_run_id, data_type))
+    if is_openapi_type(data_type):
+        return str(run_manager.get_run_dir(crawl_run_id))
+    return str(run_manager.get_raw_output_dir(crawl_run_id, storage_data_type(data_type)))
 
 
 def resolve_workers(data_type: str, workers: Optional[int]) -> int:
@@ -99,6 +148,7 @@ async def crawl_single_type(
         output_dir=output_dir,
         max_workers=resolved_workers,
         csv_dir=csv_dir,
+        target_api_type=target_api_type(data_type),
     )
 
     csv_path = find_latest_metadata_csv(csv_dir, CSV_PREFIX_MAP[data_type])
@@ -108,19 +158,40 @@ async def crawl_single_type(
 
     print(f"Using CSV: {csv_path}")
 
-    valid_numbers, csv_data = get_numbers_from_csv(csv_path, start, end)
+    valid_numbers, csv_data = get_numbers_from_csv(csv_path, start, end, data_type)
     if not valid_numbers:
         print(f"No documents found in range {start}-{end}")
         return None
 
     print(f"Found {len(valid_numbers)} documents to crawl.")
 
-    urls = URLGenerator.generate_urls_from_numbers(valid_numbers, data_type)
+    urls = URLGenerator.generate_urls_from_numbers(valid_numbers, url_data_type(data_type))
     crawler = CRAWLER_CLASSES[data_type](config)
     results = await crawler.crawl(urls, csv_metadata=csv_data)
 
     saved_info = crawler.save_results(results)
-    summary = crawler.generate_summary(results, saved_info, start_doc=start, end_doc=end)
+    saved_count = saved_info.get("total_saved", 0)
+    skipped_by_api_type = getattr(crawler, "skipped_by_api_type", 0)
+    summary_results = [
+        result
+        for result in results
+        if result.data is not None or not (target_api_type(data_type) and result.success)
+    ]
+    summary = crawler.generate_summary(
+        summary_results,
+        saved_info,
+        extra_stats={
+            "api_type_filter": {
+                "requested_type": data_type,
+                "target_api_type": target_api_type(data_type),
+                "csv_candidates": len(valid_numbers),
+                "saved_count": saved_count,
+                "skipped_by_api_type": skipped_by_api_type,
+            }
+        },
+        start_doc=start,
+        end_doc=end,
+    )
 
     run_dir = run_manager.get_run_dir(crawl_run_id)
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -148,6 +219,8 @@ async def crawl_single_type(
 
     print(f"\n{data_type.upper()} Crawling Complete.")
     print(f"Total: {len(results)}, Success: {summary['crawling_summary']['total_success']}")
+    if skipped_by_api_type:
+        print(f"Skipped by API type filter: {skipped_by_api_type}")
     print(f"Summary saved to {summary_path}")
     print(f"{'=' * 80}\n")
     return manifest_part
@@ -156,7 +229,12 @@ async def crawl_single_type(
 async def main():
     parser = argparse.ArgumentParser(description="Integrated Nara Crawler (FileData, OpenAPI, Standard)")
 
-    parser.add_argument("type", nargs="?", choices=["fileData", "openapi", "standard"], help="Type of data to crawl")
+    parser.add_argument(
+        "type",
+        nargs="?",
+        choices=["fileData", "openapi", "openapi_new", "openapi_old", "openapi_link", "standard"],
+        help="Type of data to crawl",
+    )
     parser.add_argument("-s", "--start", type=int, help="Start document number")
     parser.add_argument("-e", "--end", type=int, help="End document number")
     parser.add_argument("-o", "--output-dir", help="Output directory")
@@ -165,7 +243,7 @@ async def main():
         "--workers",
         type=int,
         default=None,
-        help="Number of workers. Defaults: fileData=30, openapi=16, standard=30",
+        help="Number of workers. Defaults: fileData=30, openapi/openapi_* =16, standard=30",
     )
     parser.add_argument("--full", action="store_true", help="Crawl all types with full range from CSV")
     parser.add_argument("--crawl-run-id", help="Optional crawl run id. Defaults to current KST timestamp")

@@ -13,7 +13,7 @@ class CrawlRunManager:
 
     def __init__(self, base_dir: str | Path):
         self.base_dir = Path(base_dir)
-        self.runs_dir = self.base_dir / "data" / "01_raw" / "crawl_runs"
+        self.runs_dir = self.base_dir / "data" / "01_raw"
 
     @staticmethod
     def create_run_id(now: datetime | None = None) -> str:

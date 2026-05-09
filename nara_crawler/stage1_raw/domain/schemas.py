@@ -12,6 +12,7 @@ class CrawlerConfig(BaseModel):
     full_scan: bool = False
     csv_path: Optional[str] = None
     csv_dir: str = './stage1_raw/scanner/database'
+    target_api_type: Optional[str] = None
     ollama_url: str = "http://localhost:11434"
     ollama_model: str = "llama3.2"
 

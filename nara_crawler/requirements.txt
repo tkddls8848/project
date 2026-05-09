@@ -13,3 +13,7 @@ pydantic>=2.0.0
 # Stage 5 index — ChromaDB vector store + Korean-capable embedding model
 chromadb>=1.0.0
 sentence-transformers>=3.0.0
+
+# Stage 99 local web service
+fastapi>=0.115.0
+uvicorn>=0.34.0
