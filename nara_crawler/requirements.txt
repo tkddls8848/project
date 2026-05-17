@@ -1,19 +1,17 @@
-# Runtime dependencies for the current Stage 1/2/3 pipeline.
-
-# Stage 1 raw crawling
+# 크롤러 (stage1) — 크롤링 실행 시에만 필요
 aiohttp>=3.9.0
 beautifulsoup4>=4.12.0
 lxml>=4.9.0
 requests>=2.31.0
 tqdm>=4.66.0
 
-# Data validation models used by the crawler
+# 공통
 pydantic>=2.0.0
+numpy>=1.25.0
 
-# Stage 5 index — ChromaDB vector store + Korean-capable embedding model
-chromadb>=1.0.0
-sentence-transformers>=3.0.0
+# 최소 파이프라인 (minimal/) — FAISS 벡터 저장소, 임베딩은 Ollama 담당
+faiss-cpu>=1.9.0
 
-# Stage 99 local web service
+# 서비스 (stage99_service)
 fastapi>=0.115.0
 uvicorn>=0.34.0

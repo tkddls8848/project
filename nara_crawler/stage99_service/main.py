@@ -4,16 +4,23 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import config
+from .cache_builder import ensure_cache
 from .data_loader import DataRepository, clean_text
 from .document_builder import DocumentBuilder
+from .ollama_retriever import OllamaFAISSRetriever
 from .ranker import HybridSearchEngine
 from .retriever import ChromaRetriever
 from .schemas import SearchRequest, SearchResponse
 
 STATIC_DIR = config.BASE_DIR / "stage99_service" / "static"
 
+# 서버 시작 전 캐시 빌드 (documents.jsonl + faiss.index 없을 때만 실행)
+print("[startup] 캐시 확인 중...")
+ensure_cache()
+print("[startup] 캐시 준비 완료")
+
 repo = DataRepository()
-retriever = ChromaRetriever()
+retriever = OllamaFAISSRetriever() if config.FAISS_INDEX_PATH.exists() else ChromaRetriever()
 search_engine = HybridSearchEngine(repo, retriever)
 document_builder = DocumentBuilder(repo)
 
@@ -64,4 +71,3 @@ def service_detail(service_id: str):
 def reload_data():
     repo.reload()
     return {"ok": True, **repo.health()}
-
