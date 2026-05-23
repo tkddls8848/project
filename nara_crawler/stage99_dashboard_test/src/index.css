@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #0c1220;
+  color: #e2e8f0;
+  font-family: 'Segoe UI', 'Noto Sans KR', sans-serif;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#root { height: 100vh; }
+
+/* React Flow */
+.react-flow__renderer { background: #0c1220; }
+.react-flow__edge-path { stroke-width: 1.5; }
+.react-flow__edge.selected .react-flow__edge-path { stroke: #22c55e !important; }
+.react-flow__handle {
+  width: 10px !important;
+  height: 10px !important;
+  border: 2px solid #0c1220 !important;
+  transition: transform 0.12s;
+}
+.react-flow__handle:hover { transform: scale(1.5); }
+.react-flow__background { background: #0c1220; }
+
+.react-flow__controls {
+  background: #111827 !important;
+  border: 1px solid #1e2d3d !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 12px #00000066 !important;
+}
+.react-flow__controls-button {
+  background: #111827 !important;
+  border-bottom: 1px solid #1e2d3d !important;
+  color: #6b7280 !important;
+  fill: #6b7280 !important;
+}
+.react-flow__controls-button:hover {
+  background: #1a2535 !important;
+  fill: #22c55e !important;
+}
+
+.react-flow__minimap {
+  background: #111827 !important;
+  border: 1px solid #1e2d3d !important;
+  border-radius: 8px !important;
+}
+
+.palette-item { user-select: none; }
+
+/* 노드 선택 상태 */
+.react-flow__node.selected > div {
+  border-color: #22c55e !important;
+  box-shadow: 0 0 0 1px #22c55e55, 0 8px 24px #00000088 !important;
+}

@@ -8,8 +8,13 @@ const healthText = document.querySelector("#healthText");
 const detailEmpty = document.querySelector("#detailEmpty");
 const detailView = document.querySelector("#detailView");
 const searchButton = document.querySelector("#searchButton");
+const buildButton = document.querySelector("#buildButton");
+const buildBar = document.querySelector("#buildBar");
+const buildStatusEl = document.querySelector("#buildStatus");
+const buildProgress = document.querySelector("#buildProgress");
 
 let currentResults = [];
+let buildPollTimer = null;
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -139,7 +144,7 @@ async function loadHealth() {
   try {
     const response = await fetch("/health");
     const data = await response.json();
-    healthText.textContent = `서비스 ${data.services_total} · 청크 ${data.chunks_total} · 인덱스 ${data.index_collection_total ?? "확인 불가"}`;
+    healthText.textContent = `인덱스 ${data.index_collection_total ?? "확인 불가"}개 문서`;
   } catch {
     healthText.textContent = "상태 확인 실패";
   }
@@ -155,7 +160,7 @@ async function runSearch(query) {
       body: JSON.stringify({
         query,
         top_k: Number(topKInput.value || 5),
-        use_vector: false
+        use_vector: true
       })
     });
     const data = await response.json();
@@ -185,5 +190,56 @@ form.addEventListener("submit", (event) => {
   }
   runSearch(query);
 });
+
+// ── 빌드 ─────────────────────────────────────────────────────────────────────
+
+async function triggerBuild() {
+  buildButton.disabled = true;
+  try {
+    const res = await fetch("/build", { method: "POST" });
+    const data = await res.json();
+    if (!data.ok) {
+      alert(data.message);
+      buildButton.disabled = false;
+      return;
+    }
+    startBuildPoll();
+  } catch (e) {
+    alert("빌드 요청 실패: " + e.message);
+    buildButton.disabled = false;
+  }
+}
+
+function startBuildPoll() {
+  buildBar.classList.remove("hidden");
+  if (buildPollTimer) clearInterval(buildPollTimer);
+  buildPollTimer = setInterval(pollBuildStatus, 1500);
+}
+
+async function pollBuildStatus() {
+  try {
+    const res = await fetch("/build/status");
+    const data = await res.json();
+
+    const pct = data.total > 0 ? Math.round((data.progress / data.total) * 100) : 0;
+    buildProgress.value = pct;
+
+    const stepLabel = data.step_name ? `[${data.step}/4] ${data.step_name}` : "";
+    const elapsed = data.elapsed_s != null ? ` (${data.elapsed_s}s)` : "";
+    buildStatusEl.textContent = `${stepLabel} ${data.message}${elapsed}`.trim();
+
+    if (data.state === "done" || data.state === "error") {
+      clearInterval(buildPollTimer);
+      buildPollTimer = null;
+      buildButton.disabled = false;
+      buildProgress.value = data.state === "done" ? 100 : 0;
+      if (data.state === "done") loadHealth();
+    }
+  } catch (e) {
+    buildStatusEl.textContent = "상태 확인 실패";
+  }
+}
+
+buildButton.addEventListener("click", triggerBuild);
 
 loadHealth();

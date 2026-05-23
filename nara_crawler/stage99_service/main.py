@@ -1,38 +1,59 @@
+import threading
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
 
 from . import config
-from .cache_builder import ensure_cache
-from .data_loader import DataRepository, clean_text
-from .document_builder import DocumentBuilder
-from .ollama_retriever import OllamaFAISSRetriever
-from .ranker import HybridSearchEngine
-from .retriever import ChromaRetriever
-from .schemas import SearchRequest, SearchResponse
+from .faiss_retriever import FAISSRetriever
+from .index_builder import build_status, run_build
 
 STATIC_DIR = config.BASE_DIR / "stage99_service" / "static"
 
-# 서버 시작 전 캐시 빌드 (documents.jsonl + faiss.index 없을 때만 실행)
-print("[startup] 캐시 확인 중...")
-ensure_cache()
-print("[startup] 캐시 준비 완료")
+retriever = FAISSRetriever()
 
-repo = DataRepository()
-retriever = OllamaFAISSRetriever() if config.FAISS_INDEX_PATH.exists() else ChromaRetriever()
-search_engine = HybridSearchEngine(repo, retriever)
-document_builder = DocumentBuilder(repo)
-
-app = FastAPI(title="Nara API Document Search", version="0.1.0")
+app = FastAPI(title="Nara API Document Search", version="0.3.0")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://127.0.0.1:8000", "http://localhost:8000"],
+    allow_origins=["*"],
     allow_credentials=False,
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
 )
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+
+class SearchRequest(BaseModel):
+    query: str = Field(..., min_length=2, max_length=config.MAX_QUERY_LENGTH)
+    top_k: int = Field(default=config.DEFAULT_TOP_K, ge=1, le=20)
+    use_vector: bool = True
+
+
+def _to_result(meta: dict) -> dict:
+    return {
+        "service_id":          f"openapi_new:{meta.get('api_id', '')}",
+        "api_type":            "openapi_new",
+        "name":                meta.get("title", ""),
+        "provider_agency_name": meta.get("provider", ""),
+        "category":            meta.get("category", ""),
+        "description":         meta.get("description", ""),
+        "display_text":        meta.get("description", ""),
+        "score":               meta.get("score", 0.0),
+        "match_reasons":       ["vector similarity (ko-sroberta-multitask)"],
+        "domain_ids":          [],
+        "concept_ids":         [],
+        "endpoints":           [],
+        "request_fields":      [],
+        "response_fields":     [],
+        "counts":              {"request_fields": 0, "response_fields": 0},
+        "source": {
+            "refined_path": meta.get("source_path", ""),
+            "raw_path":     "",
+            "url":          meta.get("url", ""),
+        },
+    }
 
 
 @app.get("/")
@@ -42,32 +63,50 @@ def index():
 
 @app.get("/health")
 def health():
-    index_count = retriever.collection_count()
+    count = retriever.collection_count()
     return {
-        "ok": True,
-        **repo.health(),
-        "index_collection_total": index_count,
-        "index_error": retriever.last_error() if index_count is None else "",
+        "ok":                    count is not None,
+        "services_total":        count or 0,
+        "chunks_total":          count or 0,
+        "index_collection_total": count,
+        "data_path":             retriever._openapi_dir,
+        "index_error":           retriever.last_error() if count is None else "",
+        "build_state":           build_status.state,
     }
 
 
-@app.post("/search", response_model=SearchResponse)
+@app.post("/search")
 def search(request: SearchRequest):
-    query = clean_text(request.query)
+    query = request.query.strip()
     if len(query) < 2:
         raise HTTPException(status_code=400, detail="query must be at least 2 characters")
-    return search_engine.search(query, top_k=request.top_k, use_vector=request.use_vector)
+    raw = retriever.search(query, top_k=request.top_k)
+    results = [_to_result(m) for m in raw]
+    return {
+        "query": query,
+        "results": results,
+        "diagnostics": {
+            "vector_enabled":    True,
+            "vector_candidates": len(results),
+            "vector_error":      retriever.last_error() if not results else "",
+        },
+    }
+
+
+@app.post("/build")
+def trigger_build():
+    if build_status.state == "running":
+        return {"ok": False, "message": "이미 빌드 중입니다."}
+    thread = threading.Thread(target=run_build, kwargs={"on_complete": retriever.reload}, daemon=True)
+    thread.start()
+    return {"ok": True, "message": "빌드를 시작했습니다."}
+
+
+@app.get("/build/status")
+def get_build_status():
+    return build_status.to_dict()
 
 
 @app.get("/services/{service_id:path}")
 def service_detail(service_id: str):
-    if not repo.service_exists(service_id):
-        raise HTTPException(status_code=404, detail="service not found")
-    document = document_builder.build(service_id, compact=False)
-    return document
-
-
-@app.post("/reload")
-def reload_data():
-    repo.reload()
-    return {"ok": True, **repo.health()}
+    raise HTTPException(status_code=404, detail="service not found")

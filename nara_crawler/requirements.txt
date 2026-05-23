@@ -1,3 +1,6 @@
+sentence-transformers>=3.0.0
+huggingface_hub>=0.23.0
+
 # 크롤러 (stage1) — 크롤링 실행 시에만 필요
 aiohttp>=3.9.0
 beautifulsoup4>=4.12.0

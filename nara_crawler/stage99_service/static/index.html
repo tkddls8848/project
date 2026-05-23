@@ -16,6 +16,10 @@
             <p id="healthText">인덱스 확인 중</p>
           </div>
         </div>
+        <div id="buildBar" class="build-bar hidden">
+          <span id="buildStatus">빌드 대기 중</span>
+          <progress id="buildProgress" max="100" value="0"></progress>
+        </div>
         <form id="searchForm" class="search-form">
           <input
             id="queryInput"
@@ -32,6 +36,7 @@
             <option value="15">15</option>
           </select>
           <button type="submit" id="searchButton">검색</button>
+          <button type="button" id="buildButton">인덱스 빌드</button>
         </form>
       </section>
 
