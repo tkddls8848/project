@@ -1,0 +1,44 @@
+# ─── Python ───────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ─── 가상환경 ──────────────────────────────────────────
+venv/
+.venv/
+env/
+ENV/
+
+# ─── 환경 변수 / 시크릿 ────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ─── 로그 ─────────────────────────────────────────────
+*.log
+uvicorn.combined.log
+
+# ─── 대용량 / 재생성 가능 자산 ──────────────────────────
+# 임베딩 모델 (~2.5GB, ensure_local_model()이 자동 다운로드)
+models/
+
+# FAISS 인덱스 + 메타데이터 (POST /build로 재생성)
+storage/
+
+# 원본 OpenAPI JSON (크롤러 출력 — 별도 배포)
+data/
+
+# ─── IDE ──────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ─── OS ───────────────────────────────────────────────
+Thumbs.db
+.DS_Store
+desktop.ini

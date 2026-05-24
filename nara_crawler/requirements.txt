@@ -15,6 +15,5 @@ numpy>=1.25.0
 # 최소 파이프라인 (minimal/) — FAISS 벡터 저장소, 임베딩은 Ollama 담당
 faiss-cpu>=1.9.0
 
-# 서비스 (stage99_service)
-fastapi>=0.115.0
-uvicorn>=0.34.0
+# 서비스 백엔드는 d:\project\nara_dashboard\backend\ 로 이동되었습니다.
+# 백엔드 의존성: nara_dashboard/backend/requirements.txt 참고

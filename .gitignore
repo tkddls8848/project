@@ -1,380 +1,225 @@
-# Created by https://www.toptal.com/developers/gitignore/api/vagrant,python,nextjs,jupyternotebooks
-# Edit at https://www.toptal.com/developers/gitignore?templates=vagrant,python,nextjs,jupyternotebooks
-**/rag_chunks
-**/refined_data
-**/test_data
-**/storage
-**/cache
-**/data
-media_links_*.json
-nara_service/backend/storage/*.json
-task.txt
-ISSUE.md
-**.csv
-# ===================================
-# Custom Project Settings
-# ===================================
+# ============================================================
+# 통합 .gitignore — d:\project\
+# 대상: nara_crawler, nara_dashboard, nara_search, nara_relist,
+#       nara_agui, nara_gov24_link_resolver, nara_openclaw, backups
+# ============================================================
 
-# Legacy and archive
-**/legacy
-**/archieve
-**/_archive/
 
-# Backups
-backups/
+# ─────────────────────────────────────────────
+# Python (nara_crawler, nara_search, nara_relist)
+# ─────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+MANIFEST
 
-# Claude AI
-.claude
+# 가상환경
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
 
-# Sensitive files
-password.rb
+# 빌드/배포 (Python setuptools)
+.Python
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+sdist/
+wheels/
+share/python-wheels/
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
 
-# Large binary/media files
-OSD
-*.png
-*.svg
-*.woff
+# 테스트 / 커버리지 / 타입체크
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.pytype/
+.tox/
+.nox/
+.hypothesis/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.cover
+*.py,cover
+nosetests.xml
+.cache/
+cover/
 
-# Logs
-*.log
+# 도구 / 의존성 관리
+.pdm.toml
+poetry.toml
+pyrightconfig.json
+__pypackages__/
+cython_debug/
 
-# ===================================
-# NARA Crawler Specific
-# ===================================
+# Jupyter
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/*
+profile_default/
+ipython_config.py
 
-# Virtual environment
-nara_crawler/venv/
-nara_crawler/.venv/
+# IDE-Python
+.spyderproject
+.spyproject
+.ropeproject
 
-# Crawler data directories
-nara_crawler/data/
-nara_crawler/output/
-nara_crawler/results/
-nara_crawler/raw_data/
-nara_crawler/refine_data/
-nara_crawler/util/scanner/database/*.csv
 
-# Crawler cache and temp files
-nara_crawler/**/__pycache__/
-nara_crawler/**/*.pyc
-
-# ===================================
-# NARA Service Specific
-# ===================================
-
-client_secret_**.json
-
-# Storage and database
-nara_service/storage/*.json
-!nara_service/storage/.gitkeep
-nara_service/storage/refine_data/*.json
-!nara_service/storage/refine_data/.gitkeep
-nara_service/storage/refine_data/filedata/*.json
-nara_service/storage/refine_data/general/*.json
-nara_service/storage/refine_data/link/*.json
-nara_service/storage/refine_data/standard/*.json
-nara_service/storage/refine_data/swagger/*.json
-nara_service/database/**
-!nara_service/database/.gitkeep
-
-# API data and docs
-nara_service/api_data/
-nara_service/api_docs/
-
-# Embeddings and ML models
-nara_service/embeddings/
-
-# Frontend (Next.js)
-nara_service/frontend/.next/
-nara_service/frontend/out/
-nara_service/frontend/build/
-nara_service/frontend/node_modules/
-nara_service/frontend/.env*.local
-
-# ===================================
-# General Data Directories
-# ===================================
-
-**/data
-**/api_data
-**/api_docs
-**/output
-**/results
-**/embeddings
-**/raw_data
-**/refine_data
-**/refine_data_dev
-
-# UDDI files
-uddi*
-
-# ===================================
-# Next.js
-# ===================================
-
-.next/
-out/
-build/
-
-# Dependencies
+# ─────────────────────────────────────────────
+# Node.js / Vite / Next.js (nara_dashboard)
+# ─────────────────────────────────────────────
 node_modules/
 .pnp
 .pnp.js
 .yarn/install-state.gz
 
-# Testing
-coverage/
-
-# Misc
-.DS_Store
-*.pem
-
-# Debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# Environment files
-.env
-.env*.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# Vercel
+# 빌드 산출
+dist/
+build/
+.next/
+out/
 .vercel
 
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
 
-### JupyterNotebooks ###
-# gitignore template for Jupyter Notebooks
-# website: http://jupyter.org/
-
-.ipynb_checkpoints
-*/.ipynb_checkpoints/*
-
-# IPython
-profile_default/
-ipython_config.py
-
-# Remove previous ipynb_checkpoints
-#   git rm -r .ipynb_checkpoints/
-
-### NextJS ###
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
-
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
+# npm / yarn / pnpm 로그
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# local env files
-.env*.local
+# 테스트
+coverage/
 
-# vercel
-.vercel
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-### Python ###
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
-
-# C extensions
-*.so
-
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# PyInstaller
-#  Usually these files are written by a python script from a template
-#  before PyInstaller builds the exe, so as to inject date/other infos into it.
-*.manifest
-*.spec
-
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-.pytest_cache/
-cover/
-
-# Translations
-*.mo
-*.pot
-
-# Django stuff:
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-
-# Flask stuff:
-instance/
-.webassets-cache
-
-# Scrapy stuff:
-.scrapy
-
-# Sphinx documentation
-docs/_build/
-
-# PyBuilder
-.pybuilder/
-target/
-
-# Jupyter Notebook
-
-# IPython
-
-# pyenv
-#   For a library or package, you might want to ignore these files since the code is
-#   intended to run in multiple environments; otherwise, check them in:
-# .python-version
-
-# pipenv
-#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
-#   However, in case of collaboration, if having platform-specific dependencies or dependencies
-#   having no cross-platform support, pipenv may install dependencies that don't work, or not
-#   install all needed dependencies.
-#Pipfile.lock
-
-# poetry
-#   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
-#   This is especially recommended for binary packages to ensure reproducibility, and is more
-#   commonly ignored for libraries.
-#   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
-#poetry.lock
-
-# pdm
-#   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
-#pdm.lock
-#   pdm stores project-wide configurations in .pdm.toml, but it is recommended to not include it
-#   in version control.
-#   https://pdm.fming.dev/#use-with-ide
-.pdm.toml
-
-# PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
-__pypackages__/
-
-# Celery stuff
-celerybeat-schedule
-celerybeat.pid
-
-# SageMath parsed files
-*.sage.py
-
-# Environments
+# ─────────────────────────────────────────────
+# 환경 변수 / 시크릿
+# ─────────────────────────────────────────────
 .env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-# Spyder project settings
-.spyderproject
-.spyproject
+# 인증/키
+*.pem
+*.key
+client_secret_*.json
+credentials.json
+password.rb
 
-# Rope project settings
-.ropeproject
 
-# mkdocs documentation
-/site
+# ─────────────────────────────────────────────
+# 도구 / 환경
+# ─────────────────────────────────────────────
+# Claude AI 캐시·설정
+.claude/
 
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Pyre type checker
-.pyre/
-
-# pytype static type analyzer
-.pytype/
-
-# Cython debug symbols
-cython_debug/
-
-# PyCharm
-#  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
-#  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
-#  and can be added to the global gitignore or merged into this file.  For a more nuclear
-#  option (not recommended) you can uncomment the following to ignore the entire idea folder.
-#.idea/
-
-### Python Patch ###
-# Poetry local configuration file - https://python-poetry.org/docs/configuration/#local-configuration
-poetry.toml
-
-# ruff
-.ruff_cache/
-
-# LSP config files
-pyrightconfig.json
-
-### Vagrant ###
-# General
+# Vagrant
 .vagrant/
-
-# Log files (if you are creating logs in debug mode, uncomment this)
-# *.log
-
-### Vagrant Patch ###
 *.box
 
-# End of https://www.toptal.com/developers/gitignore/api/vagrant,python,nextjs,jupyternotebooks
+
+# ─────────────────────────────────────────────
+# IDE
+# ─────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
+
+
+# ─────────────────────────────────────────────
+# OS
+# ─────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+
+# ─────────────────────────────────────────────
+# 로그
+# ─────────────────────────────────────────────
+*.log
+
+
+# ─────────────────────────────────────────────
+# 데이터 / 모델 / 인덱스 (전 프로젝트 일괄)
+# ─────────────────────────────────────────────
+
+# 원본 / 정제 / 출력
+**/data/
+**/raw_data/
+**/refine_data/
+**/refine_data_dev/
+**/refined_data/
+**/output/
+**/results/
+
+# API 메타
+**/api_data/
+**/api_docs/
+
+# 임베딩 모델 (자동 다운로드, ~2.5GB)
+**/models/
+**/embeddings/
+
+# 검색 인덱스 (재생성 가능)
+**/storage/
+
+# 캐시 / 청크 / 테스트 데이터
+**/cache/
+**/rag_chunks/
+**/test_data/
+
+# 크롤러 보조 (CSV 데이터베이스)
+nara_crawler/util/scanner/database/*.csv
+
+
+# ─────────────────────────────────────────────
+# 백업 / 아카이브 / 레거시
+# ─────────────────────────────────────────────
+backups/
+**/_archive/
+**/archieve/
+**/legacy/
+nara_service_legacy/
+
+
+# ─────────────────────────────────────────────
+# 미디어 / 바이너리 (CSV 포함)
+# ※ 문서용 이미지 커밋이 필요하면 개별 예외 추가
+# ─────────────────────────────────────────────
+*.png
+*.svg
+*.woff
+*.csv
+OSD/
+
+
+# ─────────────────────────────────────────────
+# 프로젝트별 잡종
+# ─────────────────────────────────────────────
+# 임시 메모
+task.txt
+ISSUE.md
+
+# 크롤링 산출 패턴
+media_links_*.json
+uddi*
