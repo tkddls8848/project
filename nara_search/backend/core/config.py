@@ -1,6 +1,6 @@
 from pathlib import Path
 
-BASE_DIR = Path(__file__).resolve().parents[1]
+BASE_DIR = Path(__file__).resolve().parents[2]
 
 DEFAULT_TOP_K = 5
 MAX_QUERY_LENGTH = 300
@@ -14,8 +14,8 @@ STORAGE_META_PATH = STORAGE_DIR / "metadata.jsonl"
 LOCAL_MODEL_PATH = str(BASE_DIR / "models" / "ko-sroberta-multitask")
 HF_MODEL_ID = "jhgan/ko-sroberta-multitask"
 
-# 원본 데이터 루트
-DATA_DIR = BASE_DIR / "data"
+# OpenAPI JSON 데이터 (평면, {api_id}_{date}.json)
+APIDATA_DIR = BASE_DIR / "apidata"
 
 
 def ensure_local_model() -> str:

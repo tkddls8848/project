@@ -9,7 +9,7 @@ from pathlib import Path
 
 import numpy as np
 
-from . import config
+from ..core import config
 
 RAW_GLOB = str(config.BASE_DIR / "data" / "01_raw" / "*" / "openapi_new" / "*.json")
 BATCH_SIZE = 32

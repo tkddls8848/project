@@ -6,9 +6,9 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import config
-from .faiss_retriever import FAISSRetriever
-from .index_builder import build_status, run_build
+from .core import config
+from .indexing.index_builder import build_status, run_build
+from .search.faiss_retriever import FAISSRetriever
 
 STATIC_DIR = config.BASE_DIR / "frontend"
 

@@ -2,7 +2,7 @@ import re
 from collections import defaultdict
 from typing import Any
 
-from .data_loader import DataRepository, clean_text
+from ..catalog.data_loader import DataRepository, clean_text
 
 
 def normalize(value: str) -> str:
@@ -101,4 +101,3 @@ class LexicalSearcher:
                 seen.add(value)
                 result.append(value)
         return result
-

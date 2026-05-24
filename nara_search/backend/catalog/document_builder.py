@@ -106,4 +106,3 @@ class DocumentBuilder:
             if limit and len(records) >= limit:
                 break
         return records
-

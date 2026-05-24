@@ -9,16 +9,16 @@ from pathlib import Path
 import faiss
 from sentence_transformers import SentenceTransformer
 
-from . import config
+from ..core import config
 
 
 # ── 데이터 경로 탐색 ─────────────────────────────────────────────────────────
 
-def find_latest_openapi_dir(data_dir: Path) -> Path:
-    apidata_dir = data_dir / "apidata"
-    if not apidata_dir.exists():
-        raise FileNotFoundError(f"apidata 디렉터리가 없습니다: {apidata_dir}")
-    return apidata_dir
+def get_apidata_dir() -> Path:
+    d = config.APIDATA_DIR
+    if not d.exists():
+        raise FileNotFoundError(f"apidata 디렉터리가 없습니다: {d}")
+    return d
 
 
 # ── 텍스트 추출 헬퍼 ─────────────────────────────────────────────────────────
@@ -147,7 +147,7 @@ def run_build(on_complete=None):
     try:
         # 1단계: 파일 탐색
         s.update(step=1, step_name="파일 탐색")
-        openapi_dir = find_latest_openapi_dir(config.DATA_DIR)
+        openapi_dir = get_apidata_dir()
         s.update(data_path=str(openapi_dir), message=f"탐색 중: {openapi_dir}")
         json_files = sorted(openapi_dir.glob("**/*.json"))
         if not json_files:

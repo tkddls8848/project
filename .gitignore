@@ -164,13 +164,23 @@ desktop.ini
 # ─────────────────────────────────────────────
 
 # 원본 / 정제 / 출력
-**/data/
+# ※ **/data/는 nara_dashboard/src/data 같은 React 소스 폴더까지 잡아서 사용 금지
+#    → 크롤러 산출 폴더만 프로젝트별 명시
+nara_crawler/data/
+nara_relist/**/data/
+nara_agui/data/
+nara_openclaw/data/
+nara_gov24_link_resolver/data/
 **/raw_data/
 **/refine_data/
 **/refine_data_dev/
 **/refined_data/
 **/output/
 **/results/
+
+# OpenAPI JSON 평면 저장소 (nara_dashboard, nara_search)
+# ※ src/data 같은 React 소스 폴더와 혼동을 피하려 별도 이름
+**/apidata/
 
 # API 메타
 **/api_data/

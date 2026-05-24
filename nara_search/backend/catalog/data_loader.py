@@ -4,7 +4,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
-from . import config
+from ..core import config
 
 
 def clean_text(value: Any) -> str:
@@ -198,4 +198,3 @@ class DataRepository:
 
     def service_exists(self, service_id: str) -> bool:
         return service_id in self.services_by_id
-

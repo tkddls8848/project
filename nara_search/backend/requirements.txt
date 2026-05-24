@@ -1,9 +1,9 @@
-# 백엔드 실행
+# backend requirements
 fastapi>=0.115.0
 uvicorn>=0.34.0
 pydantic>=2.0.0
 
-# 검색 / 임베딩
+# search / embedding
 faiss-cpu>=1.9.0
 sentence-transformers>=3.0.0
 huggingface_hub>=0.23.0

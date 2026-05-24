@@ -1,8 +1,6 @@
 # Nara Search
 
-공공데이터 OpenAPI 문서를 SentenceTransformer로 임베딩하고 FAISS로 벡터 검색하는 **독립 백엔드 서비스**.
-
-원래 `nara_crawler/stage99_service`에 있었고, 한 차례 `nara_dashboard/backend/`로 이관됐다가, 검색 서비스만 단독 프로젝트로 다시 분리되었습니다.
+공공데이터 OpenAPI 문서를 SentenceTransformer로 임베딩하고 FAISS로 벡터 검색하는 **백엔드 서비스**.
 
 ## 폴더 구조
 
@@ -11,17 +9,25 @@ nara_search/
   backend/
     __init__.py
     main.py              ← FastAPI 엔트리 (GET /, /health, /search, /build, ...)
-    config.py            ← BASE_DIR = nara_search/, ensure_local_model()
-    faiss_retriever.py   ← SentenceTransformer + FAISS 검색
-    index_builder.py     ← 백그라운드 인덱스 빌드 (4단계 진행 보고)
-    run_server.ps1
+    core/
+      config.py          ← BASE_DIR = nara_search/, ensure_local_model()
+      schemas.py         ← 공통 Pydantic 스키마
+    catalog/
+      data_loader.py     ← 카탈로그/문서 JSONL 로더
+      document_builder.py
+    search/
+      faiss_retriever.py ← SentenceTransformer + FAISS 검색
+      lexical.py
+      ranker.py
+      retriever.py
+      ollama_retriever.py
+    indexing/
+      index_builder.py   ← 백그라운드 인덱스 빌드 (4단계 진행 보고)
+      cache_builder.py
     requirements.txt
-    (참고: data_loader/cache_builder/lexical/ollama_retriever/ranker/retriever/schemas/document_builder
-           — main.py가 import하지 않는 이전 작업물. 추후 활용 가능)
   frontend/              ← 단독 사용용 vanilla JS UI (index.html, app.js, styles.css)
                           URL 마운트는 /static (변경 없음)
-  data/
-    apidata/             ← OpenAPI JSON ({api_id}_{date}.json, 평면 3,526건)
+  apidata/               ← OpenAPI JSON ({api_id}_{date}.json, 평면 3,526건)
   models/
     ko-sroberta-multitask/  ← 임베딩 모델 (없으면 자동 다운로드)
   storage/               ← (런타임 생성) faiss.index, metadata.jsonl
@@ -31,7 +37,7 @@ nara_search/
 
 ### 데이터
 
-`data/apidata/*.json`. 스키마: `api_id`, `info`, `endpoints`, `swagger_json` (data.go.kr 크롤러 출력 포맷).
+`apidata/*.json`. 스키마: `api_id`, `info`, `endpoints`, `swagger_json` (data.go.kr 크롤러 출력 포맷). React 소스의 `src/data` 같은 폴더와 혼동을 피하기 위해 `data/`가 아닌 `apidata/`로 둠.
 
 ### 모델
 
@@ -64,7 +70,7 @@ python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload
 
 | Method | Path | 설명 |
 | --- | --- | --- |
-| GET | `/` | `backend/static/index.html` 반환 (단독 UI) |
+| GET | `/` | `frontend/index.html` 반환 (단독 UI) |
 | GET | `/health` | 인덱스 상태, 데이터 경로, 빌드 상태 |
 | POST | `/search` | 자연어 검색. body: `{query, top_k, use_vector}` |
 | POST | `/build` | 백그라운드 인덱스 빌드 트리거 |
@@ -81,4 +87,4 @@ CORS: 전체 오리진 허용 (`allow_origins=["*"]`, GET/POST만).
 
 ## 환경 변수
 
-현재 사용 안 함. 모든 경로는 `backend/config.py`에서 `BASE_DIR` 기준 계산. 다른 위치에 데이터/모델을 두려면 config.py를 직접 수정하거나 환경변수 기반으로 리팩토링 필요.
+현재 사용 안 함. 모든 경로는 `backend/core/config.py`에서 `BASE_DIR` 기준 계산. 다른 위치에 데이터/모델을 두려면 config.py를 직접 수정하거나 환경변수 기반으로 리팩토링 필요.

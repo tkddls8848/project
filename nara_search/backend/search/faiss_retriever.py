@@ -6,8 +6,8 @@ import json
 import faiss
 from sentence_transformers import SentenceTransformer
 
-from . import config
-from .index_builder import find_latest_openapi_dir
+from ..core import config
+from ..indexing.index_builder import get_apidata_dir
 
 
 class FAISSRetriever:
@@ -21,7 +21,7 @@ class FAISSRetriever:
 
     def _load(self) -> None:
         try:
-            openapi_dir = find_latest_openapi_dir(config.DATA_DIR)
+            openapi_dir = get_apidata_dir()
             self._openapi_dir = str(openapi_dir)
             print(f"[retriever] 데이터 경로: {openapi_dir}")
             if self._model is None:

@@ -1,9 +1,9 @@
 from collections import defaultdict
 from typing import Any
 
-from . import config
-from .data_loader import DataRepository
-from .document_builder import DocumentBuilder
+from ..core import config
+from ..catalog.data_loader import DataRepository
+from ..catalog.document_builder import DocumentBuilder
 from .lexical import LexicalSearcher, tokenize
 from .retriever import ChromaRetriever
 
@@ -113,4 +113,3 @@ class HybridSearchEngine:
                 seen.add(value)
                 result.append(value)
         return result
-

@@ -1,6 +1,6 @@
 from typing import Any
 
-from . import config
+from ..core import config
 
 
 class ChromaRetriever:

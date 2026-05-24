@@ -7,7 +7,7 @@ from typing import Any
 
 import numpy as np
 
-from . import config
+from ..core import config
 
 
 class OllamaFAISSRetriever:
