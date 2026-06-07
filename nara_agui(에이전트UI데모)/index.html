@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Nara AGUI Demo</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0d1117;
+      color: #c9d1d9;
+      line-height: 1.5;
+    }
+    header {
+      padding: 24px 32px 16px;
+      border-bottom: 1px solid #21262d;
+    }
+    header h1 { margin: 0 0 4px; font-size: 22px; font-weight: 600; }
+    header p { margin: 0; font-size: 13px; color: #8b949e; }
+
+    .seed-buttons {
+      padding: 16px 32px 8px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .seed-buttons button {
+      background: #21262d;
+      color: #c9d1d9;
+      border: 1px solid #30363d;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .seed-buttons button:hover { background: #30363d; }
+
+    form {
+      padding: 8px 32px 16px;
+      display: flex;
+      gap: 8px;
+    }
+    #queryInput {
+      flex: 1;
+      background: #161b22;
+      color: #c9d1d9;
+      border: 1px solid #30363d;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    #queryInput:focus { outline: none; border-color: #58a6ff; }
+    form button {
+      background: #238636;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    form button:hover { background: #2ea043; }
+    form button:disabled { background: #30363d; cursor: not-allowed; }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 1px;
+      background: #21262d;
+      min-height: calc(100vh - 200px);
+    }
+    .thinking, .result {
+      background: #0d1117;
+      padding: 20px 24px;
+    }
+    .thinking h2, .result h2 {
+      margin: 0 0 16px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #8b949e;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    #timeline { list-style: none; padding: 0; margin: 0; }
+    #timeline li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 8px 0;
+      font-size: 13px;
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-top: 5px;
+      flex-shrink: 0;
+      background: #30363d;
+    }
+    .running .dot { background: #58a6ff; animation: pulse 1s infinite; }
+    .done .dot { background: #3fb950; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .step-label { font-weight: 500; }
+    .step-detail { color: #8b949e; font-size: 12px; margin-top: 2px; }
+
+    /* === Single layout === */
+    .single-card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 20px;
+    }
+    .single-card h3 { margin: 0 0 4px; font-size: 18px; }
+    .single-card .agency { color: #8b949e; font-size: 13px; margin-bottom: 12px; }
+    .single-card .desc { color: #c9d1d9; margin-bottom: 12px; }
+    .endpoint {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 4px;
+      padding: 8px 12px;
+      font-family: ui-monospace, monospace;
+      font-size: 12px;
+    }
+    .method { color: #58a6ff; font-weight: 600; }
+
+    /* === Grid layout === */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    .grid-card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 14px;
+    }
+    .grid-card h4 { margin: 0 0 4px; font-size: 14px; }
+    .grid-card .meta { color: #8b949e; font-size: 12px; }
+    .grid-card .category {
+      display: inline-block;
+      background: #1f6feb33;
+      color: #58a6ff;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      margin-top: 6px;
+    }
+
+    /* === Flow layout === */
+    .flow {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .flow-node {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .step-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #1f6feb;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+    .flow-node h4 { margin: 0 0 2px; font-size: 14px; }
+    .flow-node .agency { color: #8b949e; font-size: 12px; }
+    .flow-arrow {
+      align-self: center;
+      color: #8b949e;
+      padding: 4px 0 4px 38px;
+      font-size: 12px;
+    }
+
+    #answer {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #21262d;
+      font-size: 14px;
+      line-height: 1.7;
+      color: #c9d1d9;
+      min-height: 24px;
+    }
+    .typing-cursor::after {
+      content: "▎";
+      color: #58a6ff;
+      animation: blink 1s infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    .empty {
+      color: #6e7681;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>AGUI 데모</h1>
+    <p>Agent UI = Thinking Steps (좌) + Generative UI (우). 쿼리 성격에 따라 결과 레이아웃이 자동 선택됩니다.</p>
+  </header>
+
+  <section class="seed-buttons">
+    <button data-q="여행경보 어디서 봐?">▶ 단일형 — "여행경보 어디서 봐?"</button>
+    <button data-q="날씨 관련 API 뭐 있어?">▶ 비교형 — "날씨 관련 API 뭐 있어?"</button>
+    <button data-q="외국인 운전면허 따는 절차">▶ 절차형 — "외국인 운전면허 따는 절차"</button>
+  </section>
+
+  <form id="searchForm">
+    <input id="queryInput" placeholder="질문을 직접 입력하거나 위 버튼 클릭" autocomplete="off" />
+    <button type="submit" id="submitBtn">검색</button>
+  </form>
+
+  <main class="workspace">
+    <aside class="thinking">
+      <h2>사고 과정</h2>
+      <ul id="timeline"><li class="empty">대기 중…</li></ul>
+    </aside>
+    <section class="result">
+      <h2>결과 (레이아웃 자동 선택)</h2>
+      <div id="layout"><div class="empty">검색을 시작하면 결과가 여기에 표시됩니다.</div></div>
+      <div id="answer"></div>
+    </section>
+  </main>
+
+  <script>
+    const STEP_LABELS = {
+      query_analysis: "쿼리 분석 / 분류",
+      query_classify: "쿼리 분류",
+      vector_search: "문서 검색",
+      flow_ordering: "절차 순서 결정",
+      answer_generation: "답변 생성",
+    };
+
+    const timeline = document.getElementById("timeline");
+    const layoutEl = document.getElementById("layout");
+    const answerEl = document.getElementById("answer");
+    const submitBtn = document.getElementById("submitBtn");
+    const queryInput = document.getElementById("queryInput");
+
+    function escapeHtml(s) {
+      return String(s ?? "").replace(/[&<>"']/g, c => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+      }[c]));
+    }
+
+    function resetUI() {
+      timeline.innerHTML = "";
+      layoutEl.innerHTML = '<div class="empty">검색 중…</div>';
+      answerEl.innerHTML = "";
+      answerEl.classList.add("typing-cursor");
+    }
+
+    function upsertStep({ name, status, detail }) {
+      let li = document.getElementById(`step-${name}`);
+      if (!li) {
+        li = document.createElement("li");
+        li.id = `step-${name}`;
+        timeline.appendChild(li);
+      }
+      li.className = status;
+      li.innerHTML = `
+        <span class="dot"></span>
+        <div>
+          <div class="step-label">${escapeHtml(STEP_LABELS[name] || name)}</div>
+          ${detail ? `<div class="step-detail">${escapeHtml(detail)}</div>` : ""}
+        </div>
+      `;
+    }
+
+    function renderSingle(item) {
+      layoutEl.innerHTML = `
+        <div class="single-card">
+          <h3>${escapeHtml(item.name)}</h3>
+          <div class="agency">${escapeHtml(item.agency)}</div>
+          <div class="desc">${escapeHtml(item.description)}</div>
+          ${(item.endpoints || []).map(ep => `
+            <div class="endpoint">
+              <span class="method">${escapeHtml(ep.method)}</span>
+              ${escapeHtml(ep.path)} — ${escapeHtml(ep.desc)}
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }
+
+    function renderGrid(items) {
+      layoutEl.innerHTML = `
+        <div class="grid">
+          ${items.map(it => `
+            <div class="grid-card">
+              <h4>${escapeHtml(it.name)}</h4>
+              <div class="meta">${escapeHtml(it.agency)}</div>
+              <span class="category">${escapeHtml(it.category)}</span>
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }
+
+    function renderFlow(nodes, edges) {
+      const edgeMap = new Map(edges.map(e => [e.from, e]));
+      const parts = [];
+      for (const node of nodes.sort((a, b) => a.step - b.step)) {
+        parts.push(`
+          <div class="flow-node">
+            <div class="step-num">${node.step}</div>
+            <div>
+              <h4>${escapeHtml(node.label)}</h4>
+              <div class="agency">${escapeHtml(node.agency)}</div>
+            </div>
+          </div>
+        `);
+        const outgoing = edgeMap.get(node.id);
+        if (outgoing) {
+          parts.push(`<div class="flow-arrow">↓ ${escapeHtml(outgoing.label)}</div>`);
+        }
+      }
+      layoutEl.innerHTML = `<div class="flow">${parts.join("")}</div>`;
+    }
+
+    function handleLayout(payload) {
+      if (payload.kind === "single") renderSingle(payload.item);
+      else if (payload.kind === "grid") renderGrid(payload.items);
+      else if (payload.kind === "flow") renderFlow(payload.nodes, payload.edges);
+    }
+
+    async function runSearch(query) {
+      resetUI();
+      submitBtn.disabled = true;
+      try {
+        const res = await fetch("/search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query }),
+        });
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          let nl;
+          while ((nl = buffer.indexOf("\n")) >= 0) {
+            const line = buffer.slice(0, nl).trim();
+            buffer = buffer.slice(nl + 1);
+            if (!line) continue;
+            const ev = JSON.parse(line);
+            dispatch(ev);
+          }
+        }
+      } finally {
+        submitBtn.disabled = false;
+        answerEl.classList.remove("typing-cursor");
+      }
+    }
+
+    function dispatch(ev) {
+      if (ev.type === "step") upsertStep(ev.payload);
+      else if (ev.type === "layout") handleLayout(ev.payload);
+      else if (ev.type === "token") answerEl.textContent += ev.payload.data;
+      else if (ev.type === "done") answerEl.classList.remove("typing-cursor");
+    }
+
+    document.getElementById("searchForm").addEventListener("submit", e => {
+      e.preventDefault();
+      const q = queryInput.value.trim();
+      if (q.length < 2) return;
+      runSearch(q);
+    });
+
+    document.querySelectorAll(".seed-buttons button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        queryInput.value = btn.dataset.q;
+        runSearch(btn.dataset.q);
+      });
+    });
+  </script>
+</body>
+</html>

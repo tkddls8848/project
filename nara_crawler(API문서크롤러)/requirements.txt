@@ -1,0 +1,9 @@
+# Runtime dependencies for nara_crawler.
+# Keep this file limited to packages imported by crawler code.
+
+aiohttp>=3.9.0
+beautifulsoup4>=4.13.0
+lxml>=4.9.0
+requests>=2.31.0
+tqdm>=4.66.0
+pydantic>=2.0.0

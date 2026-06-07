@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "gov24_service_metadata.schema.json",
+  "title": "Gov24 Service Metadata",
+  "type": "object",
+  "required": ["link_id", "source", "title", "url", "link_type", "domain_ids", "confidence", "review_status", "collected_at"],
+  "additionalProperties": false,
+  "properties": {
+    "link_id": {
+      "type": "string",
+      "pattern": "^gov24:service:[a-z0-9_]+$"
+    },
+    "source": {
+      "type": "string",
+      "enum": ["gov24", "agency", "manual"]
+    },
+    "external_id": { "type": "string" },
+    "title": { "type": "string", "minLength": 1 },
+    "url": {
+      "type": "string",
+      "pattern": "^https?://.+"
+    },
+    "link_type": {
+      "type": "string",
+      "enum": ["application", "guide", "info", "agency"]
+    },
+    "domain_ids": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "related_service_ids": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "related_agency_ids": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "keywords": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "review_status": {
+      "type": "string",
+      "enum": ["pending", "reviewed", "rejected"]
+    },
+    "collected_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source_url": { "type": "string" },
+    "notes": { "type": "string" }
+  }
+}

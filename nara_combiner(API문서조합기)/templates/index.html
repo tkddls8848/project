@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Nara Combiner</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f172a;
+      color: #e5e7eb;
+      line-height: 1.6;
+    }
+    header {
+      padding: 24px 32px 16px;
+      border-bottom: 1px solid #263244;
+    }
+    h1 { margin: 0 0 4px; font-size: 22px; font-weight: 650; }
+    header p { margin: 0; font-size: 13px; color: #94a3b8; }
+    .container { max-width: 900px; margin: 0 auto; padding: 24px 32px; }
+    .seeds { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    .seed-btn {
+      background: #1e293b;
+      color: #e5e7eb;
+      border: 1px solid #334155;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .seed-btn:hover { background: #334155; }
+    .form-group { margin-bottom: 12px; }
+    label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 4px; }
+    input, textarea {
+      width: 100%;
+      background: #111827;
+      color: #e5e7eb;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+    input:focus, textarea:focus { outline: none; border-color: #38bdf8; }
+    textarea { resize: vertical; min-height: 80px; }
+    .submit-btn {
+      background: #0f766e;
+      color: white;
+      border: none;
+      padding: 10px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .submit-btn:hover { background: #0d9488; }
+    .submit-btn:disabled { background: #334155; cursor: not-allowed; }
+    .result-area {
+      margin-top: 28px;
+      border: 1px solid #263244;
+      border-radius: 8px;
+      overflow: hidden;
+      display: none;
+    }
+    .result-meta {
+      background: #111827;
+      padding: 12px 16px;
+      font-size: 13px;
+      border-bottom: 1px solid #263244;
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .meta-item { color: #94a3b8; }
+    .meta-item span { color: #38bdf8; }
+    .warning-badge {
+      background: #422006;
+      color: #facc15;
+      border: 1px solid #854d0e;
+      padding: 2px 10px;
+      border-radius: 10px;
+      font-size: 12px;
+    }
+    .result-text {
+      padding: 20px;
+      font-size: 14px;
+      line-height: 1.8;
+      white-space: pre-wrap;
+      min-height: 80px;
+    }
+    .typing::after {
+      content: "|";
+      color: #38bdf8;
+      animation: blink 1s infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+    .error-text { color: #f87171; padding: 20px; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Nara Combiner</h1>
+    <p>여러 공공 API 문서를 조합해 행정 서비스 계획 초안을 만듭니다.</p>
+  </header>
+
+  <div class="container">
+    <div class="seeds">
+      <button class="seed-btn" data-ids="15025430 15080662 15051043">
+        의료 이동 + 교통 지원
+      </button>
+      <button class="seed-btn" data-ids="15041891 15051043 15080662">
+        복지 + 의료 + 교통
+      </button>
+      <button class="seed-btn" data-ids="15056681 15080662">
+        교통 분야 조합
+      </button>
+    </div>
+
+    <div class="form-group">
+      <label>서비스 ID</label>
+      <input id="idsInput" placeholder="예: 15025430 15080662 15051043" />
+    </div>
+    <div class="form-group">
+      <label>질문</label>
+      <textarea id="questionInput">이 API들을 조합하면 어떤 행정 서비스 계획을 만들 수 있나?</textarea>
+    </div>
+    <button class="submit-btn" id="submitBtn">조합 분석</button>
+
+    <div class="result-area" id="resultArea">
+      <div class="result-meta" id="resultMeta"></div>
+      <div class="result-text typing" id="resultText"></div>
+    </div>
+  </div>
+
+  <script>
+    const idsInput = document.getElementById("idsInput");
+    const questionInput = document.getElementById("questionInput");
+    const submitBtn = document.getElementById("submitBtn");
+    const resultArea = document.getElementById("resultArea");
+    const resultMeta = document.getElementById("resultMeta");
+    const resultText = document.getElementById("resultText");
+
+    document.querySelectorAll(".seed-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        idsInput.value = btn.dataset.ids;
+      });
+    });
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (c) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+      }[c]));
+    }
+
+    submitBtn.addEventListener("click", () => {
+      const raw = idsInput.value.trim();
+      if (!raw) return;
+
+      const ids = raw.split(/[\s,]+/).filter(Boolean);
+      const question = questionInput.value.trim() || "이 API들을 조합하면 어떤 행정 서비스 계획을 만들 수 있나?";
+
+      submitBtn.disabled = true;
+      resultArea.style.display = "block";
+      resultMeta.innerHTML = "";
+      resultText.textContent = "";
+      resultText.className = "result-text typing";
+
+      const es = new EventSource("/compose-stream?" + new URLSearchParams({
+        ids: ids.join(","),
+        q: question
+      }));
+
+      es.onmessage = (event) => {
+        if (event.data === "[DONE]") {
+          es.close();
+          resultText.classList.remove("typing");
+          submitBtn.disabled = false;
+          return;
+        }
+
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.error) {
+            resultText.className = "error-text";
+            resultText.textContent = msg.error;
+            es.close();
+            submitBtn.disabled = false;
+            return;
+          }
+
+          if (msg.domains) {
+            const parts = [
+              `<span class="meta-item">분야 <span>${escapeHtml(msg.domains.join(", "))}</span></span>`
+            ];
+            if (msg.missing?.length) {
+              parts.push(`<span class="meta-item">누락 ID <span>${escapeHtml(msg.missing.join(", "))}</span></span>`);
+            }
+            if (msg.warning) {
+              parts.push(`<span class="warning-badge">${escapeHtml(msg.warning)}</span>`);
+            }
+            resultMeta.innerHTML = parts.join("");
+          }
+
+          if (msg.token) {
+            resultText.textContent += msg.token;
+          }
+        } catch {
+          // Ignore malformed chunks.
+        }
+      };
+
+      es.onerror = () => {
+        es.close();
+        if (!resultText.textContent) {
+          resultText.className = "error-text";
+          resultText.textContent = "서버 연결 오류가 발생했습니다.";
+        }
+        resultText.classList.remove("typing");
+        submitBtn.disabled = false;
+      };
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,61 @@
+{
+  "plan_id": "demo-parent-medical-transport-001",
+  "goal": "부모님 병원 이동 지원, 교통비 감면, 복지 지원 신청 준비",
+  "source": "nara_combiner",
+  "warnings": [
+    "Demo plan uses dummy government execution adapters. No real submission is performed."
+  ],
+  "steps": [
+    {
+      "step_id": "check_welfare_eligibility",
+      "title": "복지 지원 자격 조회",
+      "service_id": "15080662",
+      "action": "eligibility",
+      "execution_mode": "api",
+      "target_url": "https://api.demo.gov.kr/welfare/eligibility",
+      "method": "POST",
+      "required_inputs": ["applicant_name", "birth_date", "region", "income_type"],
+      "payload_template": {
+        "name": "$applicant_name",
+        "birthDate": "$birth_date",
+        "region": "$region",
+        "incomeType": "$income_type"
+      },
+      "requires_user_approval": true,
+      "risk_level": "medium",
+      "manual_instructions": []
+    },
+    {
+      "step_id": "prepare_gov24_application",
+      "title": "정부24 신청 페이지 연결",
+      "service_id": "gov24:medical-transport-support",
+      "action": "apply",
+      "execution_mode": "linkout",
+      "target_url": "https://www.gov.kr/portal/service/serviceInfo/DEMO-MEDICAL-TRANSPORT",
+      "method": "GET",
+      "required_inputs": ["identity_token"],
+      "payload_template": {},
+      "requires_user_approval": true,
+      "risk_level": "high",
+      "manual_instructions": []
+    },
+    {
+      "step_id": "collect_documents",
+      "title": "증빙서류 준비 체크리스트",
+      "service_id": null,
+      "action": "document",
+      "execution_mode": "manual",
+      "target_url": null,
+      "method": "GET",
+      "required_inputs": [],
+      "payload_template": {},
+      "requires_user_approval": false,
+      "risk_level": "low",
+      "manual_instructions": [
+        "가족관계증명서 또는 대리 신청 관계 증빙을 준비한다.",
+        "진료 예약 확인서 또는 병원 방문 목적 증빙을 준비한다.",
+        "교통약자 또는 복지 대상 여부를 증명할 수 있는 서류를 준비한다."
+      ]
+    }
+  ]
+}

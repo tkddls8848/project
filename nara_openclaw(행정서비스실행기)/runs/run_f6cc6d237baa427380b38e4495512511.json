@@ -1,0 +1,73 @@
+{
+  "run_id": "run_f6cc6d237baa427380b38e4495512511",
+  "plan_id": "demo-parent-medical-transport-001",
+  "goal": "부모님 병원 이동 지원, 교통비 감면, 복지 지원 신청 준비",
+  "status": "blocked",
+  "approved_by": "tester",
+  "approved_at": null,
+  "created_at": "2026-05-25T02:56:46.000450+00:00",
+  "dry_run": {
+    "plan_id": "demo-parent-medical-transport-001",
+    "goal": "부모님 병원 이동 지원, 교통비 감면, 복지 지원 신청 준비",
+    "executable": true,
+    "approval_required": true,
+    "blockers": [],
+    "warnings": [
+      "Demo plan uses dummy government execution adapters. No real submission is performed."
+    ],
+    "steps": [
+      {
+        "step_id": "check_welfare_eligibility",
+        "title": "복지 지원 자격 조회",
+        "execution_mode": "api",
+        "action": "eligibility",
+        "status": "ready",
+        "missing_inputs": [],
+        "requires_user_approval": true,
+        "target_url": "https://api.demo.gov.kr/welfare/eligibility",
+        "method": "POST",
+        "request_preview": {
+          "name": "***",
+          "birthDate": "1940-01-01",
+          "region": "서울특별시 종로구",
+          "incomeType": "기초연금"
+        },
+        "warnings": []
+      },
+      {
+        "step_id": "prepare_gov24_application",
+        "title": "정부24 신청 페이지 연결",
+        "execution_mode": "linkout",
+        "action": "apply",
+        "status": "ready",
+        "missing_inputs": [],
+        "requires_user_approval": true,
+        "target_url": "https://www.gov.kr/portal/service/serviceInfo/DEMO-MEDICAL-TRANSPORT",
+        "method": "GET",
+        "request_preview": {},
+        "warnings": []
+      },
+      {
+        "step_id": "collect_documents",
+        "title": "증빙서류 준비 체크리스트",
+        "execution_mode": "manual",
+        "action": "document",
+        "status": "ready",
+        "missing_inputs": [],
+        "requires_user_approval": false,
+        "target_url": null,
+        "method": "GET",
+        "request_preview": {},
+        "warnings": []
+      }
+    ]
+  },
+  "executed_steps": [],
+  "user_inputs": {
+    "applicant_name": "홍길동",
+    "birth_date": "1940-01-01",
+    "region": "서울특별시 종로구",
+    "income_type": "기초연금",
+    "identity_token": "***"
+  }
+}
