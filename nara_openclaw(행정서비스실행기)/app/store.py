@@ -1,12 +1,13 @@
 import json
 from pathlib import Path
 
-from .config import RUNS_DIR
+from . import config
 from .schemas import RunRecord
 
 
 def ensure_runs_dir(path: Path | None = None) -> Path:
-    target = path or RUNS_DIR
+    # config.RUNS_DIR을 호출 시점에 읽어 테스트가 임시 디렉터리로 격리할 수 있게 한다.
+    target = path or config.RUNS_DIR
     target.mkdir(parents=True, exist_ok=True)
     return target
 

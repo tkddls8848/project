@@ -1,0 +1,73 @@
+{
+  "api_id": "15000001",
+  "crawled_url": "https://www.data.go.kr/data/15000001/openapi.do",
+  "info": {
+    "목록명": "한국환경공단_에어코리아_대기오염정보",
+    "제공기관": "한국환경공단",
+    "분류체계": "환경기상 - 대기",
+    "키워드": "대기오염,미세먼지,대기질",
+    "설명": "시도별 실시간 대기오염 측정정보를 조회하는 서비스",
+    "수정일": "2026-01-01"
+  },
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/getCtprvnRltmMesureDnsty",
+      "description": "시도별 실시간 측정정보 조회"
+    }
+  ],
+  "swagger_json": {
+    "info": {
+      "title": "대기오염정보",
+      "description": "에어코리아 대기오염정보 조회"
+    },
+    "paths": {
+      "/getCtprvnRltmMesureDnsty": {
+        "get": {
+          "summary": "시도별 실시간 측정정보 조회",
+          "parameters": [
+            {
+              "name": "serviceKey",
+              "in": "query",
+              "required": true,
+              "type": "string",
+              "description": "공공데이터포털에서 발급받은 인증키"
+            },
+            {
+              "name": "sidoName",
+              "in": "query",
+              "required": true,
+              "type": "string",
+              "description": "시도 이름 (예: 서울, 부산)"
+            },
+            {
+              "name": "numOfRows",
+              "in": "query",
+              "required": false,
+              "type": "integer",
+              "description": "한 페이지 결과 수"
+            }
+          ]
+        }
+      }
+    },
+    "definitions": {
+      "Item": {
+        "properties": {
+          "pm10Value": {
+            "type": "string",
+            "description": "미세먼지(PM10) 농도"
+          },
+          "pm25Value": {
+            "type": "string",
+            "description": "초미세먼지(PM2.5) 농도"
+          },
+          "dataTime": {
+            "type": "string",
+            "description": "측정일시"
+          }
+        }
+      }
+    }
+  }
+}

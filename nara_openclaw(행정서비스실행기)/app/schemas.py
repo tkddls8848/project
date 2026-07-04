@@ -84,6 +84,10 @@ class RunRecord(BaseModel):
     plan_id: str
     goal: str
     status: Literal["completed", "blocked", "partial", "failed"]
+    # 차단 사유 코드: dry_run_blocked / approval_missing / approver_missing
+    status_reason: str | None = None
+    # 실행 어댑터 종류. "dummy"는 실제 기관 제출이 아님을 뜻한다.
+    executor_mode: str = "dummy"
     approved_by: str | None = None
     approved_at: str | None = None
     created_at: str

@@ -6,16 +6,48 @@ from uuid import uuid4
 
 from .schemas import ExecutionRequest, ExecutionStep, StepDryRun, StepExecutionResult
 
-SENSITIVE_KEYS = {"name", "resident_id", "phone", "email", "identity_token", "documents"}
+# 마스킹 대상. 목록을 좁히지 않는다 — 새 민감 필드는 여기에 추가만 한다.
+SENSITIVE_KEYS = {
+    "name",
+    "applicant_name",
+    "birth_date",
+    "birthdate",
+    "resident_id",
+    "phone",
+    "email",
+    "address",
+    "identity_token",
+    "documents",
+    "token",
+    "secret",
+    "password",
+}
+SENSITIVE_SUFFIXES = ("_token", "_secret", "_password", "_key")
+
+MASK = "***"
+
+
+def _is_sensitive_key(key: Any) -> bool:
+    lowered = str(key).lower()
+    return lowered in SENSITIVE_KEYS or lowered.endswith(SENSITIVE_SUFFIXES)
+
+
+def _mask_value(value: Any) -> Any:
+    if isinstance(value, dict):
+        return mask_inputs(value)
+    if isinstance(value, list):
+        return [_mask_value(item) for item in value]
+    return value
 
 
 def mask_inputs(values: dict[str, Any]) -> dict[str, Any]:
+    """민감 키를 재귀적으로 마스킹한다. 중첩 dict/list 내부도 처리한다."""
     masked: dict[str, Any] = {}
     for key, value in values.items():
-        if key in SENSITIVE_KEYS:
-            masked[key] = "***"
+        if _is_sensitive_key(key):
+            masked[key] = MASK
         else:
-            masked[key] = value
+            masked[key] = _mask_value(value)
     return masked
 
 
