@@ -59,15 +59,31 @@ def load_all(data_dir: Path | None = None) -> dict[str, dict]:
     return _CACHE
 
 
+# Search가 노출하는 정식 service_id prefix. 경계에서 내부 api_id로 변환만 하고
+# 그 외 재해석은 하지 않는다 (누락 보고는 호출자가 보낸 원본 문자열 기준).
+CANONICAL_PREFIX = "openapi_new:"
+
+
+def _internal_id(raw: str) -> str:
+    if raw.startswith(CANONICAL_PREFIX):
+        return raw[len(CANONICAL_PREFIX):]
+    return raw
+
+
 def get_services(ids: list[str]) -> tuple[list[Service], list[str]]:
-    """id 목록으로 Service 객체 반환. 누락 ID는 두 번째 원소로."""
+    """id 목록으로 Service 객체 반환. 누락 ID는 두 번째 원소로.
+
+    순수 api_id("15000827")와 정식 service_id("openapi_new:15000827")를
+    모두 허용한다.
+    """
     catalog = load_all()
     found: list[Service] = []
     missing: list[str] = []
 
     for id_ in ids:
-        if id_ in catalog:
-            found.append(Service(**catalog[id_]))
+        key = _internal_id(id_.strip())
+        if key in catalog:
+            found.append(Service(**catalog[key]))
         else:
             logger.warning("ID 없음: %s", id_)
             missing.append(id_)

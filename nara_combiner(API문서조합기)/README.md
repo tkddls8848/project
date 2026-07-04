@@ -46,7 +46,33 @@ http://127.0.0.1:8003
 }
 ```
 
-응답은 조합 아이디어와 계획 초안이다. 실제 실행은 이 응답을 구조화한 뒤 `nara_openclaw(행정서비스실행기)`에 전달한다.
+- `service_ids`: 1~10개. 순수 api_id(`15000827`)와 Search 정식 ID(`openapi_new:15000827`)
+  모두 허용 (경계에서 내부 ID로 변환만 하고 재해석하지 않음)
+- `question`: 최대 500자
+
+성공 응답(200) 필수 필드:
+
+| 필드 | 의미 |
+| --- | --- |
+| `service_ids` | 요청한 ID 원본 목록 |
+| `domains` | 선택된 서비스의 분류체계 집합 |
+| `warning` | 같은 도메인 조합 등 주의 문구 (없으면 null) |
+| `missing` | 카탈로그에서 찾지 못한 ID (일부 누락은 200 + 이 필드로 보고) |
+| `suggestion` | LLM 조합 제안 본문 |
+| `truncated` | 길이 예산(`COMBINER_MAX_SUGGESTION_CHARS`, 기본 4000자) 초과로 잘렸는지 |
+| `elapsed_ms`, `model` | 진단 정보 |
+
+오류 응답 계약:
+
+| 상황 | 상태 | `error_code` |
+| --- | --- | --- |
+| 전체 ID 누락 | 404 | `NO_SERVICES_FOUND` |
+| Ollama 연결 실패·시간 초과·오류 응답 | 503 | `UPSTREAM_UNAVAILABLE` |
+| 빈 `service_ids`, 10개 초과, 질문 500자 초과 | 422 | (FastAPI validation) |
+
+오류 본문은 `{ok: false, error_code, message}` 형식이며 기존 UI 호환을 위해 `error` 키도 함께 담는다.
+
+응답은 조합 아이디어와 계획 초안이다. 실제 실행은 이 응답을 구조화한 뒤 `nara_openclaw(행정서비스실행기)`에 전달한다. 실행·승인 기능은 이 서비스에 포함하지 않는다.
 
 ### `GET /compose-stream`
 

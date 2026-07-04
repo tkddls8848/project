@@ -21,10 +21,14 @@ async def generate(prompt: str, model: str = OLLAMA_MODEL) -> str:
             return resp.json().get("response", "").strip()
         except httpx.ConnectError:
             raise RuntimeError(f"Ollama 연결 실패 ({OLLAMA_BASE_URL}). Ollama가 실행 중인지 확인하세요.")
+        except httpx.TimeoutException:
+            raise RuntimeError(f"Ollama 응답 시간 초과 ({OLLAMA_BASE_URL}).")
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:
                 raise RuntimeError(f"모델 없음: {model}. `ollama pull {model}` 을 먼저 실행하세요.")
-            raise
+            raise RuntimeError(f"Ollama 오류 응답: HTTP {e.response.status_code}")
+        except httpx.HTTPError as e:
+            raise RuntimeError(f"Ollama 호출 실패: {type(e).__name__}")
 
 
 async def generate_stream(prompt: str, model: str = OLLAMA_MODEL) -> AsyncIterator[str]:
@@ -48,3 +52,7 @@ async def generate_stream(prompt: str, model: str = OLLAMA_MODEL) -> AsyncIterat
                         pass
         except httpx.ConnectError:
             raise RuntimeError(f"Ollama 연결 실패 ({OLLAMA_BASE_URL})")
+        except httpx.TimeoutException:
+            raise RuntimeError(f"Ollama 응답 시간 초과 ({OLLAMA_BASE_URL})")
+        except httpx.HTTPStatusError as e:
+            raise RuntimeError(f"Ollama 오류 응답: HTTP {e.response.status_code}")
