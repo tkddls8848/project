@@ -36,6 +36,8 @@ def app_client(monkeypatch, tmp_path, fixture_apidata_dir):
     from backend import main
 
     main.detail_provider.reload()
+    main.lexical_retriever.reload()
     client = TestClient(main.app)
     yield client
     main.detail_provider.reload()
+    main.lexical_retriever.reload()

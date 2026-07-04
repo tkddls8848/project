@@ -86,6 +86,7 @@ def _extract_metadata(doc, source_path):
         "title":          _safe_get(info, "목록명") or _safe_get(swagger_info, "title"),
         "provider":       _safe_get(info, "제공기관"),
         "category":       _safe_get(info, "분류체계"),
+        "keywords":       _safe_get(info, "키워드"),
         "description":    description,
         "url":            doc.get("crawled_url", ""),
         "endpoint_count": len(doc.get("endpoints") or []),

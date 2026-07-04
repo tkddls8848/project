@@ -78,6 +78,27 @@ python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload
 
 CORS: 전체 오리진 허용 (`allow_origins=["*"]`, GET/POST만).
 
+## 하이브리드 검색
+
+`POST /search`는 두 채널을 함께 사용한다.
+
+| 채널 | 구현 | 필요 조건 |
+| --- | --- | --- |
+| vector | SentenceTransformer + FAISS | 인덱스·모델 (POST /build) |
+| lexical | BM25 + CJK 문자 bigram | 없음 (metadata.jsonl 또는 apidata 스캔) |
+
+- 두 채널 모두 결과가 있으면 **RRF**(Reciprocal Rank Fusion, k=60)로 순위를
+  융합한다. 점수 스케일이 다른 두 채널을 순위 기반으로 합치는 표준 기법이다
+  (Azure AI Search, Weaviate 등과 동일 방식). 이때 `score`는 RRF 점수다.
+- 한 채널만 가용하면 그 채널의 원 점수를 그대로 반환한다.
+- **인덱스·모델이 없어도 lexical 채널로 검색이 동작한다.** 한국어는
+  Elasticsearch `cjk` analyzer와 같은 문자 bigram 방식으로 형태소 분석기
+  없이 매칭한다.
+- `use_vector: false`로 lexical 전용 검색이 가능하다.
+- 결과의 `match_reasons`에 어떤 채널이 문서를 찾았는지 표시된다.
+- `diagnostics`에 `lexical_candidates`, `lexical_source`, `fusion` 필드가
+  추가됐다 (기존 필드는 유지).
+
 ## service_id 계약
 
 정식 형식은 `{source}:{api_id}` (예: `openapi_new:15000827`)이며 `/search` 결과의

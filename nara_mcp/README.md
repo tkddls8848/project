@@ -72,6 +72,11 @@ Claude Desktop / 일반 JSON 설정:
 | `get_service_detail(service_id)` | `GET /services/{service_id}` | 검색 결과의 정식 ID(`openapi_new:{api_id}`)를 그대로 전달 |
 | `get_index_health()` | `GET /health` | 인덱스·데이터 준비 상태 진단 |
 
+세 도구 모두 MCP spec의 tool annotations로 `readOnlyHint: true`,
+`destructiveHint: false`, `idempotentHint: true`, `openWorldHint: false`를
+선언한다 (MCP reference server 관례). Host는 프로토콜 수준에서 이 서버가
+환경을 수정하지 않음을 알 수 있다.
+
 성공 응답은 upstream JSON에 `ok: true`, `service: "nara_search"`만 더한
 최소 정규화다. 실패는 항상 다음 형식이다.
 

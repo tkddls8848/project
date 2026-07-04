@@ -17,9 +17,20 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from mcp.server.fastmcp import FastMCP
+from mcp.types import ToolAnnotations
 
 import config
 from clients.search_client import SearchClient
+
+# MCP spec tool annotations: 세 도구 모두 환경을 수정하지 않는 read-only이며
+# 같은 인자로 반복 호출해도 부작용이 없다. 로컬 Search 서비스만 호출하므로
+# open world(임의 외부 엔티티 접촉)가 아니다.
+READ_ONLY = ToolAnnotations(
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=False,
+)
 
 mcp = FastMCP(
     "nara-search",
@@ -41,7 +52,7 @@ def get_client() -> SearchClient:
     return _client
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 def search_public_services(query: str, top_k: int = 5, use_vector: bool = True) -> dict[str, Any]:
     """자연어로 공공 OpenAPI 문서를 검색한다.
 
@@ -58,7 +69,7 @@ def search_public_services(query: str, top_k: int = 5, use_vector: bool = True) 
     return get_client().search(query, top_k=top_k, use_vector=use_vector)
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 def get_service_detail(service_id: str) -> dict[str, Any]:
     """service_id로 공공 API 문서의 상세 정보를 조회한다.
 
@@ -75,7 +86,7 @@ def get_service_detail(service_id: str) -> dict[str, Any]:
     return get_client().get_service_detail(service_id)
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 def get_index_health() -> dict[str, Any]:
     """검색 인덱스 준비 상태를 확인한다.
 

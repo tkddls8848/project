@@ -12,11 +12,19 @@ from .core import config
 from .core.service_id import ServiceIdError, normalize_service_id, to_canonical
 from .indexing.index_builder import build_status, run_build
 from .search.faiss_retriever import FAISSRetriever
+from .search.fusion import reciprocal_rank_fusion
+from .search.lexical_retriever import LexicalRetriever
 
 STATIC_DIR = config.BASE_DIR / "frontend"
 
 retriever = FAISSRetriever()
+lexical_retriever = LexicalRetriever()
 detail_provider = ServiceDetailProvider()
+
+CHANNEL_REASONS = {
+    "vector": "vector similarity (ko-sroberta-multitask)",
+    "lexical": "lexical BM25 (cjk bigram)",
+}
 
 app = FastAPI(title="Nara API Document Search", version="0.4.0")
 app.add_middleware(
@@ -46,6 +54,7 @@ def _relative_source_path(path: str) -> str:
 
 
 def _to_result(meta: dict) -> dict:
+    channels = meta.get("match_channels") or ["vector"]
     return {
         "service_id":          to_canonical(str(meta.get("api_id", ""))),
         "api_type":            "openapi_new",
@@ -55,7 +64,7 @@ def _to_result(meta: dict) -> dict:
         "description":         meta.get("description", ""),
         "display_text":        meta.get("description", ""),
         "score":               meta.get("score", 0.0),
-        "match_reasons":       ["vector similarity (ko-sroberta-multitask)"],
+        "match_reasons":       [CHANNEL_REASONS.get(c, c) for c in channels],
         "domain_ids":          [],
         "concept_ids":         [],
         "endpoints":           [],
@@ -94,23 +103,50 @@ def health():
         "index_error":           retriever.last_error() if count is None else "",
         "build_state":           build_status.state,
         "diagnostics":           retriever.diagnostics(),
+        "lexical_corpus_total":  lexical_retriever.corpus_size(),
+        "lexical_source":        lexical_retriever.corpus_source(),
     }
 
 
 @app.post("/search")
 def search(request: SearchRequest):
+    """하이브리드 검색: 벡터(FAISS) + 렉시컬(BM25/cjk bigram)을 RRF로 융합.
+
+    - 두 채널 모두 결과가 있으면 RRF(k=60)로 순위 융합 (score는 RRF 점수)
+    - 한 채널만 가용하면 그 채널의 원 점수를 그대로 사용
+    - 인덱스·모델이 없어도 렉시컬 채널로 검색이 동작한다
+    """
     query = request.query.strip()
     if len(query) < 2:
         raise HTTPException(status_code=400, detail="query must be at least 2 characters")
-    raw = retriever.search(query, top_k=request.top_k)
-    results = [_to_result(m) for m in raw]
+
+    vector_raw = retriever.search(query, top_k=request.top_k) if request.use_vector else []
+    lexical_raw = lexical_retriever.search(query, top_k=request.top_k)
+
+    if vector_raw and lexical_raw:
+        fused = reciprocal_rank_fusion(
+            {"vector": vector_raw, "lexical": lexical_raw}, top_k=request.top_k
+        )
+        fusion = "rrf"
+    elif vector_raw or lexical_raw:
+        channel = "vector" if vector_raw else "lexical"
+        fused = [dict(m, match_channels=[channel]) for m in (vector_raw or lexical_raw)][: request.top_k]
+        fusion = channel
+    else:
+        fused = []
+        fusion = "none"
+
+    results = [_to_result(m) for m in fused]
     return {
         "query": query,
         "results": results,
         "diagnostics": {
-            "vector_enabled":    True,
-            "vector_candidates": len(results),
-            "vector_error":      retriever.last_error() if not results else "",
+            "vector_enabled":     request.use_vector,
+            "vector_candidates":  len(vector_raw),
+            "vector_error":       retriever.last_error() if not vector_raw else "",
+            "lexical_candidates": len(lexical_raw),
+            "lexical_source":     lexical_retriever.corpus_source(),
+            "fusion":             fusion,
         },
     }
 
@@ -122,6 +158,7 @@ def trigger_build():
 
     def _on_complete():
         retriever.reload()
+        lexical_retriever.reload()
         detail_provider.reload()
 
     thread = threading.Thread(target=run_build, kwargs={"on_complete": _on_complete}, daemon=True)

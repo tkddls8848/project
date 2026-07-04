@@ -43,6 +43,17 @@ def test_tool_descriptions_mention_contract():
     assert "openapi_new" in detail.description
 
 
+def test_all_tools_declare_read_only_annotations():
+    """MCP spec tool annotations — host가 프로토콜 수준에서 read-only임을 알 수 있다."""
+    for tool in anyio.run(server.mcp.list_tools):
+        annotations = tool.annotations
+        assert annotations is not None, f"{tool.name}: annotations 없음"
+        assert annotations.readOnlyHint is True, tool.name
+        assert annotations.destructiveHint is False, tool.name
+        assert annotations.idempotentHint is True, tool.name
+        assert annotations.openWorldHint is False, tool.name
+
+
 def test_search_tool_returns_upstream_results(monkeypatch):
     def handler(request):
         return httpx.Response(200, json={
