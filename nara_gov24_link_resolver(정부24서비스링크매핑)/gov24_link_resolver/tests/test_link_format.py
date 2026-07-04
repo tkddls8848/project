@@ -81,9 +81,38 @@ def test_metadata_domain_ids_nonempty(metadata_records):
     assert not empty, f"domain_ids 없는 레코드: {empty}"
 
 
-def test_report_exists():
+def _load_validate_module():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "validate_outputs", ROOT / "scripts" / "validate_outputs.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_validation_report_reproducible(tmp_path):
+    """커밋된 후보 데이터에서 리포트가 재생성되고 완료 기준을 충족한다.
+
+    작업 트리를 오염시키지 않도록 리포트는 임시 디렉터리에 생성한다.
+    """
+    validate_outputs = _load_validate_module()
+    report = validate_outputs.run_validation(output_dir=tmp_path, verbose=False)
+
+    report_path = tmp_path / "link_resolution_report.json"
+    assert report_path.exists()
+    assert report["total_candidates"] > 0
+    assert report["schema_errors"] == 0, report["schema_error_details"]
+    assert report["url_validity_rate"] >= 0.9, \
+        f"URL 유효율 {report['url_validity_rate']:.0%} — 90% 미만"
+
+
+def test_committed_report_meets_threshold():
+    """data/output에 생성된 실제 리포트가 있으면 기준 충족을 확인한다."""
     report_path = OUTPUT / "link_resolution_report.json"
-    assert report_path.exists(), "link_resolution_report.json 없음 — validate_outputs.py 먼저 실행"
+    if not report_path.exists():
+        pytest.skip("link_resolution_report.json 없음 — scripts/validate_outputs.py로 생성")
     report = json.loads(report_path.read_text(encoding="utf-8"))
     assert report.get("url_validity_rate", 0) >= 0.9, \
         f"URL 유효율 {report.get('url_validity_rate'):.0%} — 90% 미만"

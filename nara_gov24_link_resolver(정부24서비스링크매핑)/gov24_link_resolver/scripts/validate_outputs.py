@@ -60,22 +60,35 @@ def check_urls(records: list[dict], url_field: str = "url") -> list[str]:
     return broken
 
 
-def main() -> None:
-    OUTPUT.mkdir(parents=True, exist_ok=True)
+def run_validation(
+    working_dir: Path = WORKING,
+    output_dir: Path = OUTPUT,
+    schemas_dir: Path = SCHEMAS,
+    verbose: bool = True,
+) -> dict:
+    """검증을 수행하고 리포트를 output_dir에 저장한 뒤 dict로 반환한다.
+
+    테스트는 output_dir에 임시 경로를 넘겨 작업 트리를 오염시키지 않는다.
+    """
+    def log(message: str) -> None:
+        if verbose:
+            print(message)
+
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     # 스키마 로드
-    candidate_schema = json.loads((SCHEMAS / "gov24_link_candidate.schema.json").read_text(encoding="utf-8"))
-    metadata_schema = json.loads((SCHEMAS / "gov24_service_metadata.schema.json").read_text(encoding="utf-8"))
+    candidate_schema = json.loads((schemas_dir / "gov24_link_candidate.schema.json").read_text(encoding="utf-8"))
+    metadata_schema = json.loads((schemas_dir / "gov24_service_metadata.schema.json").read_text(encoding="utf-8"))
 
     # 후보 파일
-    candidates_path = WORKING / "link_candidates.jsonl"
-    metadata_path = OUTPUT / "gov24_service_metadata.jsonl"
+    candidates_path = working_dir / "link_candidates.jsonl"
+    metadata_path = output_dir / "gov24_service_metadata.jsonl"
 
     candidates = load_jsonl(candidates_path) if candidates_path.exists() else []
     metadata = load_jsonl(metadata_path) if metadata_path.exists() else []
 
-    print(f"link_candidates.jsonl : {len(candidates)}건")
-    print(f"gov24_service_metadata.jsonl : {len(metadata)}건")
+    log(f"link_candidates.jsonl : {len(candidates)}건")
+    log(f"gov24_service_metadata.jsonl : {len(metadata)}건")
 
     # 스키마 검증
     schema_errors: list[str] = []
@@ -102,29 +115,29 @@ def main() -> None:
             domain_counter[d] += 1
 
     # 보고서 출력
-    print("\n── 검증 결과 ────────────────────────────")
+    log("\n── 검증 결과 ────────────────────────────")
     if schema_errors:
-        print(f"  스키마 오류 {len(schema_errors)}건:")
+        log(f"  스키마 오류 {len(schema_errors)}건:")
         for e in schema_errors:
-            print(f"    {e}")
+            log(f"    {e}")
     else:
-        print("  스키마 검증: 모두 통과")
+        log("  스키마 검증: 모두 통과")
 
     if broken_urls:
-        print(f"  URL 형식 불량 {len(broken_urls)}건:")
+        log(f"  URL 형식 불량 {len(broken_urls)}건:")
         for e in broken_urls:
-            print(f"    {e}")
+            log(f"    {e}")
     else:
-        print("  URL 형식 검사: 모두 통과")
+        log("  URL 형식 검사: 모두 통과")
 
     if dup_urls:
-        print(f"  중복 URL {len(dup_urls)}건: {dup_urls}")
+        log(f"  중복 URL {len(dup_urls)}건: {dup_urls}")
     else:
-        print("  중복 URL: 없음")
+        log("  중복 URL: 없음")
 
     valid_url_count = len(candidates) - len(broken_urls)
     validity_rate = valid_url_count / len(candidates) if candidates else 0.0
-    print(f"\n  URL 유효율: {validity_rate:.0%} ({valid_url_count}/{len(candidates)})")
+    log(f"\n  URL 유효율: {validity_rate:.0%} ({valid_url_count}/{len(candidates)})")
 
     # 리포트 저장
     report = {
@@ -145,12 +158,17 @@ def main() -> None:
         "broken_link_details": broken_urls,
     }
 
-    report_path = OUTPUT / "link_resolution_report.json"
+    report_path = output_dir / "link_resolution_report.json"
     report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"\n리포트 저장: {report_path}")
+    log(f"\n리포트 저장: {report_path}")
+    return report
+
+
+def main() -> None:
+    report = run_validation()
 
     # 종료 코드
-    if schema_errors or validity_rate < 0.9:
+    if report["schema_errors"] or report["url_validity_rate"] < 0.9:
         print("\n[FAIL] 완료 기준 미충족")
         sys.exit(1)
     print("\n[PASS] 모든 완료 기준 충족")
