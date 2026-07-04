@@ -6,9 +6,6 @@ import threading
 import time
 from pathlib import Path
 
-import faiss
-from sentence_transformers import SentenceTransformer
-
 from ..core import config
 
 
@@ -145,6 +142,10 @@ def run_build(on_complete=None):
     s.update(state="running", started_at=time.time(), finished_at=None,
              step=0, progress=0, total=0, message="시작 중...")
     try:
+        # 무거운 의존성은 빌드 시작 시점에만 import (미설치 시 build 오류로 보고)
+        import faiss
+        from sentence_transformers import SentenceTransformer
+
         # 1단계: 파일 탐색
         s.update(step=1, step_name="파일 탐색")
         openapi_dir = get_apidata_dir()

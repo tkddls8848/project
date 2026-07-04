@@ -10,21 +10,19 @@ nara_search/
     __init__.py
     main.py              ← FastAPI 엔트리 (GET /, /health, /search, /build, ...)
     core/
-      config.py          ← BASE_DIR = nara_search/, ensure_local_model()
+      config.py          ← BASE_DIR = nara_search/, 경로 계약, ensure_local_model()
+      service_id.py      ← service_id 정규화 계약 ({source}:{api_id})
       schemas.py         ← 공통 Pydantic 스키마
     catalog/
       data_loader.py     ← 카탈로그/문서 JSONL 로더
       document_builder.py
+      detail_service.py  ← 상세조회 (catalog 우선, 평면 apidata fallback)
     search/
-      faiss_retriever.py ← SentenceTransformer + FAISS 검색
-      lexical.py
-      ranker.py
-      retriever.py
-      ollama_retriever.py
+      faiss_retriever.py ← SentenceTransformer + FAISS 검색 (지연 import)
     indexing/
       index_builder.py   ← 백그라운드 인덱스 빌드 (4단계 진행 보고)
-      cache_builder.py
     requirements.txt
+  tests/                 ← pytest (fixture apidata 기반, 무거운 의존성 불필요)
   frontend/              ← 단독 사용용 vanilla JS UI (index.html, app.js, styles.css)
                           URL 마운트는 /static (변경 없음)
   apidata/               ← OpenAPI JSON ({api_id}_{date}.json, 평면 3,526건)
@@ -71,14 +69,49 @@ python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload
 | Method | Path | 설명 |
 | --- | --- | --- |
 | GET | `/` | `frontend/index.html` 반환 (단독 UI) |
-| GET | `/health` | 인덱스 상태, 데이터 경로, 빌드 상태 |
+| GET | `/health` | 인덱스 상태, 데이터 경로, 빌드 상태, `diagnostics` (apidata/index/metadata/model 존재 여부) |
 | POST | `/search` | 자연어 검색. body: `{query, top_k, use_vector}` |
 | POST | `/build` | 백그라운드 인덱스 빌드 트리거 |
 | GET | `/build/status` | 빌드 진행률 (4단계: 파일탐색→파싱→임베딩→저장) |
 | GET | `/static/*` | 정적 파일 |
-| GET | `/services/{service_id:path}` | 현재 404 (TODO) |
+| GET | `/services/{service_id:path}` | 서비스 상세조회 (아래 참고) |
 
 CORS: 전체 오리진 허용 (`allow_origins=["*"]`, GET/POST만).
+
+## service_id 계약
+
+정식 형식은 `{source}:{api_id}` (예: `openapi_new:15000827`)이며 `/search` 결과의
+`service_id`를 `/services/{service_id}`에 그대로 전달하면 성공해야 한다.
+
+| 입력 | 동작 |
+| --- | --- |
+| `openapi_new:15000827` | 정식 형식. 그대로 조회 |
+| `15000827` (순수 숫자 api_id) | Search가 `openapi_new:` prefix로 정규화 |
+| `filedata:15000827` (미지원 source) | `400` + `error_code: UNSUPPORTED_SOURCE` |
+| `abc` 등 형식 위반 | `400` + `error_code: INVALID_SERVICE_ID` |
+| 형식은 유효하나 미존재 | `404` + `error_code: NOT_FOUND` |
+| 데이터 소스 미준비 (catalog·apidata 모두 없음) | `503` + `error_code: SERVICE_UNAVAILABLE` |
+
+정규화는 Search만 담당한다 (`backend/core/service_id.py`). 다른 프로젝트는 받은
+정식 ID를 재해석하지 않고 그대로 전달한다.
+
+오류 응답 형식:
+
+```json
+{"ok": false, "error_code": "NOT_FOUND", "message": "service_id not found"}
+```
+
+## 상세조회 데이터 소스
+
+`/services/{service_id}`는 두 소스를 순서대로 시도한다 (`detail_source` 필드로 표시).
+
+1. **catalog** — `data/02_catalog/*.jsonl` 등 카탈로그 산출물이 있으면
+   `DataRepository` + `DocumentBuilder` 사용 (endpoint/field/mapping 포함 상세)
+2. **apidata_flat** — 카탈로그가 없으면 평면 `apidata/{api_id}_{date}.json`을 직접
+   파싱해 최소 계약(name, description, provider_agency_name, category, endpoints,
+   request_fields, response_fields, source)을 채운다
+
+응답의 `raw_path`/`refined_path`는 로컬 절대 경로 대신 프로젝트 기준 상대 경로다.
 
 ## 외부 소비자와의 관계
 
@@ -87,4 +120,23 @@ CORS: 전체 오리진 허용 (`allow_origins=["*"]`, GET/POST만).
 
 ## 환경 변수
 
-현재 사용 안 함. 모든 경로는 `backend/core/config.py`에서 `BASE_DIR` 기준 계산. 다른 위치에 데이터/모델을 두려면 config.py를 직접 수정하거나 환경변수 기반으로 리팩토링 필요.
+모든 경로는 기본값이 `BASE_DIR` 기준이며 다음 환경변수로 재지정할 수 있다.
+
+| 변수 | 기본값 | 용도 |
+| --- | --- | --- |
+| `NARA_SEARCH_APIDATA_DIR` | `apidata/` | 평면 OpenAPI JSON |
+| `NARA_SEARCH_STORAGE_DIR` | `storage/` | faiss.index, metadata.jsonl |
+| `NARA_SEARCH_MODEL_DIR` | `models/ko-sroberta-multitask/` | 임베딩 모델 |
+| `NARA_SEARCH_DATA_DIR` | `data/` | 카탈로그 산출물 루트 (02_catalog/03_semantic/04_output/minimal) |
+
+## 테스트
+
+```bash
+pip install pytest httpx
+python -m pytest tests -q
+```
+
+테스트는 faiss·sentence-transformers·실제 데이터 없이 실행된다.
+fixture apidata(`tests/fixtures/apidata/`)로 상세조회 계약을, monkeypatch로
+검색 envelope과 오류 계약을 검증한다. 인덱스·모델·카탈로그가 없어도 앱은
+기동하며 `/health`의 `diagnostics`로 무엇이 없는지 진단할 수 있다.
