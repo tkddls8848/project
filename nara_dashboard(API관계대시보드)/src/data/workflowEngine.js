@@ -255,6 +255,19 @@ function buildAnalysisPrompt(docs, userPrompt = '이 API들을 조합하면 어�
   ].join('\n');
 }
 
+function normalizeExportFormat(format) {
+  return String(format || 'JSON').trim().toUpperCase();
+}
+
+function exportFilename(filename, format) {
+  const base = String(filename || 'result')
+    .trim()
+    .replace(/[\\/:*?"<>|]+/g, '-')
+    .replace(/\s+/g, '_') || 'result';
+  const ext = normalizeExportFormat(format).toLowerCase() === 'xlsx' ? 'xls' : normalizeExportFormat(format).toLowerCase();
+  return base.toLowerCase().endsWith(`.${ext}`) ? base : `${base}.${ext}`;
+}
+
 function executeNode(node, edges, byId) {
   if (node.type === 'apiSearch') {
     const results = searchApiDocs(node.data?.query, node.data?.maxResults);
@@ -398,6 +411,34 @@ function executeNode(node, edges, byId) {
     };
   }
 
+  if (node.type === 'exportNode') {
+    if (inputDocs.length === 0) {
+      return {
+        ...node.data,
+        status: 'error',
+        output: { kind: 'export', docs: [], exportRequest: null },
+        error: '내보낼 입력 데이터가 없습니다.',
+      };
+    }
+
+    const format = normalizeExportFormat(node.data?.format);
+    return {
+      ...node.data,
+      status: 'success',
+      results: inputDocs,
+      output: {
+        kind: 'export',
+        docs: inputDocs,
+        exportRequest: {
+          format,
+          filename: exportFilename(node.data?.filename, format),
+          docs: inputDocs,
+        },
+      },
+      error: '',
+    };
+  }
+
   return {
     ...node.data,
     status: 'success',
@@ -422,6 +463,57 @@ export function runWorkflow(nodes, edges) {
   for (const node of topoSort(nodes, edges)) {
     const current = nextById.get(node.id);
     const data = executeNode(current, edges, nextById);
+    nextById.set(node.id, { ...current, data });
+  }
+
+  return nodes.map(node => nextById.get(node.id) ?? node);
+}
+
+function upstreamNodeIds(targetNodeId, edges) {
+  const byTarget = new Map();
+  edges.forEach(edge => {
+    if (!byTarget.has(edge.target)) byTarget.set(edge.target, []);
+    byTarget.get(edge.target).push(edge.source);
+  });
+
+  const visited = new Set();
+  const stack = [targetNodeId];
+
+  while (stack.length > 0) {
+    const nodeId = stack.pop();
+    if (visited.has(nodeId)) continue;
+    visited.add(nodeId);
+
+    for (const sourceId of byTarget.get(nodeId) ?? []) {
+      stack.push(sourceId);
+    }
+  }
+
+  return visited;
+}
+
+export function runWorkflowForOutput(nodes, edges, outputNodeId) {
+  const targetIds = upstreamNodeIds(outputNodeId, edges);
+  const targetNodes = nodes.filter(node => targetIds.has(node.id));
+  const targetEdges = edges.filter(edge => targetIds.has(edge.source) && targetIds.has(edge.target));
+
+  const nextById = new Map(nodes.map(node => [
+    node.id,
+    targetIds.has(node.id)
+      ? {
+          ...node,
+          data: {
+            ...node.data,
+            status: 'idle',
+            error: '',
+          },
+        }
+      : node,
+  ]));
+
+  for (const node of topoSort(targetNodes, targetEdges)) {
+    const current = nextById.get(node.id);
+    const data = executeNode(current, targetEdges, nextById);
     nextById.set(node.id, { ...current, data });
   }
 

@@ -1,4 +1,4 @@
-export function Toolbar({ nodeCount, edgeCount, onClear, onReset, onRun }) {
+export function Toolbar({ nodeCount, edgeCount, onClear, onReset }) {
   return (
     <div
       style={{
@@ -67,9 +67,6 @@ export function Toolbar({ nodeCount, edgeCount, onClear, onReset, onRun }) {
       <GhostBtn onClick={onReset} color="#818cf8">↺ 초기화</GhostBtn>
       <GhostBtn onClick={onClear} color="#f87171">✕ 삭제</GhostBtn>
 
-      <div style={{ width: 1, height: 20, background: '#1e2d3d', margin: '0 2px' }} />
-
-      <PrimaryBtn onClick={onRun}>▶ 실행</PrimaryBtn>
     </div>
   );
 }
@@ -143,30 +140,6 @@ function GhostBtn({ onClick, color, children }) {
         e.currentTarget.style.background = 'transparent';
         e.currentTarget.style.borderColor = `${color}44`;
       }}
-    >
-      {children}
-    </button>
-  );
-}
-
-function PrimaryBtn({ children, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        background: '#16a34a',
-        border: 'none',
-        borderRadius: 5,
-        color: 'white',
-        fontSize: 11,
-        fontWeight: 700,
-        padding: '5px 14px',
-        cursor: 'pointer',
-        letterSpacing: '0.02em',
-        transition: 'background 0.12s',
-      }}
-      onMouseEnter={e => e.currentTarget.style.background = '#15803d'}
-      onMouseLeave={e => e.currentTarget.style.background = '#16a34a'}
     >
       {children}
     </button>

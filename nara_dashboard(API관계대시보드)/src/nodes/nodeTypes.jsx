@@ -21,7 +21,7 @@ function ResultPreview({ results }) {
       <div style={{ fontSize: 9, color: '#4b5563', fontWeight: 700, letterSpacing: '0.06em' }}>
         결과 {results.length}개
       </div>
-      {results.slice(0, 3).map(doc => (
+      {results.slice(0, 5).map(doc => (
         <div key={doc.apiId} style={{
           color: '#cbd5e1',
           background: '#0c1220',
@@ -37,7 +37,32 @@ function ResultPreview({ results }) {
           {doc.name}
         </div>
       ))}
+      {results.length > 5 && (
+        <div style={{ fontSize: 9, color: '#64748b', padding: '1px 2px' }}>
+          +{results.length - 5}개 더
+        </div>
+      )}
     </div>
+  );
+}
+
+function OutputRunButton({ onRun, label = '이 출력 실행' }) {
+  if (!onRun) return null;
+
+  return (
+    <button
+      type="button"
+      onClick={(event) => {
+        event.stopPropagation();
+        onRun();
+      }}
+      onPointerDown={event => event.stopPropagation()}
+      style={runButtonStyle}
+      onMouseEnter={event => { event.currentTarget.style.background = '#0ea5e9'; }}
+      onMouseLeave={event => { event.currentTarget.style.background = '#0284c7'; }}
+    >
+      ▶ {label}
+    </button>
   );
 }
 
@@ -128,12 +153,17 @@ export function SummaryNode({ data, selected }) {
 
 export function ExportNode({ data, selected }) {
   const fmtColor = { JSON: '#f59e0b', CSV: '#06b6d4', XLSX: '#22c55e' };
+  const exportCount = data.output?.exportRequest?.docs?.length ?? data.results?.length ?? 0;
   return (
     <BaseNode category="output" icon="📤" title="내보내기" hasOutput={false} selected={selected}>
       <Field label="파일명" value={data.filename} />
       <div style={{ display: 'flex', gap: 6 }}>
         <Badge label={data.format || 'JSON'} color={fmtColor[data.format] ?? '#f59e0b'} />
+        <StatusBadge status={data.status} />
       </div>
+      {exportCount > 0 && <Field label="내보낼 데이터" value={`${exportCount}개 API 문서`} />}
+      {data.error && <Badge label={data.error} color="#f87171" />}
+      <OutputRunButton onRun={data.onRunOutput} />
     </BaseNode>
   );
 }
@@ -142,7 +172,12 @@ export function SaveNode({ data, selected }) {
   return (
     <BaseNode category="output" icon="💾" title="워크플로우 저장" hasOutput={false} selected={selected}>
       <Field label="저장 이름" value={data.name} />
-      <Badge label="Prometheus 저장소" color="#f97316" />
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <Badge label="Prometheus 저장소" color="#f97316" />
+        <StatusBadge status={data.status} />
+      </div>
+      {data.error && <Badge label={data.error} color="#f87171" />}
+      <OutputRunButton onRun={data.onRunOutput} />
     </BaseNode>
   );
 }
@@ -158,6 +193,7 @@ export function ChatOutputNode({ data, selected }) {
       </div>
       {docCount > 0 && <Field label="채팅 컨텍스트" value={`${docCount}개 API 문서`} />}
       {data.error && <Badge label={data.error} color="#f87171" />}
+      <OutputRunButton onRun={data.onRunOutput} label="채팅 준비" />
     </BaseNode>
   );
 }
@@ -176,4 +212,18 @@ export const nodeTypes = {
   exportNode:     ExportNode,
   saveNode:       SaveNode,
   chatOutput:     ChatOutputNode,
+};
+
+const runButtonStyle = {
+  width: '100%',
+  border: 'none',
+  borderRadius: 5,
+  background: '#0284c7',
+  color: 'white',
+  fontSize: 11,
+  fontWeight: 800,
+  padding: '6px 8px',
+  cursor: 'pointer',
+  letterSpacing: '0.02em',
+  transition: 'background 0.12s',
 };

@@ -89,6 +89,10 @@ function normalizeText(value) {
   return String(value ?? '').toLocaleLowerCase('ko');
 }
 
+function compactText(value) {
+  return normalizeText(value).replace(/[^\p{L}\p{N}]+/gu, '');
+}
+
 function queryTerms(query) {
   return normalizeText(query)
     .split(/[\s,，/|]+/)
@@ -96,10 +100,36 @@ function queryTerms(query) {
     .filter(Boolean);
 }
 
+function ngrams(value, size = 2) {
+  const text = compactText(value);
+  if (text.length === 0) return [];
+  if (text.length <= size) return [text];
+
+  const grams = [];
+  for (let i = 0; i <= text.length - size; i += 1) {
+    grams.push(text.slice(i, i + size));
+  }
+  return grams;
+}
+
+function overlapRatio(term, text) {
+  const queryGrams = new Set(ngrams(term));
+  if (queryGrams.size === 0) return 0;
+
+  const textGrams = new Set(ngrams(text));
+  let hits = 0;
+  queryGrams.forEach(gram => {
+    if (textGrams.has(gram)) hits += 1;
+  });
+
+  return hits / queryGrams.size;
+}
+
 function scoreDoc(doc, terms) {
   if (terms.length === 0) return 1;
 
   const fields = doc.fields.map(field => `${field.key} ${field.desc}`).join(' ');
+  const endpoints = doc.endpoints.map(endpoint => `${endpoint.method} ${endpoint.path} ${endpoint.description}`).join(' ');
   const haystacks = [
     { text: doc.name, weight: 5 },
     { text: doc.keywords.join(' '), weight: 4 },
@@ -107,13 +137,42 @@ function scoreDoc(doc, terms) {
     { text: doc.provider, weight: 2 },
     { text: doc.description, weight: 2 },
     { text: fields, weight: 1 },
+    { text: endpoints, weight: 1 },
   ];
 
   return terms.reduce((sum, term) => {
     const termScore = haystacks.reduce((hitSum, item) => {
-      return normalizeText(item.text).includes(term) ? hitSum + item.weight : hitSum;
+      const normalized = normalizeText(item.text);
+      const compact = compactText(item.text);
+      const compactTerm = compactText(term);
+
+      if (normalized.includes(term)) return hitSum + item.weight;
+      if (compactTerm && compact.includes(compactTerm)) return hitSum + item.weight * 0.8;
+
+      const fuzzy = compactTerm.length >= 2 ? overlapRatio(compactTerm, compact) : 0;
+      return fuzzy >= 0.5 ? hitSum + item.weight * fuzzy * 0.45 : hitSum;
     }, 0);
     return sum + termScore;
+  }, 0);
+}
+
+function broadScoreDoc(doc, terms) {
+  if (terms.length === 0) return 1;
+
+  const blob = [
+    doc.name,
+    doc.keywords.join(' '),
+    doc.topCategory,
+    doc.category,
+    doc.provider,
+    doc.description,
+    doc.fields.map(field => `${field.key} ${field.desc}`).join(' '),
+    doc.endpoints.map(endpoint => `${endpoint.method} ${endpoint.path} ${endpoint.description}`).join(' '),
+  ].join(' ');
+
+  return terms.reduce((sum, term) => {
+    const ratio = overlapRatio(term, blob);
+    return sum + (ratio >= 0.25 ? ratio : 0);
   }, 0);
 }
 
@@ -134,11 +193,23 @@ export function toWorkflowDoc(doc, extra = {}) {
 
 export function searchApiDocs(query, maxResults = 10) {
   const terms = queryTerms(query);
-  return apiDocs
+  const limit = Math.max(1, Number(maxResults) || 10);
+  const strictResults = apiDocs
     .map(doc => ({ doc, score: scoreDoc(doc, terms) }))
     .filter(item => item.score > 0)
-    .sort((a, b) => b.score - a.score || a.doc.name.localeCompare(b.doc.name, 'ko'))
-    .slice(0, Math.max(1, Number(maxResults) || 10))
+    .sort((a, b) => b.score - a.score || a.doc.name.localeCompare(b.doc.name, 'ko'));
+
+  const seen = new Set(strictResults.map(item => item.doc.apiId));
+  const broadResults = strictResults.length >= limit
+    ? []
+    : apiDocs
+        .filter(doc => !seen.has(doc.apiId))
+        .map(doc => ({ doc, score: broadScoreDoc(doc, terms) }))
+        .filter(item => item.score > 0)
+        .sort((a, b) => b.score - a.score || a.doc.name.localeCompare(b.doc.name, 'ko'));
+
+  return [...strictResults, ...broadResults]
+    .slice(0, limit)
     .map(item => toWorkflowDoc(item.doc, {
       searchScore: item.score,
       searchReason: terms.length > 0 ? terms.join(', ') : '전체 문서',

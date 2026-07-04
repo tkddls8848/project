@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ReactFlow,
   Background,
@@ -13,7 +13,7 @@ import {
 
 import { nodeTypes } from './nodes/nodeTypes.jsx';
 import { initialNodes, initialEdges, NODE_DEFAULTS } from './data/initialFlow.js';
-import { runWorkflow } from './data/workflowEngine.js';
+import { runWorkflowForOutput } from './data/workflowEngine.js';
 import { NodePalette } from './components/NodePalette.jsx';
 import { NodeProperties } from './components/NodeProperties.jsx';
 import { Toolbar } from './components/Toolbar.jsx';
@@ -27,6 +27,90 @@ const EDGE_STYLE = {
   stroke: '#475569',
   strokeWidth: 2,
 };
+
+const OUTPUT_NODE_TYPES = new Set(['exportNode', 'saveNode', 'chatOutput']);
+
+function escapeCsv(value) {
+  const text = String(value ?? '');
+  return /[",\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
+function exportRows(docs = []) {
+  return docs.map(doc => ({
+    apiId: doc.apiId,
+    name: doc.name,
+    provider: doc.provider,
+    topCategory: doc.topCategory,
+    category: doc.category,
+    keywords: (doc.keywords ?? []).join(', '),
+    description: doc.description,
+    endpoints: (doc.endpoints ?? []).length,
+    fields: (doc.fields ?? []).length,
+    searchScore: doc.searchScore ?? '',
+  }));
+}
+
+function toCsv(rows) {
+  const headers = ['apiId', 'name', 'provider', 'topCategory', 'category', 'keywords', 'description', 'endpoints', 'fields', 'searchScore'];
+  return [
+    headers.join(','),
+    ...rows.map(row => headers.map(header => escapeCsv(row[header])).join(',')),
+  ].join('\r\n');
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function toExcelHtml(rows) {
+  const headers = ['apiId', 'name', 'provider', 'topCategory', 'category', 'keywords', 'description', 'endpoints', 'fields', 'searchScore'];
+  const head = headers.map(header => `<th>${escapeHtml(header)}</th>`).join('');
+  const body = rows.map(row => (
+    `<tr>${headers.map(header => `<td>${escapeHtml(row[header])}</td>`).join('')}</tr>`
+  )).join('');
+
+  return `<!doctype html><html><head><meta charset="utf-8"></head><body><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></body></html>`;
+}
+
+function downloadBlob(content, filename, type) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function downloadExport(exportRequest) {
+  if (!exportRequest?.docs?.length) return;
+
+  const format = String(exportRequest.format || 'JSON').toUpperCase();
+  const rows = exportRows(exportRequest.docs);
+
+  if (format === 'CSV') {
+    downloadBlob(toCsv(rows), exportRequest.filename, 'text/csv;charset=utf-8');
+    return;
+  }
+
+  if (format === 'XLSX') {
+    downloadBlob(toExcelHtml(rows), exportRequest.filename, 'application/vnd.ms-excel;charset=utf-8');
+    return;
+  }
+
+  downloadBlob(
+    JSON.stringify({ exported_at: new Date().toISOString(), docs: exportRequest.docs }, null, 2),
+    exportRequest.filename,
+    'application/json;charset=utf-8'
+  );
+}
 
 export default function App() {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
@@ -83,7 +167,17 @@ export default function App() {
 
   const onKeyDown = useCallback(
     (e) => {
-      if (e.key === 'Delete' || e.key === 'Backspace') {
+      const target = e.target;
+      const isEditableTarget = target instanceof HTMLElement && (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT' ||
+        target.isContentEditable
+      );
+
+      if (isEditableTarget) return;
+
+      if (e.key === 'Delete') {
         setNodes((nds) => nds.filter((n) => !n.selected));
         setEdges((eds) =>
           eds.filter((ed) => {
@@ -113,16 +207,60 @@ export default function App() {
     setActiveChatContext(null);
   };
 
-  const handleRun = () => {
-    const nextNodes = runWorkflow(nodes, edges);
+  const handleRunOutput = useCallback((outputNodeId) => {
+    const nextNodes = runWorkflowForOutput(nodes, edges, outputNodeId);
     setNodes(nextNodes);
 
-    const chatNode = nextNodes.find((node) => node.type === 'chatOutput' && node.data?.status === 'success');
+    const exportNode = nextNodes.find((node) => (
+      node.id === outputNodeId &&
+      node.type === 'exportNode' &&
+      node.data?.status === 'success'
+    ));
+    if (exportNode?.data?.output?.exportRequest) {
+      downloadExport(exportNode.data.output.exportRequest);
+    }
+
+    const chatNode = nextNodes.find((node) => (
+      node.id === outputNodeId &&
+      node.type === 'chatOutput' &&
+      node.data?.status === 'success'
+    ));
     if (chatNode?.data?.chatContext) {
       setActiveChatContext(chatNode.data.chatContext);
       setSelectedNode(chatNode);
     }
-  };
+  }, [edges, nodes, setNodes]);
+
+  const handleUpdateNodeData = useCallback(
+    (nodeId, patch) => {
+      setNodes((nds) =>
+        nds.map((node) => {
+          if (node.id !== nodeId) return node;
+
+          const {
+            status,
+            error,
+            results,
+            output,
+            analysisPrompt,
+            chatContext,
+            ...stableData
+          } = node.data ?? {};
+
+          return {
+            ...node,
+            data: {
+              ...stableData,
+              ...patch,
+              status: 'idle',
+              error: '',
+            },
+          };
+        })
+      );
+    },
+    [setNodes]
+  );
 
   const minimapColor = (node) => {
     const typeToCategory = {
@@ -139,6 +277,20 @@ export default function App() {
     ? nodes.find((n) => n.id === selectedNode.id) ?? null
     : null;
 
+  const flowNodes = useMemo(
+    () => nodes.map(node => {
+      if (!OUTPUT_NODE_TYPES.has(node.type)) return node;
+      return {
+        ...node,
+        data: {
+          ...node.data,
+          onRunOutput: () => handleRunOutput(node.id),
+        },
+      };
+    }),
+    [handleRunOutput, nodes]
+  );
+
   return (
     <div
       style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}
@@ -150,7 +302,6 @@ export default function App() {
         edgeCount={edges.length}
         onClear={handleClear}
         onReset={handleReset}
-        onRun={handleRun}
       />
 
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
@@ -158,7 +309,7 @@ export default function App() {
 
         <div ref={reactFlowWrapper} style={{ flex: 1 }}>
           <ReactFlow
-            nodes={nodes}
+            nodes={flowNodes}
             edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
@@ -174,7 +325,7 @@ export default function App() {
             maxZoom={2}
             snapToGrid
             snapGrid={[16, 16]}
-            deleteKeyCode={['Delete', 'Backspace']}
+            deleteKeyCode="Delete"
           >
             <Background
               variant={BackgroundVariant.Dots}
@@ -191,7 +342,11 @@ export default function App() {
           </ReactFlow>
         </div>
 
-        <NodeProperties node={liveSelectedNode} edges={edges} />
+        <NodeProperties
+          node={liveSelectedNode}
+          edges={edges}
+          onUpdateData={handleUpdateNodeData}
+        />
       </div>
 
       <OllamaChatModal
