@@ -1,506 +1,473 @@
-# Nara MCP 독립 기능 연결 계획
-
-작성일: 2026-06-20
-상호 보완 대상: `plan claude.md`, `plan codex.md`
-목표: 두 계획의 장점을 합쳐, `D:\project` 아래의 독립 기능 프로젝트들이 자기 책임을 유지한 채 MCP로 필요한 기능만 선택적으로 노출하도록 정리한다.
-
-## 1. 기본 전제
-
-`D:\project`는 여러 하부 업무를 하나로 합친 단일 프로젝트가 아니다. 각 폴더는 검색, 조합, 실행, 대시보드, 크롤링처럼 서로 다른 목적을 가진 독립 기능 프로젝트다.
-
-따라서 이 계획의 목적은 코드베이스나 제품을 하나로 합치는 것이 아니다. 목적은 독립 기능 프로젝트의 경계를 유지하면서, MCP가 필요한 기능을 호출할 수 있는 얇은 연결 표면을 만드는 것이다.
-
-원칙:
-
-- 각 독립 기능 프로젝트는 단독 실행, 단독 테스트, 단독 배포 가능성을 유지한다.
-- `nara_mcp`는 중앙 통합 시스템이 아니라 선택적 MCP 어댑터다.
-- 기능 구현은 원 소유 프로젝트에서 하고, MCP는 HTTP로 호출만 한다.
-- 한 프로젝트의 내부 모듈을 다른 프로젝트에서 직접 import하지 않는다.
-- 공통화는 스키마, URL, tool 이름, 에러 envelope처럼 경계에 필요한 부분으로 제한한다.
-
-## 2. 정리 결론
-
-Nara에 MCP를 적용하는 1차 목표는 외부 DB MCP 서버를 도입하는 것이 아니라, 이미 존재하는 Nara의 검색·상세조회·조합·실행감사 기능을 MCP 도구로 안전하게 노출하는 것이다.
-
-다만 한 번에 모든 기능을 MCP로 열면 구현 범위와 보안 검증이 커진다. 따라서 다음 순서로 진행한다.
-
-1. `nara_mcp` 신규 독립 기능 프로젝트를 만든다.
-2. Phase 1은 `nara_search`만 래핑하는 read-only MVP로 제한한다.
-3. Phase 1.5에서 `nara_combiner`와 `nara_openclaw`의 read-only 조회 기능만 추가한다.
-4. Phase 2에서 dry-run과 승인 기반 실행 도구를 별도 플래그로 연다.
-5. 원격 MCP, 인증, 실행 자동화는 별도 보안 하드닝 계획이 확정된 뒤 진행한다.
-
-핵심 원칙은 기존 운영 코드의 직접 import 금지다. `nara_mcp`는 각 서비스의 HTTP 엔드포인트만 호출한다.
-
-## 3. 두 계획의 상호 보완 포인트
-
-| 항목 | Claude 계획의 강점 | Codex 계획의 강점 | 정리 결정 |
-| --- | --- | --- | --- |
-| MVP 범위 | 검색·상세조회·헬스체크로 작게 시작 | 조합·실행감사까지 전체 흐름 제시 | Phase 1은 Claude 범위, Phase 1.5에 Codex 범위 흡수 |
-| 보안 | read-only, 최소 권한, 승인 게이트 명확 | write/execute 비활성화와 마스킹 테스트 포함 | 실행 계열은 기본 비활성, 승인·마스킹 통과 후 별도 활성 |
-| 구현 방식 | `nara_search` HTTP 의존만 허용 | 기존 Nara 기능을 MCP tools/resources로 노출 | HTTP 어댑터 계층을 공통 패턴으로 고정 |
-| 복잡도 관리 | 신규 파서 작성 금지, 기존 로더 재사용 | 프로젝트별 책임 분리 | 엔드포인트 보강은 원 소유 프로젝트에서만 수행 |
-| 검증 | MCP 인스펙터와 Claude Desktop E2E | 단위·연동·보안 테스트 체계 | Phase별 완료 기준에 모두 반영 |
-
-## 4. 목표 구조
-
-```
-MCP Host
-  Claude Code / Claude Desktop / Cursor / Codex
-        |
-        v
-nara_mcp
-  server.py      FastMCP 도구 정의
-  clients/       각 Nara 서비스 HTTP 클라이언트
-  schemas/       MCP 응답 envelope 정규화
-  config.py      서비스 URL, timeout, feature flag
-        |
-        +--> nara_search    : 검색, 상세조회, 헬스체크
-        +--> nara_combiner  : API 조합 제안
-        +--> nara_openclaw  : 실행감사 조회, dry-run, 승인 실행
-```
-
-의존 규칙:
-
-- `nara_mcp`는 어떤 Nara 독립 기능 프로젝트의 Python 모듈도 import 하지 않는다.
-- 각 기능의 원천 데이터 접근은 해당 소유 서비스가 담당한다.
-- MCP 응답은 원 서비스 응답을 최대한 보존하고, 호스트 사용성에 필요한 얇은 요약만 추가한다.
-- Phase 1의 도구는 파일 쓰기, 인덱스 빌드, 실행 제출을 하지 않는다.
-
-## 5. Phase별 구현 계획
-
-### Phase 0: 인터페이스 고정
+# Nara 서브프로젝트 독립 개발 계획
 
-목표: 구현 전에 서비스 경계와 tool 이름을 고정해 이후 변경 비용을 줄인다.
-
-작업:
-
-- `nara_mcp` 디렉터리명 확정: `nara_mcp`
-- MCP tool 이름 확정:
-  - `search_public_services`
-  - `get_service_detail`
-  - `get_index_health`
-  - `compose_services`
-  - `get_run_record`
-  - `dry_run_plan`
-  - `execute_with_approval`
-- 환경 변수 확정:
-  - `NARA_SEARCH_BASE_URL=http://127.0.0.1:8000`
-  - `NARA_COMBINER_BASE_URL=http://127.0.0.1:8003`
-  - `NARA_OPENCLAW_BASE_URL=http://127.0.0.1:8002`
-  - `NARA_MCP_ENABLE_EXECUTE=false`
-- 공통 timeout 기본값: 10초
-- 공통 에러 envelope 정의:
+- 기준일: 2026-07-04
+- 문서 성격: 서브프로젝트별 현재 개발 계획 요약
+- 통합 제품 상태: 미정
 
-```json
-{
-  "ok": false,
-  "service": "nara_search",
-  "error_code": "NOT_FOUND",
-  "message": "service_id not found",
-  "detail": {}
-}
-```
+## 1. 문서 목적
 
-완료 기준:
+현재 목표는 여러 서브프로젝트를 하나의 통합 제품으로 완성하는 것이 아니다. 각 서브프로젝트를 자기 목적에 맞게 독립적으로 개발하고, 실제로 완성되는 기능과 품질을 확인하면서 전체 프로젝트의 최종 모습을 계속 수정한다.
 
-- README에 tool 목록, 입력, 출력, feature flag가 표로 정리된다.
-- 각 원 서비스의 담당 엔드포인트가 명확히 매핑된다.
+이 문서는 다음 내용만 관리한다.
 
-### Phase 1: 검색 MCP MVP
+- 각 서브프로젝트가 현재 무엇을 구현하고 있는가
+- 다음 개발 범위는 무엇인가
+- 해당 개발 단계를 어디까지 완료로 볼 것인가
+- 다른 프로젝트와 연결할 때 지켜야 할 최소 경계는 무엇인가
 
-목표: Claude Code 또는 Claude Desktop에서 자연어로 공공 API를 검색하고 상세조회할 수 있게 한다.
+통합 아키텍처, 전체 사용자 흐름, 공통 배포 구조는 지금 확정하지 않는다. 필요해지는 시점에 완성된 서브프로젝트를 기준으로 별도 계획을 작성한다.
 
-신규 프로젝트:
+## 2. 개발 원칙
 
-```
-nara_mcp/
-  server.py
-  config.py
-  clients/
-    search_client.py
-  schemas/
-    common.py
-  requirements.txt
-  README.md
-  tests/
-    test_search_tools.py
-```
+### 2.1 독립성
 
-MCP tools:
+- 각 서브프로젝트는 단독 실행과 단독 검증이 가능해야 한다.
+- 한 프로젝트의 완료가 다른 프로젝트의 개발 완료 조건이 되지 않는다.
+- 공통 릴리스나 동시 기동을 현재 완료 기준으로 삼지 않는다.
+- 다른 프로젝트의 내부 Python 또는 JavaScript 모듈을 직접 import하지 않는다.
 
-| Tool | 입력 | 호출 대상 | 정책 |
-| --- | --- | --- | --- |
-| `search_public_services` | `query`, `top_k=5`, `use_vector=true` | `POST /search` | read-only |
-| `get_service_detail` | `service_id` | `GET /services/{service_id}` | read-only |
-| `get_index_health` | 없음 | `GET /health` | read-only |
+### 2.2 점진적 결정
 
-`nara_search` 보강:
+- 현재 코드와 테스트로 확인된 사실을 계획의 출발점으로 삼는다.
+- 아직 구현되지 않은 통합 흐름은 확정된 아키텍처처럼 문서화하지 않는다.
+- 완성된 프로젝트의 입력·출력·운영 특성을 확인한 뒤 연결 방식을 정한다.
+- 미래 기능은 현재 개발을 방해하지 않는 후보 목록으로만 유지한다.
 
-- 현재 README 기준 `GET /services/{service_id:path}`는 TODO/404 상태다.
-- 이 엔드포인트를 실제 상세조회로 구현한다.
-- 기존 `backend/catalog/data_loader.py`, `document_builder.py`를 우선 재사용한다.
-- 신규 JSON 파서나 별도 카탈로그 규격은 만들지 않는다.
-- 반환 필드는 최소 `service_id`, `api_id`, `info`, `endpoints`, `swagger_json`로 둔다.
+### 2.3 연결 경계
 
-복잡도 완화:
+- 프로젝트 간 연결이 필요해지면 HTTP API 또는 파일 산출물 계약을 사용한다.
+- 공통 필드와 ID는 실제 연결이 발생하는 경계에서만 고정한다.
+- 변환과 정규화는 데이터를 소유한 프로젝트 또는 명시적인 어댑터가 담당한다.
+- MCP는 전체 시스템의 필수 중심이 아니라 독립적인 선택형 어댑터 프로젝트다.
 
-- MCP 서버에서 apidata를 직접 읽지 않는다.
-- 검색 결과 envelope은 `nara_search`의 기존 응답 형식을 유지한다.
-- 상세조회 실패는 404를 MCP 에러 envelope으로만 변환한다.
+### 2.4 문서 관리
 
-완료 기준:
+- 세부 구현 결정은 각 프로젝트의 `plan.md`, `PLAN.md`, README에서 관리한다.
+- 이 문서는 프로젝트별 현재 상태와 다음 개발 슬라이스만 요약한다.
+- 서브프로젝트 구현이 달라지면 이 문서도 그 결과에 맞춰 수정한다.
 
-- `nara_search` 실행 후 `/health`가 정상 응답한다.
-- `/search` 결과의 `service_id`로 `/services/{service_id}`가 200을 반환한다.
-- `mcp dev nara_mcp/server.py`에서 세 도구가 호출된다.
-- Claude Code 또는 Claude Desktop에 등록 후 자연어 질의로 검색 결과가 나온다.
+## 3. 현재 상태 요약
 
-### Phase 1.5: 조합·감사 조회 확장
-
-목표: 검색된 API들을 조합 제안으로 넘기고, 실행 결과는 조회만 가능하게 한다.
-
-추가 clients:
-
-```
-nara_mcp/clients/
-  combiner_client.py
-  openclaw_client.py
-```
-
-MCP tools:
-
-| Tool | 입력 | 호출 대상 | 정책 |
-| --- | --- | --- | --- |
-| `compose_services` | `service_ids`, `question` | `POST /compose` | read-only 성격의 제안 생성 |
-| `get_run_record` | `run_id` | `GET /runs/{run_id}` | read-only, 민감정보 마스킹 |
-
-`nara_combiner` 목표 기능:
-
-- service ID 배열과 사용자 질문을 받아 조합 제안과 실행 계획 초안을 생성한다.
-- 실제 실행, 승인, 감사 저장은 하지 않는다.
-- MCP 호출용으로 응답 길이를 너무 길게 만들지 않도록 `summary`, `plan`, `warnings`를 분리한다.
-
-`nara_openclaw` 목표 기능:
-
-- `GET /runs/{run_id}`만 MCP에 노출한다.
-- run payload에 민감정보가 있으면 기존 마스킹 규칙을 적용한 필드만 반환한다.
-- 존재하지 않는 run ID는 명확한 not found를 반환한다.
-
-복잡도 완화:
-
-- `compose_services`는 `nara_combiner`의 기존 API를 그대로 래핑한다.
-- MCP에서 LLM 프롬프트를 새로 만들지 않는다.
-- `get_run_record`는 실행을 시작하지 않고 감사 로그 조회만 수행한다.
-
-완료 기준:
-
-- 검색 결과 service ID 2~3개를 `compose_services`에 넘겨 조합 제안을 받을 수 있다.
-- 존재하지 않는 run ID에 대한 에러가 일관된 envelope으로 반환된다.
-- 마스킹 테스트가 통과한다.
-
-### Phase 2: dry-run 및 승인 실행
-
-목표: 실행 기능을 열되, dry-run과 명시적 승인 없이는 실제 실행 도구가 호출되지 않게 한다.
-
-MCP tools:
-
-| Tool | 입력 | 호출 대상 | 기본 상태 |
-| --- | --- | --- | --- |
-| `dry_run_plan` | `plan`, `user_inputs` | `POST /execute/dry-run` | 활성 가능 |
-| `execute_with_approval` | `plan`, `user_inputs`, `approval` | `POST /execute` | 기본 비활성 |
-
-활성 조건:
-
-- `NARA_MCP_ENABLE_EXECUTE=true`
-- `approval.approved=true`
-- `approval.approver`가 비어 있지 않음
-- `approval.approval_token`이 필요한 모드에서는 존재해야 함
-- 실행 전 dry-run 결과가 성공이어야 함
-
-보안 규칙:
-
-- MCP tool 설명에 "실제 제출 가능성"을 명시한다.
-- 민감 키는 `nara_openclaw`의 `SENSITIVE_KEYS` 패턴으로 마스킹한다.
-- 실행 결과에는 receipt ID, run ID, masked payload만 반환한다.
-- 원격 MCP transport에서는 Phase 2 실행 도구를 열지 않는다. 인증·감사 정책 확정 후 별도 검토한다.
-
-완료 기준:
-
-- 기본 설정에서는 `execute_with_approval`이 비활성화된다.
-- 승인 없는 실행 요청은 거부된다.
-- dry-run 성공 후 승인 실행 시 `runs/`에 감사 JSON이 생성된다.
-- 테스트에서 민감정보 원문이 응답에 노출되지 않는다.
-
-### Phase 3: 원격 MCP와 보안 하드닝
-
-목표: 로컬 stdio MCP가 안정화된 뒤에만 원격 transport를 검토한다.
-
-작업:
-
-- SSE/HTTP transport 도입 여부 결정
-- API key 또는 OAuth 계층 검토
-- rate limit 적용
-- CORS와 allowed host 제한
-- MCP 서버 레지스트리 문서화
-- 실행 도구는 원격에서 별도 allowlist 필요
-
-완료 기준:
-
-- 인증 없는 원격 호출이 차단된다.
-- tool별 권한 정책이 README에 명시된다.
-- 감사 로그에 MCP caller, tool name, request ID가 남는다.
-
-## 6. 독립 기능 프로젝트별 목표와 책임
-
-### `nara_mcp`
-
-책임:
-
-- MCP server 진입점
-- tool 정의와 설명
-- 각 Nara 서비스 HTTP client
-- 공통 timeout, 에러 envelope, feature flag
-- MCP host 등록 문서
-
-하지 않는 일:
-
-- apidata 직접 파싱
-- FAISS/Chroma 인덱스 직접 접근
-- LLM 조합 프롬프트 직접 작성
-- 승인 없는 실행
-
-목표 기능:
-
-- 자연어 검색용 read-only MCP tools
-- 조합 제안 조회
-- 실행감사 조회
-- feature flag 기반 실행 도구 통제
-
-### `nara_search(API문서검색)`
-
-책임:
-
-- 공공 API 문서 검색
-- 인덱스 상태 확인
-- service ID 기반 상세조회
-
-필수 보강:
-
-- `GET /services/{service_id:path}` 실제 구현
-- 검색 결과의 `service_id`와 상세조회 ID 규칙 일치
-- 없는 service ID에 대한 404 응답 정리
-
-복잡도 완화:
-
-- 기존 카탈로그 로더를 재사용한다.
-- 검색 응답 envelope을 변경하지 않는다.
-- 상세조회 구현은 대시보드에도 재사용 가능하게 FastAPI 엔드포인트로만 제공한다.
-
-### `nara_combiner(API문서조합기)`
-
-책임:
-
-- 여러 API 문서의 조합 가능성 설명
-- 행정 서비스 계획 초안 생성
-- 실행 가능한 계획 후보를 `nara_openclaw`로 넘길 수 있는 형태로 정리
-
-MCP 연계:
-
-- `compose_services`가 `POST /compose`를 호출한다.
-- MCP 서버는 조합 결과를 요약해 반환하되 원문 plan도 보존한다.
-
-복잡도 완화:
-
-- MCP 전용 조합 로직을 만들지 않는다.
-- service ID 정규화는 `nara_combiner` 또는 공통 규칙 문서에서 처리한다.
-
-### `nara_openclaw(행정서비스실행기)`
-
-책임:
-
-- dry-run 검증
-- 명시적 승인 후 실행
-- 실행 감사 JSON 저장
-- 민감정보 마스킹
-
-MCP 연계:
-
-- Phase 1.5: `get_run_record`만 노출
-- Phase 2: `dry_run_plan`, `execute_with_approval` 노출
-
-복잡도 완화:
-
-- 기본 executor는 계속 dummy로 둔다.
-- 실제 Government24 또는 기관 제출 어댑터는 MCP와 독립적으로 교체한다.
-- 승인 계약은 기존 OpenClaw 스키마를 따른다.
-
-### `nara_dashboard(API관계대시보드)`
-
-책임:
-
-- 검색 결과와 관계 시각화
-- service detail 패널 표시
-
-MCP 적용 효과:
-
-- `nara_search`의 상세조회 엔드포인트가 구현되면 대시보드의 빈 endpoint/detail 패널도 개선된다.
-
-복잡도 완화:
-
-- Phase 1에서는 대시보드 코드를 직접 수정하지 않는다.
-- 상세조회 API 안정화 후 필요할 때만 프론트 연동을 보강한다.
-
-### `nara_crawler(API문서크롤러)`
-
-책임:
-
-- 공공 API 원본 수집
-- apidata JSON 생성
-- 장기적으로 catalog foundation과 품질 리포트 생성
-
-MCP 적용 효과:
-
-- 직접 MCP에 노출하지 않는다.
-- 수집 산출물이 `nara_search` 상세조회와 검색 품질의 기반이 된다.
-
-복잡도 완화:
-
-- Phase 1에서는 크롤러 변경 없음.
-- 데이터 정제·스키마 정리는 크롤러 또는 별도 데이터 정리 기능에서 처리한다.
-
-### `nara_agui(에이전트UI데모)`
-
-책임:
-
-- 에이전트 사고 과정, 검색 결과, 조합 흐름을 시각적으로 보여주는 데모
-
-MCP 적용 효과:
-
-- MCP는 외부 호스트용 도구 표면이고, AGUI는 사용자-facing 데모 표면이다.
-- 두 표면은 같은 원 서비스 API를 소비하되 서로 직접 의존하지 않는다.
-
-복잡도 완화:
-
-- MCP 구현 중 AGUI를 수정하지 않는다.
-- MCP 안정화 후 tool 호출 결과를 AGUI 흐름에 붙일지 별도 결정한다.
-
-## 7. 구현 순서
-
-1. `nara_search`의 `/services/{service_id}` 구현
-2. `nara_mcp` 기본 골격 생성
-3. `search_public_services`, `get_service_detail`, `get_index_health` 구현
-4. MCP README와 `.mcp.json` 예시 작성
-5. Phase 1 단위 테스트와 MCP 인스펙터 검증
-6. `compose_services` 추가
-7. `get_run_record` 추가와 마스킹 검증
-8. `dry_run_plan` 추가
-9. `execute_with_approval`는 feature flag와 승인 검증 후 추가
-10. 원격 transport는 보안 하드닝 이후 별도 계획으로 분리
-
-## 8. 테스트 전략
-
-### 단위 테스트
-
-- `search_public_services`가 `top_k`, `query`를 올바르게 전달한다.
-- `get_service_detail`이 200과 404를 구분한다.
-- `compose_services`가 service ID 배열을 그대로 전달한다.
-- `get_run_record`가 민감 필드를 마스킹한다.
-- 실행 feature flag가 꺼져 있으면 실행 tool이 거부된다.
-
-### 연동 테스트
-
-- `nara_search` 기동 후 MCP tool로 검색한다.
-- 검색 결과의 service ID로 상세조회한다.
-- service ID 2~3개를 조합 도구에 넘긴다.
-- OpenClaw demo run 또는 fixture run을 조회한다.
-
-### 보안 테스트
-
-- 기본 설정에서 파일 쓰기, 인덱스 빌드, 실행 제출이 불가능하다.
-- 승인 없는 `execute_with_approval` 요청은 실패한다.
-- 민감정보 원문이 MCP 응답에 포함되지 않는다.
-- timeout과 upstream 오류가 내부 stack trace 없이 반환된다.
-
-### 회귀 테스트
-
-- `nara_dashboard`가 기존 `/search` 응답 형식 변경 없이 동작한다.
-- `nara_combiner`와 `nara_openclaw`의 기존 pytest가 통과한다.
-
-## 9. MCP 등록 문서 예시
-
-`nara_mcp/README.md`에 다음 형식으로 제공한다.
-
-```json
-{
-  "mcpServers": {
-    "nara": {
-      "command": "python",
-      "args": ["D:/project/nara_mcp/server.py"],
-      "env": {
-        "NARA_SEARCH_BASE_URL": "http://127.0.0.1:8000",
-        "NARA_COMBINER_BASE_URL": "http://127.0.0.1:8003",
-        "NARA_OPENCLAW_BASE_URL": "http://127.0.0.1:8002",
-        "NARA_MCP_ENABLE_EXECUTE": "false"
-      }
-    }
-  }
-}
-```
-
-## 10. 스코프에서 제외할 것
-
-현재 하지 않는다:
-
-- Postgres, Supabase, MongoDB, Redis, BigQuery MCP 서버 도입
-- FAISS를 Pinecone, Chroma, Milvus로 즉시 교체
-- Neo4j를 실제 운영 그래프 DB로 승격
-- MCP 서버에서 직접 apidata 파일 읽기
-- 승인 없는 행정서비스 실행
-- 원격 MCP transport 즉시 도입
-- 크롤러와 대시보드의 대규모 리팩터
-
-나중에 검토한다:
-
-- `retrieval_chunks.jsonl` 기반 ChromaDB 이행
-- `api_tool_specs.jsonl`를 MCP tool registry로 자동 변환
-- AGUI와 MCP 결과 표면 연동
-- 원격 MCP 인증과 감사 정책
-
-## 11. 리스크와 대응
-
-| 리스크 | 영향 | 대응 |
+| 프로젝트 | 현재 상태 | 현재 단계의 핵심 과제 |
 | --- | --- | --- |
-| `/services/{service_id}` 구현이 불안정함 | MCP 상세조회 실패 | `nara_search` 로더 재사용, fixture 기반 테스트 추가 |
-| service ID 형식 불일치 | 검색 후 상세조회 실패 | `openapi_new:{api_id}`와 순수 `api_id` 허용 여부를 명시 |
-| MCP tool 범위 과확장 | 보안·테스트 부담 증가 | Phase 1을 read-only 검색으로 제한 |
-| 실행 도구 오용 | 실제 제출 위험 | feature flag, dry-run, approval 필수화 |
-| 민감정보 노출 | 개인정보 사고 | OpenClaw 마스킹 규칙 재사용 |
-| 원 서비스 미기동 | MCP 도구 실패 | health tool과 명확한 upstream unavailable 오류 제공 |
-| 응답이 너무 길어짐 | MCP host 사용성 저하 | 요약 필드와 원문 필드를 분리하고 필요 시 limit 도입 |
+| `nara_crawler(API문서크롤러)` | 크롤러, 스캐너, 저장·실행 관리 코드 존재 | 실제 수집 실행과 산출물 품질을 재현 가능하게 만들기 |
+| `nara_search(API문서검색)` | FAISS 검색, health, index build API 구현 | 상세조회 스텁과 catalog 설정 불일치 해결, 테스트 추가 |
+| `nara_combiner(API문서조합기)` | 조합 API, streaming, 웹 UI 구현 | 현재 응답 품질·스키마·오류 처리를 안정화 |
+| `nara_dashboard(API관계대시보드)` | React Flow 로컬 워크플로우 데모 구현 | 현재 브라우저 기반 워크플로우 기능의 안정화와 테스트 기반 마련 |
+| `nara_agui(에이전트UI데모)` | 검색·분류·흐름 표현 데모 구현 | 데모 흐름과 모델 실패 처리를 재현 가능하게 만들기 |
+| `nara_gov24_link_resolver(정부24서비스링크매핑)` | seed·정규화·매칭·검증 스크립트 구현 | 라이선스 확인과 검수된 링크 산출물 만들기 |
+| `nara_openclaw(행정서비스실행기)` | dry-run, 승인 검사, 더미 실행, run 기록 구현 | 더미 실행 경계와 감사·마스킹 신뢰성 강화 |
+| `nara_mcp` | 계획 문서만 존재 | 필요성과 대상 API가 확정될 때 최소 read-only 어댑터로 시작 |
 
-## 12. 최종 완료 정의
+## 4. `nara_crawler(API문서크롤러)` 개발 계획
 
-Phase 1 완료:
+### 현재 역할
 
-- `nara_mcp`가 로컬 stdio MCP 서버로 실행된다.
-- Claude Code 또는 Claude Desktop에서 공공 API 검색과 상세조회가 가능하다.
-- 기존 `nara_search` 검색 응답 형식은 깨지지 않는다.
-- 대시보드와 검색 서비스의 기존 동작이 유지된다.
+- 공공 API 원본과 메타데이터 수집
+- 소스 유형별 스캔과 파싱
+- 수집 실행 상태와 파일 산출물 관리
 
-Phase 1.5 완료:
+### 현재 확인된 구현
 
-- 검색된 service ID를 조합 도구로 넘겨 행정 서비스 계획 초안을 받을 수 있다.
-- 실행 감사 로그를 마스킹된 형태로 조회할 수 있다.
+- OpenAPI, 파일데이터, 표준데이터 crawler 구조
+- scanner와 metadata parser
+- crawl run, file storage, index, summary 관리 코드
+- 장기 catalog·semantic·report 구조를 설명하는 계획 문서
 
-Phase 2 완료:
+### 다음 개발 범위
 
-- dry-run과 승인 실행이 MCP에서 가능하다.
-- 기본 설정에서는 실행이 비활성화된다.
-- 승인, 마스킹, 감사 로그 테스트가 모두 통과한다.
+1. 현재 지원하는 소스별 최소 실행 명령을 확정한다.
+2. 작은 fixture 또는 제한된 실제 입력으로 수집을 반복 실행한다.
+3. 성공, 부분 실패, 재시도, 중복 수집 결과를 구분한다.
+4. 원본 파일과 정규화 산출물의 경로·필수 필드를 문서화한다.
+5. 파싱 성공률, 스킵 수, 오류 수를 요약하는 기본 리포트를 만든다.
+6. 핵심 parser와 저장 동작에 자동 테스트를 추가한다.
 
-## 13. 요약
+### 현재 단계 완료 조건
 
-정리 전략은 "작은 MCP 어댑터를 먼저 만들고, 기능은 원 소유 프로젝트에 남긴다"이다. Claude 계획의 작은 read-only MVP를 Phase 1의 기준으로 삼고, Codex 계획의 조합·감사·실행 흐름은 Phase 1.5와 Phase 2로 분리해 흡수한다.
+- 최소 한 종류의 OpenAPI 수집이 같은 명령으로 반복 가능하다.
+- 입력, 출력, 실패 기록 위치가 README에 명확하다.
+- 같은 원본을 다시 처리해도 무제한 중복 산출물이 생기지 않는다.
+- 기본 품질 리포트와 핵심 테스트가 통과한다.
 
-이 방식은 목표 기능을 줄이지 않으면서도 구현 복잡도를 낮춘다. 각 독립 기능 프로젝트는 자기 책임만 구현하고, `nara_mcp`는 필요한 기능을 안전한 도구 표면으로 선택 연결한다.
+### 이후 후보
+
+- `agencies.jsonl`, `services.jsonl`, `aliases.jsonl` 등 장기 catalog 자산
+- 관계·semantic 데이터 생성
+- 파일데이터와 표준데이터 범위 확대
+
+현재 단계에서 장기 자산 전체를 만들 필요는 없다.
+
+## 5. `nara_search(API문서검색)` 개발 계획
+
+### 현재 역할
+
+- OpenAPI 문서 인덱스 생성
+- 자연어 질의 기반 검색
+- 검색 상태와 결과 제공
+
+### 현재 확인된 구현
+
+- `GET /health`
+- `POST /search`
+- `POST /build`
+- `GET /build/status`
+- FAISS retriever와 로컬 임베딩 모델 사용
+- catalog loader와 detail builder 초안
+
+### 확인된 문제
+
+- `GET /services/{service_id}`가 항상 404를 반환한다.
+- catalog loader가 현재 config에 없는 `CATALOG_DIR`, `SEMANTIC_DIR`, `SERVING_DIR`, `MINIMAL_DOCS_PATH`를 참조한다.
+- 자동 테스트가 없다.
+- 데이터, 모델, index가 Git에 포함되지 않으므로 새 환경 준비 절차가 불명확하다.
+
+### 다음 개발 범위
+
+1. 실제 사용하는 데이터 경로와 더 이상 사용하지 않는 loader 경로를 구분한다.
+2. 필요한 config 항목을 복구하거나 사용하지 않는 catalog 코드를 정리한다.
+3. `service_id` 정규화 함수를 Search 내부에 둔다.
+4. 정식 ID, 순수 API ID, 잘못된 prefix, 미존재 ID 동작을 정한다.
+5. 상세조회 endpoint를 현재 데이터 구조에 맞게 구현한다.
+6. 검색, health, 상세조회, 데이터 누락에 대한 자동 테스트를 추가한다.
+7. 데이터·모델·index 준비와 build 절차를 README에 정리한다.
+
+### 현재 단계 완료 조건
+
+- Search 단독 실행 절차가 새 환경에서 재현된다.
+- `/search` 결과 ID로 상세조회가 성공한다.
+- 잘못된 ID와 없는 ID가 구분된다.
+- 데이터나 index가 없을 때 원인을 진단할 수 있다.
+- Search 자동 테스트가 통과한다.
+
+### 이후 후보
+
+- alias 기반 검색 확장
+- catalog metadata filter
+- 외부 MCP 또는 Dashboard 연동
+- 벡터 저장소 교체 검토
+
+이 후보들은 현재 상세조회와 테스트 안정화를 막지 않는다.
+
+## 6. `nara_combiner(API문서조합기)` 개발 계획
+
+### 현재 역할
+
+- 여러 API 문서를 선택해 조합 가능성을 설명
+- 사용자 질문을 포함한 LLM 조합 제안 생성
+- non-stream과 stream 응답 제공
+
+### 현재 확인된 구현
+
+- `POST /compose`
+- `GET /compose-stream`
+- health endpoint와 웹 UI
+- service loader, prompt builder, warning 감지
+- 자동 테스트 13개 통과 기준선
+
+### 다음 개발 범위
+
+1. 정상 조합, 일부 ID 누락, 전체 ID 누락, LLM 실패 응답을 고정한다.
+2. 현재 `suggestion` 중심 응답의 필수 필드를 문서화한다.
+3. prompt와 warning 동작을 fixture로 보강한다.
+4. 긴 응답에 합리적인 길이 제한을 둔다.
+5. 구조화 plan이나 relation이 실제로 필요해질 때 별도 응답 버전을 설계한다.
+6. 실행 기능과 승인 처리는 계속 포함하지 않는다.
+
+### 현재 단계 완료 조건
+
+- 같은 fixture와 질문에서 응답 구조가 안정적으로 유지된다.
+- 누락 ID와 모델 장애가 명확한 HTTP 오류로 반환된다.
+- stream과 non-stream의 핵심 metadata 의미가 일치한다.
+- 기존 테스트와 추가 회귀 테스트가 통과한다.
+
+### 이후 후보
+
+- 구조화된 조합 plan
+- 근거가 포함된 API relation
+- OpenClaw로 전달 가능한 handoff schema
+
+후보 schema는 실제 소비 프로젝트가 정해진 뒤 확정한다.
+
+## 7. `nara_dashboard(API관계대시보드)` 개발 계획
+
+### 현재 역할
+
+- React Flow 기반 API 워크플로우 시각화
+- 노드 설정 편집과 연결
+- 출력 노드 단위 로컬 실행
+
+### 현재 확인된 구현
+
+- 검색, 필터, 분석, 출력 노드
+- 노드 설정 편집
+- 출력 노드별 upstream graph 실행
+- JSON, CSV, Excel 호환 형식 내보내기
+- Ollama 채팅 modal
+- production build 성공 기준선
+
+### 다음 개발 범위
+
+1. 현재 로컬 `apiDocs.js` 기반 동작을 명확히 문서화한다.
+2. workflow engine의 pure function 테스트를 추가한다.
+3. 출력 형식별 파일명, encoding, 빈 입력, 오류 동작을 테스트한다.
+4. 저장 노드의 실제 의미를 정하고 미구현 상태를 명확히 표시한다.
+5. 큰 bundle의 원인을 측정하고 필요한 경우 code splitting을 적용한다.
+6. backend 연결은 local mode 안정화 후 별도 개발 슬라이스로 다룬다.
+
+### 현재 단계 완료 조건
+
+- 기본 workflow fixture가 브라우저와 단위 테스트에서 동일한 결과를 낸다.
+- 노드 설정 변경 후 영향받는 실행 상태가 일관되게 초기화된다.
+- 지원하는 export 형식과 실제 파일 형식이 일치한다.
+- production build가 성공하고 주요 경고가 문서화된다.
+
+### 이후 후보
+
+- Search backend data source
+- Combiner 결과의 flow 변환
+- 관계 근거와 confidence 표시
+- 사용자 workflow 저장소
+
+후보 연결은 현재 로컬 워크플로우 구조를 깨지 않는 별도 adapter로 구현한다.
+
+## 8. `nara_agui(에이전트UI데모)` 개발 계획
+
+### 현재 역할
+
+- 자연어 요청 분류와 검색 흐름 데모
+- single, grid, flow 등 에이전트 결과 표현 실험
+
+### 다음 개발 범위
+
+1. classify, flow ordering, answer prompt의 입력·출력을 fixture로 고정한다.
+2. 모델 미기동, timeout, 잘못된 응답을 UI에서 구분한다.
+3. `/search`와 `/health`의 최소 자동 테스트를 추가한다.
+4. 데모 데이터와 실제 외부 의존 동작을 명확히 구분한다.
+5. 현재 UI 표현 방식의 장단점을 기록한다.
+
+### 현재 단계 완료 조건
+
+- 대표 질의 fixture가 같은 UI mode로 분류된다.
+- 모델이 없을 때 앱 전체가 실패하지 않고 오류를 표시한다.
+- 단독 실행과 데모 절차가 README로 재현된다.
+
+### 이후 후보
+
+- Search 또는 MCP 결과 소비
+- 근거가 포함된 relation UI
+- 외부 생성형 UI protocol 비교
+
+외부 protocol 도입은 현재 데모 안정화 이후에 판단한다.
+
+## 9. `nara_gov24_link_resolver(정부24서비스링크매핑)` 개발 계획
+
+### 현재 역할
+
+- 정부24 또는 기관 서비스 링크 후보 수집
+- 링크 정규화와 서비스 매칭
+- 검수 상태와 품질 확인
+
+### 현재 확인된 구현
+
+- 수동 seed 수집
+- 링크 정규화
+- 서비스 매칭
+- output 검증
+- schema와 자동 테스트 14개 통과 기준선
+
+### 다음 개발 범위
+
+1. 정부24 이용약관과 자동 수집 허용 범위를 확정한다.
+2. 검증 가능한 수동 seed를 확대한다.
+3. 후보, pending, reviewed 상태 전이를 문서화한다.
+4. 중복, redirect, 잘못된 scheme, dead link 처리를 보강한다.
+5. 검수 완료 산출물과 품질 리포트를 생성한다.
+
+### 현재 단계 완료 조건
+
+- 라이선스 검토 문서의 미확정 항목이 해소된다.
+- 최소 목표 수의 reviewed 링크가 존재한다.
+- 모든 output이 schema 검증을 통과한다.
+- 후보 생성부터 검증까지 같은 명령 순서로 재현된다.
+
+### 이후 후보
+
+- OpenClaw linkout 입력
+- 주기적 링크 상태 점검
+- 기관별 deep link 품질 비교
+
+다른 프로젝트 연동은 reviewed 산출물이 준비된 뒤 결정한다.
+
+## 10. `nara_openclaw(행정서비스실행기)` 개발 계획
+
+### 현재 역할
+
+- 실행 계획 dry-run
+- 필수 입력과 승인 필요 여부 확인
+- 승인된 계획의 더미 실행
+- 마스킹된 run 기록 저장과 조회
+
+### 현재 확인된 구현
+
+- `GET /demo/plan`
+- `POST /execute/dry-run`
+- `POST /execute`
+- `GET /runs/{run_id}`
+- `DummyGovernmentExecutor`
+- 자동 테스트 4개 통과 기준선
+
+### 다음 개발 범위
+
+1. 더미 실행임을 모든 API 설명과 응답에서 명확히 표시한다.
+2. 승인자 누락, 승인 false, 입력 누락, target URL 누락을 세분화해 테스트한다.
+3. 민감 키 목록과 중첩 payload 마스킹 범위를 검토한다.
+4. 테스트 run 파일을 임시 디렉터리에 격리한다.
+5. executor adapter interface와 실패 contract를 문서화한다.
+6. 실제 기관 adapter는 추가하지 않는다.
+
+### 현재 단계 완료 조건
+
+- 승인 우회가 불가능하다.
+- dry-run은 외부 실행이나 실제 제출을 하지 않는다.
+- run 기록과 응답에 민감정보 원문이 남지 않는다.
+- 테스트가 작업 트리에 run 파일을 남기지 않는다.
+- 더미와 실제 실행 상태를 혼동할 수 없다.
+
+### 이후 후보
+
+- 검수된 linkout adapter
+- 실제 API adapter의 별도 보안 검토
+- MCP 실행 어댑터
+
+실제 실행은 별도 권한·법률·감사 계획 없이는 개발하지 않는다.
+
+## 11. `nara_mcp` 개발 계획
+
+### 현재 역할
+
+아직 구현된 역할은 없다. 현재는 다른 Nara 프로젝트의 안정된 HTTP API를 외부 MCP host에 선택적으로 노출할 수 있는 어댑터 후보이다.
+
+### 개발 착수 조건
+
+- 노출 대상 서브프로젝트가 단독 실행과 자동 테스트를 갖춘다.
+- 대상 HTTP 요청·응답이 최소한의 안정된 계약을 가진다.
+- MCP를 통해 얻을 구체적인 사용자 가치가 확인된다.
+
+### 최초 개발 범위
+
+착수한다면 Search의 read-only 기능만 대상으로 한다.
+
+- `search_public_services`
+- `get_service_detail`
+- `get_index_health`
+
+구현 원칙:
+
+- 로컬 `stdio` transport만 사용한다.
+- Search Python 코드를 import하지 않고 HTTP로 호출한다.
+- index build, 파일 쓰기, 실행 기능을 노출하지 않는다.
+- timeout과 upstream 오류를 짧은 구조화 오류로 변환한다.
+- MCP가 없어도 Search는 독립 실행 가능해야 한다.
+
+### 최초 단계 완료 조건
+
+- Search가 꺼져 있을 때 명확한 연결 오류를 반환한다.
+- Search가 켜져 있을 때 검색과 상세조회가 동작한다.
+- MCP host 등록·해제와 무관하게 Search 동작이 변하지 않는다.
+- 자동 테스트와 로컬 Inspector 검증이 통과한다.
+
+### 보류 범위
+
+- Combiner, OpenClaw 연결
+- 실행 tool
+- 원격 transport
+- 공통 tool registry
+
+이 기능들은 각 원 프로젝트가 완성된 뒤 필요성을 다시 평가한다.
+
+## 12. 프로젝트 간 최소 공통 규칙
+
+통합 제품을 전제하지 않더라도 향후 연결 비용을 줄이기 위해 다음만 유지한다.
+
+### ID
+
+- 외부에 노출하는 서비스 ID는 가능하면 `{source}:{api_id}` 형식을 사용한다.
+- 내부 ID가 다르면 프로젝트 경계 adapter에서 변환한다.
+- 모든 프로젝트가 지금 즉시 같은 내부 ID 구조로 리팩터링할 필요는 없다.
+
+### 오류
+
+- HTTP 서비스는 4xx와 5xx를 구분한다.
+- 사용자가 해결할 수 있는 오류와 서비스 내부 오류를 분리한다.
+- stack trace, 로컬 절대 경로, 민감정보를 외부 응답에 포함하지 않는다.
+
+### 테스트 fixture
+
+- 프로젝트별 fixture는 해당 프로젝트가 소유한다.
+- 다른 프로젝트의 runtime 디렉터리나 실제 사용자 파일을 테스트 입력으로 사용하지 않는다.
+- 통합 fixture는 실제 연동 개발을 시작할 때 별도로 만든다.
+
+### 보안
+
+- read-only 기능과 실행 기능을 분리한다.
+- 실제 외부 동작은 명시적 승인과 감사 기록을 요구한다.
+- 더미 실행을 실제 성공으로 표현하지 않는다.
+
+## 13. 개발 우선순위 제안
+
+이 순서는 통합을 위한 의존 순서가 아니라, 현재 코드의 위험과 미완성도를 기준으로 한 권장 순서다. 각 프로젝트는 독립적으로 진행할 수 있다.
+
+### 우선 안정화
+
+1. Search: config·loader 불일치, 상세조회, 자동 테스트
+2. Dashboard: workflow engine 테스트, export 정확성
+3. OpenClaw: 테스트 산출물 격리, 마스킹·승인 보강
+4. Gov24 Link Resolver: 라이선스와 reviewed output
+
+### 기능 품질 보강
+
+5. Crawler: 재현 가능한 수집과 품질 리포트
+6. Combiner: 응답 contract와 오류 처리
+7. AGUI: fixture와 실패 UI
+
+### 필요성 확인 후 착수
+
+8. MCP: 안정된 read-only Search API만 선택적으로 노출
+
+## 14. 검증 기준선
+
+현재 확인된 기준선:
+
+| 프로젝트 | 기준선 |
+| --- | --- |
+| Combiner | 13 tests passed |
+| OpenClaw | 4 tests passed |
+| Gov24 Link Resolver | 14 tests passed |
+| Dashboard | production build 성공 |
+
+각 서브프로젝트는 자신의 기준선을 독립적으로 늘린다. 전체 프로젝트 E2E나 모든 서비스 동시 기동은 현재 공통 완료 조건이 아니다.
+
+## 15. 현재 제외 범위
+
+- 하나의 통합 애플리케이션 구조 확정
+- 전체 프로젝트 공통 배포와 버전 정책
+- 중앙 데이터베이스 또는 graph DB 도입
+- 모든 UI와 API의 단일 인증 체계
+- 전체 workflow orchestration
+- 원격 MCP 공개
+- 실제 행정기관 자동 제출
+- 외부 생성형 UI 프레임워크 도입
+
+이 항목들은 서브프로젝트 개발 결과가 축적된 뒤 필요성과 비용을 다시 평가한다.
+
+## 16. 계획 갱신 방식
+
+서브프로젝트의 개발 단계가 완료되면 다음 순서로 문서를 갱신한다.
+
+1. 해당 프로젝트 README와 세부 계획에 실제 결과를 기록한다.
+2. 이 문서의 현재 상태와 다음 개발 범위를 갱신한다.
+3. 다른 프로젝트와 연결할 가치가 생겼는지 평가한다.
+4. 연결이 필요할 때만 별도의 인터페이스 또는 통합 계획을 작성한다.
+
+최종 제품의 모습은 지금 선결정하지 않는다. 독립적으로 검증된 서브프로젝트들이 무엇을 잘 수행하는지 확인한 뒤, 그 결과를 기반으로 계속 수정한다.
