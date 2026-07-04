@@ -36,7 +36,7 @@ function extractFields(doc) {
 
         if (seen.has(key)) continue;
         seen.add(key);
-        fields.push({ key, desc: val?.description ?? parentKey ? `${parentKey}.${key}` : key });
+        fields.push({ key, desc: val?.description ?? (parentKey ? `${parentKey}.${key}` : key) });
       }
     }
 

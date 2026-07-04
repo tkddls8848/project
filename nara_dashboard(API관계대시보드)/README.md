@@ -25,6 +25,34 @@ npm run dev
 
 Vite dev 서버: `http://localhost:5173`
 
+## 데이터 모드 (local)
+
+현재 대시보드는 **로컬 데이터 모드**로 동작한다. `src/data/apiDocs.js`가
+`apidata/*.json`을 빌드 타임에 eager glob으로 번들에 포함하며, 검색·필터·조인은
+모두 브라우저 안에서 이 로컬 카탈로그를 대상으로 실행된다. `nara_search`
+백엔드 연동은 별도 개발 슬라이스이며, 프록시(`/api/*`)는 검색 보강과 Ollama
+채팅에만 쓰인다.
+
+- `apidata/`가 비어 있으면 카탈로그가 빈 상태로 기동한다 (앱은 동작, 검색 결과 0건)
+- 번들 크기는 `apidata/` 문서 수에 비례한다 — 대형 청크 경고의 주원인
+- **저장 노드는 미구현**이다. 실행 시 `persisted:false`와 미구현 안내를 반환하며
+  브라우저 밖에 아무것도 저장하지 않는다
+
+## 테스트
+
+```powershell
+npm test          # vitest run
+```
+
+- `src/data/__tests__/workflowEngine.test.js` — 노드 실행·topo 순서·출력별 부분 실행,
+  join/if/merge/export/save 노드의 성공·오류 경로 (카탈로그는 fixture로 대체)
+- `src/data/__tests__/exporters.test.js` — CSV 이스케이프·UTF-8 BOM·헤더, Excel HTML
+  이스케이프, JSON export 형식
+
+내보내기 직렬화는 `src/data/exporters.js`의 순수 함수로 분리되어 있다.
+CSV는 Excel 호환을 위해 UTF-8 BOM으로 시작하고, XLSX 선택 시 실제 산출물은
+Excel 호환 HTML 테이블(`.xls`)이다.
+
 ## 프록시 (vite.config.js)
 
 | 경로 | 타겟 | 비고 |

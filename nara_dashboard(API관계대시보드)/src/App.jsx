@@ -14,6 +14,7 @@ import {
 import { nodeTypes } from './nodes/nodeTypes.jsx';
 import { initialNodes, initialEdges, NODE_DEFAULTS } from './data/initialFlow.js';
 import { runWorkflowForOutput } from './data/workflowEngine.js';
+import { exportRows, toCsv, toExcelHtml, toJsonExport } from './data/exporters.js';
 import { NodePalette } from './components/NodePalette.jsx';
 import { NodeProperties } from './components/NodeProperties.jsx';
 import { Toolbar } from './components/Toolbar.jsx';
@@ -29,53 +30,6 @@ const EDGE_STYLE = {
 };
 
 const OUTPUT_NODE_TYPES = new Set(['exportNode', 'saveNode', 'chatOutput']);
-
-function escapeCsv(value) {
-  const text = String(value ?? '');
-  return /[",\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
-}
-
-function exportRows(docs = []) {
-  return docs.map(doc => ({
-    apiId: doc.apiId,
-    name: doc.name,
-    provider: doc.provider,
-    topCategory: doc.topCategory,
-    category: doc.category,
-    keywords: (doc.keywords ?? []).join(', '),
-    description: doc.description,
-    endpoints: (doc.endpoints ?? []).length,
-    fields: (doc.fields ?? []).length,
-    searchScore: doc.searchScore ?? '',
-  }));
-}
-
-function toCsv(rows) {
-  const headers = ['apiId', 'name', 'provider', 'topCategory', 'category', 'keywords', 'description', 'endpoints', 'fields', 'searchScore'];
-  return [
-    headers.join(','),
-    ...rows.map(row => headers.map(header => escapeCsv(row[header])).join(',')),
-  ].join('\r\n');
-}
-
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-}
-
-function toExcelHtml(rows) {
-  const headers = ['apiId', 'name', 'provider', 'topCategory', 'category', 'keywords', 'description', 'endpoints', 'fields', 'searchScore'];
-  const head = headers.map(header => `<th>${escapeHtml(header)}</th>`).join('');
-  const body = rows.map(row => (
-    `<tr>${headers.map(header => `<td>${escapeHtml(row[header])}</td>`).join('')}</tr>`
-  )).join('');
-
-  return `<!doctype html><html><head><meta charset="utf-8"></head><body><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></body></html>`;
-}
 
 function downloadBlob(content, filename, type) {
   const blob = new Blob([content], { type });
@@ -105,11 +59,7 @@ function downloadExport(exportRequest) {
     return;
   }
 
-  downloadBlob(
-    JSON.stringify({ exported_at: new Date().toISOString(), docs: exportRequest.docs }, null, 2),
-    exportRequest.filename,
-    'application/json;charset=utf-8'
-  );
+  downloadBlob(toJsonExport(exportRequest.docs), exportRequest.filename, 'application/json;charset=utf-8');
 }
 
 export default function App() {
