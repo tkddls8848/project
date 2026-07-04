@@ -1,4 +1,17 @@
-export function Toolbar({ nodeCount, edgeCount, onClear, onReset }) {
+import { useRef } from 'react';
+
+export function Toolbar({ nodeCount, edgeCount, onClear, onReset, onExportFlow, onImportFlow }) {
+  const fileInputRef = useRef(null);
+
+  const handleFileChange = (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || !onImportFlow) return;
+    const reader = new FileReader();
+    reader.onload = () => onImportFlow(String(reader.result ?? ''));
+    reader.readAsText(file, 'utf-8');
+  };
+
   return (
     <div
       style={{
@@ -64,9 +77,18 @@ export function Toolbar({ nodeCount, edgeCount, onClear, onReset }) {
       <div style={{ width: 1, height: 20, background: '#1e2d3d', margin: '0 2px' }} />
 
       {/* 액션 */}
+      <GhostBtn onClick={() => fileInputRef.current?.click()} color="#22c55e">⬆ 가져오기</GhostBtn>
+      <GhostBtn onClick={onExportFlow} color="#0ea5e9">⬇ 내보내기</GhostBtn>
       <GhostBtn onClick={onReset} color="#818cf8">↺ 초기화</GhostBtn>
       <GhostBtn onClick={onClear} color="#f87171">✕ 삭제</GhostBtn>
 
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json,application/json"
+        style={{ display: 'none' }}
+        onChange={handleFileChange}
+      />
     </div>
   );
 }

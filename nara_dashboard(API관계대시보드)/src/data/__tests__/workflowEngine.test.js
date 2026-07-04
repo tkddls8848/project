@@ -161,15 +161,22 @@ describe('runWorkflow', () => {
     expect(data.output.prompt).toContain('버스도착정보');
   });
 
-  it('saveNode는 미구현임을 명시하고 아무것도 저장하지 않는다', () => {
+  it('saveNode는 플로우 저장 요청(saveRequest)을 만든다', () => {
     const result = runWorkflow(
-      [node('doc1', 'apiDoc', { apiId: '15000001' }), node('save', 'saveNode', {})],
+      [node('doc1', 'apiDoc', { apiId: '15000001' }), node('save', 'saveNode', { name: '내 플로우' })],
       [edge('doc1', 'save')]
     );
     const data = dataOf(result, 'save');
     expect(data.status).toBe('success');
-    expect(data.output.persisted).toBe(false);
-    expect(data.output.note).toContain('미구현');
+    expect(data.output.kind).toBe('saveRequest');
+    expect(data.output.saveRequest).toEqual({ name: '내 플로우' });
+  });
+
+  it('saveNode는 입력이 없어도 기본 이름으로 저장 요청을 만든다', () => {
+    const result = runWorkflow([node('save', 'saveNode', {})], []);
+    const data = dataOf(result, 'save');
+    expect(data.status).toBe('success');
+    expect(data.output.saveRequest.name).toBe('새 워크플로우');
   });
 
   it('exportNode는 입력이 없으면 error이고 exportRequest를 만들지 않는다', () => {

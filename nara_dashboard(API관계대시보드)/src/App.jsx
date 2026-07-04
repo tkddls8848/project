@@ -15,6 +15,7 @@ import { nodeTypes } from './nodes/nodeTypes.jsx';
 import { initialNodes, initialEdges, NODE_DEFAULTS } from './data/initialFlow.js';
 import { runWorkflowForOutput } from './data/workflowEngine.js';
 import { exportRows, toCsv, toExcelHtml, toJsonExport } from './data/exporters.js';
+import { FlowImportError, deserializeFlow, flowToJson, maxNodeIdSuffix } from './data/flowIO.js';
 import { NodePalette } from './components/NodePalette.jsx';
 import { NodeProperties } from './components/NodeProperties.jsx';
 import { Toolbar } from './components/Toolbar.jsx';
@@ -60,6 +61,14 @@ function downloadExport(exportRequest) {
   }
 
   downloadBlob(toJsonExport(exportRequest.docs), exportRequest.filename, 'application/json;charset=utf-8');
+}
+
+function downloadFlow(nodes, edges, name) {
+  const base = String(name || 'workflow')
+    .trim()
+    .replace(/[\\/:*?"<>|]+/g, '-')
+    .replace(/\s+/g, '_') || 'workflow';
+  downloadBlob(flowToJson(nodes, edges, { name }), `${base}.flow.json`, 'application/json;charset=utf-8');
 }
 
 export default function App() {
@@ -157,6 +166,26 @@ export default function App() {
     setActiveChatContext(null);
   };
 
+  const handleExportFlow = useCallback(() => {
+    downloadFlow(nodes, edges, '워크플로우');
+  }, [nodes, edges]);
+
+  const handleImportFlow = useCallback((jsonText) => {
+    try {
+      const flow = deserializeFlow(jsonText);
+      idCounter = Math.max(idCounter, maxNodeIdSuffix(flow.nodes));
+      setNodes(flow.nodes);
+      setEdges(flow.edges.map(edge => ({ ...edge, style: EDGE_STYLE })));
+      setSelectedNode(null);
+      setActiveChatContext(null);
+    } catch (error) {
+      const message = error instanceof FlowImportError
+        ? error.message
+        : '워크플로우 파일을 읽을 수 없습니다.';
+      window.alert(`가져오기 실패: ${message}`);
+    }
+  }, [setNodes, setEdges]);
+
   const handleRunOutput = useCallback((outputNodeId) => {
     const nextNodes = runWorkflowForOutput(nodes, edges, outputNodeId);
     setNodes(nextNodes);
@@ -168,6 +197,16 @@ export default function App() {
     ));
     if (exportNode?.data?.output?.exportRequest) {
       downloadExport(exportNode.data.output.exportRequest);
+    }
+
+    const saveNode = nextNodes.find((node) => (
+      node.id === outputNodeId &&
+      node.type === 'saveNode' &&
+      node.data?.output?.saveRequest
+    ));
+    if (saveNode) {
+      const name = saveNode.data.output.saveRequest.name;
+      downloadFlow(nodes, edges, name);
     }
 
     const chatNode = nextNodes.find((node) => (
@@ -252,6 +291,8 @@ export default function App() {
         edgeCount={edges.length}
         onClear={handleClear}
         onReset={handleReset}
+        onExportFlow={handleExportFlow}
+        onImportFlow={handleImportFlow}
       />
 
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>

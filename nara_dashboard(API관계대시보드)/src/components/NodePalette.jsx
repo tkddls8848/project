@@ -33,7 +33,7 @@ const PALETTE = [
     category: 'output',
     nodes: [
       { type: 'exportNode', icon: '📤', label: '내보내기',        desc: 'JSON / CSV / XLSX' },
-      { type: 'saveNode',   icon: '💾', label: '워크플로우 저장', desc: '미구현 (로컬 데모)' },
+      { type: 'saveNode',   icon: '💾', label: '워크플로우 저장', desc: '플로우 JSON 다운로드' },
       { type: 'chatOutput', icon: '💬', label: '채팅하기',        desc: 'Ollama gemma4:e4b와 컨텍스트 채팅' },
     ],
   },

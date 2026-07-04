@@ -412,18 +412,18 @@ function executeNode(node, edges, byId) {
   }
 
   if (node.type === 'saveNode') {
-    // 저장 미구현: 로컬 데모는 브라우저 밖에 아무것도 저장하지 않는다.
+    // 워크플로우 정의를 JSON 파일로 내보낸다 (Node-RED flow export 방식).
+    // 실제 다운로드는 App이 saveRequest를 보고 수행한다.
     return {
       ...node.data,
-      status: inputDocs.length > 0 ? 'success' : 'error',
+      status: 'success',
       results: inputDocs,
       output: {
         kind: 'saveRequest',
         docs: inputDocs,
-        persisted: false,
-        note: '저장 미구현 — 로컬 데모에서는 워크플로우가 실제로 저장되지 않습니다.',
+        saveRequest: { name: String(node.data?.name || '새 워크플로우') },
       },
-      error: inputDocs.length > 0 ? '' : '저장할 입력 데이터가 없습니다.',
+      error: '',
     };
   }
 

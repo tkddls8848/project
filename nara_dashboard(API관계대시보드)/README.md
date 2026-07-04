@@ -35,8 +35,19 @@ Vite dev 서버: `http://localhost:5173`
 
 - `apidata/`가 비어 있으면 카탈로그가 빈 상태로 기동한다 (앱은 동작, 검색 결과 0건)
 - 번들 크기는 `apidata/` 문서 수에 비례한다 — 대형 청크 경고의 주원인
-- **저장 노드는 미구현**이다. 실행 시 `persisted:false`와 미구현 안내를 반환하며
-  브라우저 밖에 아무것도 저장하지 않는다
+
+## 워크플로우 저장·공유 (flow JSON)
+
+Node-RED의 flow export/import 패턴을 따라 워크플로우 정의를 JSON 파일로
+내보내고 다시 가져올 수 있다.
+
+- 툴바 **⬇ 내보내기** / 저장 노드 실행 → `{이름}.flow.json` 다운로드
+- 툴바 **⬆ 가져오기** → 파일 선택으로 캔버스 교체
+- 형식: `{format: "nara-dashboard-flow", version: 1, name, exported_at, nodes[], edges[]}`
+- 실행 결과(status/results/output 등 런타임 필드)는 저장하지 않고 노드
+  설정과 연결만 직렬화한다 (`src/data/flowIO.js`)
+- 가져오기 시 format/version/노드 타입을 검증하고, 없는 노드를 가리키는
+  연결은 버린다. 실패하면 원인을 알림으로 표시한다
 
 ## 테스트
 
@@ -48,6 +59,8 @@ npm test          # vitest run
   join/if/merge/export/save 노드의 성공·오류 경로 (카탈로그는 fixture로 대체)
 - `src/data/__tests__/exporters.test.js` — CSV 이스케이프·UTF-8 BOM·헤더, Excel HTML
   이스케이프, JSON export 형식
+- `src/data/__tests__/flowIO.test.js` — flow JSON 직렬화/역직렬화 왕복, 런타임 필드
+  제거, format/version/타입 검증, dangling 엣지 제거
 
 내보내기 직렬화는 `src/data/exporters.js`의 순수 함수로 분리되어 있다.
 CSV는 Excel 호환을 위해 UTF-8 BOM으로 시작하고, XLSX 선택 시 실제 산출물은
