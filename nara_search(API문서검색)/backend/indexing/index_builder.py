@@ -6,7 +6,7 @@ import threading
 import time
 from pathlib import Path
 
-from ..core import config
+from ..core import config, faiss_io
 
 
 # ── 데이터 경로 탐색 ─────────────────────────────────────────────────────────
@@ -240,7 +240,8 @@ def run_build(on_complete=None, device="cpu"):
 
         out_dir = config.STORAGE_DIR
         out_dir.mkdir(parents=True, exist_ok=True)
-        faiss.write_index(index, str(out_dir / "faiss.index"))
+        # 한글 경로에 직접 쓰면 faiss가 EILSEQ로 실패하므로 헬퍼로 저장한다.
+        faiss_io.write_index(index, out_dir / "faiss.index")
         with open(out_dir / "metadata.jsonl", "w", encoding="utf-8") as f:
             for m in metadata_list:
                 f.write(json.dumps(m, ensure_ascii=False) + "\n")

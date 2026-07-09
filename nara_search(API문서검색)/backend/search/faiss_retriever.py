@@ -7,7 +7,7 @@ faiss / sentence_transformers는 이 모듈 import 시점이 아니라 실제 �
 """
 import json
 
-from ..core import config
+from ..core import config, faiss_io
 
 
 class FAISSRetriever:
@@ -42,7 +42,8 @@ class FAISSRetriever:
                 print(f"[retriever] 모델 로딩: {model_path}")
                 self._model = SentenceTransformer(model_path)
             print(f"[retriever] 인덱스 로딩: {config.FAISS_INDEX_PATH}")
-            self._index = faiss.read_index(str(config.FAISS_INDEX_PATH))
+            # 한글 경로는 faiss가 직접 읽지 못하므로 헬퍼로 읽는다.
+            self._index = faiss_io.read_index(config.FAISS_INDEX_PATH)
             with config.STORAGE_META_PATH.open(encoding="utf-8") as f:
                 self._metadata = [json.loads(line) for line in f if line.strip()]
             print(f"[retriever] 준비 완료. {self._index.ntotal}개 문서")
