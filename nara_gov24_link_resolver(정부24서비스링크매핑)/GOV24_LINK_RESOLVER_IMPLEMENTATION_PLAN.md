@@ -1,4 +1,4 @@
-﻿# Gov24 Link Resolver 구현 계획서
+# Gov24 Link Resolver 구현 계획서
 
 작성일: 2026-05-24
 위치: `D:\project\nara_gov24_link_resolver`
@@ -54,30 +54,29 @@ P4 Gov24 Link Resolver
 
 ```text
 D:\project\nara_gov24_link_resolver\
-  gov24_link_resolver\
-    README.md
-    data\
-      raw\
-        gov24_pages.jsonl
-        agency_pages.jsonl
-      working\
-        link_candidates.jsonl
-        service_name_matches.jsonl
-      output\
-        gov24_service_metadata.jsonl
-        gov24_link_candidates.jsonl
-        link_resolution_report.json
-    schemas\
-      gov24_service_metadata.schema.json
-      gov24_link_candidate.schema.json
-    scripts\
-      collect_manual_seed.py
-      normalize_links.py
-      match_services.py
-      validate_outputs.py
-    tests\
-      test_schema.py
-      test_link_format.py
+  README.md
+  data\
+    raw\
+      gov24_pages.jsonl
+      agency_pages.jsonl
+    working\
+      link_candidates.jsonl
+      service_name_matches.jsonl
+    output\
+      gov24_service_metadata.jsonl
+      gov24_link_candidates.jsonl
+      link_resolution_report.json
+  schemas\
+    gov24_service_metadata.schema.json
+    gov24_link_candidate.schema.json
+  scripts\
+    collect_manual_seed.py
+    normalize_links.py
+    match_services.py
+    validate_outputs.py
+  tests\
+    test_schema.py
+    test_link_format.py
 ```
 
 ## 5. 산출물 정의
@@ -252,7 +251,7 @@ P1/P2/P5가 소비할 최종 메타데이터 파일이다.
 
 ## 7. 최소 구현 우선순위
 
-1. `gov24_link_resolver/README.md`
+1. `README.md`
 2. `schemas/gov24_link_candidate.schema.json`
 3. `data/working/link_candidates.jsonl` 수동 seed 20개
 4. `scripts/validate_outputs.py`
@@ -316,7 +315,7 @@ MVP 완료 기준:
 
 ## 11. 다음 작업
 
-1. `gov24_link_resolver` 디렉터리 생성
+1. 프로젝트 루트 디렉터리 생성
 2. README와 schema 작성
 3. startup_cafe 수동 seed 링크 작성
 4. 검증 스크립트 작성

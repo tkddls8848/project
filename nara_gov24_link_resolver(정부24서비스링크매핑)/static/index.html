@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>정부24 서비스 링크 매핑</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">Gov24 Link Resolver</p>
+        <h1>정부24 서비스 링크 매핑</h1>
+      </div>
+      <div class="header-actions" aria-label="파이프라인 실행">
+        <button type="button" class="secondary" data-run="normalize">정규화</button>
+        <button type="button" class="secondary" data-run="match">메타데이터 생성</button>
+        <button type="button" class="secondary" data-run="validate">검증</button>
+        <button type="button" class="primary" data-run="all">전체 실행</button>
+        <button type="button" class="ghost" id="refreshButton">새로고침</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="metrics" aria-label="요약 지표">
+        <article class="metric">
+          <span>후보 링크</span>
+          <strong id="metricCandidates">0</strong>
+        </article>
+        <article class="metric">
+          <span>검토 완료</span>
+          <strong id="metricReviewed">0</strong>
+        </article>
+        <article class="metric">
+          <span>대기</span>
+          <strong id="metricPending">0</strong>
+        </article>
+        <article class="metric">
+          <span>메타데이터</span>
+          <strong id="metricMetadata">0</strong>
+        </article>
+        <article class="metric">
+          <span>URL 유효율</span>
+          <strong id="metricUrlRate">0%</strong>
+        </article>
+        <article class="metric danger">
+          <span>오류</span>
+          <strong id="metricErrors">0</strong>
+        </article>
+      </section>
+
+      <section class="workspace">
+        <aside class="side-panel">
+          <h2>후보 추가</h2>
+          <form id="candidateForm">
+            <label>
+              <span>제목</span>
+              <input name="title" required autocomplete="off">
+            </label>
+            <label>
+              <span>URL</span>
+              <input name="url" required type="url" placeholder="https://">
+            </label>
+            <div class="field-row">
+              <label>
+                <span>출처</span>
+                <select name="source">
+                  <option value="manual">manual</option>
+                  <option value="search">search</option>
+                  <option value="crawler">crawler</option>
+                  <option value="api">api</option>
+                </select>
+              </label>
+              <label>
+                <span>상태</span>
+                <select name="review_status">
+                  <option value="pending">pending</option>
+                  <option value="reviewed">reviewed</option>
+                  <option value="rejected">rejected</option>
+                </select>
+              </label>
+            </div>
+            <label>
+              <span>신뢰도</span>
+              <input name="confidence" type="number" min="0" max="1" step="0.01" value="0.70">
+            </label>
+            <label>
+              <span>검색어</span>
+              <input name="matched_query" autocomplete="off">
+            </label>
+            <label>
+              <span>서비스명</span>
+              <input name="matched_service_name" autocomplete="off">
+            </label>
+            <label>
+              <span>매칭 근거</span>
+              <input name="match_reason" value="title_keyword_overlap" autocomplete="off">
+            </label>
+            <label>
+              <span>비고</span>
+              <textarea name="notes" rows="3"></textarea>
+            </label>
+            <button type="submit" class="primary wide">후보 저장</button>
+          </form>
+
+          <div class="status-box" id="statusBox" role="status">준비됨</div>
+        </aside>
+
+        <section class="main-panel">
+          <div class="tabs" role="tablist" aria-label="데이터 보기">
+            <button type="button" class="tab active" data-tab="candidates">후보</button>
+            <button type="button" class="tab" data-tab="metadata">메타데이터</button>
+            <button type="button" class="tab" data-tab="report">리포트</button>
+            <button type="button" class="tab" data-tab="logs">실행 로그</button>
+          </div>
+
+          <section class="tab-panel active" id="panel-candidates">
+            <div class="table-toolbar">
+              <input id="searchInput" type="search" placeholder="검색">
+              <select id="statusFilter" aria-label="상태 필터">
+                <option value="">전체 상태</option>
+                <option value="pending">pending</option>
+                <option value="reviewed">reviewed</option>
+                <option value="rejected">rejected</option>
+              </select>
+              <select id="sourceFilter" aria-label="출처 필터">
+                <option value="">전체 출처</option>
+                <option value="manual">manual</option>
+                <option value="search">search</option>
+                <option value="crawler">crawler</option>
+                <option value="api">api</option>
+              </select>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>제목</th>
+                    <th>URL</th>
+                    <th>출처</th>
+                    <th>신뢰도</th>
+                    <th>상태</th>
+                  </tr>
+                </thead>
+                <tbody id="candidateRows"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="tab-panel" id="panel-metadata">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Link ID</th>
+                    <th>제목</th>
+                    <th>유형</th>
+                    <th>도메인</th>
+                    <th>상태</th>
+                    <th>URL</th>
+                  </tr>
+                </thead>
+                <tbody id="metadataRows"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="tab-panel" id="panel-report">
+            <div class="report-grid">
+              <article>
+                <h2>파일</h2>
+                <dl id="fileList"></dl>
+              </article>
+              <article>
+                <h2>도메인</h2>
+                <div id="domainList" class="chip-list"></div>
+              </article>
+              <article>
+                <h2>검증 상세</h2>
+                <div id="reportDetails"></div>
+              </article>
+            </div>
+          </section>
+
+          <section class="tab-panel" id="panel-logs">
+            <pre id="logOutput"></pre>
+          </section>
+        </section>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

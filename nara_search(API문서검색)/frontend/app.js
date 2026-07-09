@@ -8,7 +8,9 @@ const healthText = document.querySelector("#healthText");
 const detailEmpty = document.querySelector("#detailEmpty");
 const detailView = document.querySelector("#detailView");
 const searchButton = document.querySelector("#searchButton");
-const buildButton = document.querySelector("#buildButton");
+const buildCpuButton = document.querySelector("#buildCpuButton");
+const buildGpuButton = document.querySelector("#buildGpuButton");
+const buildButtons = [buildCpuButton, buildGpuButton];
 const buildBar = document.querySelector("#buildBar");
 const buildStatusEl = document.querySelector("#buildStatus");
 const buildProgress = document.querySelector("#buildProgress");
@@ -193,27 +195,35 @@ form.addEventListener("submit", (event) => {
 
 // ── 빌드 ─────────────────────────────────────────────────────────────────────
 
-async function triggerBuild() {
-  buildButton.disabled = true;
+function setBuildButtonsDisabled(disabled) {
+  buildButtons.forEach((btn) => { btn.disabled = disabled; });
+}
+
+async function triggerBuild(device) {
+  setBuildButtonsDisabled(true);
   try {
-    const res = await fetch("/build", { method: "POST" });
+    const res = await fetch("/build", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ device })
+    });
     const data = await res.json();
     if (!data.ok) {
       alert(data.message);
-      buildButton.disabled = false;
+      setBuildButtonsDisabled(false);
       return;
     }
     startBuildPoll();
   } catch (e) {
     alert("빌드 요청 실패: " + e.message);
-    buildButton.disabled = false;
+    setBuildButtonsDisabled(false);
   }
 }
 
 function startBuildPoll() {
   buildBar.classList.remove("hidden");
   if (buildPollTimer) clearInterval(buildPollTimer);
-  buildPollTimer = setInterval(pollBuildStatus, 1500);
+  buildPollTimer = setInterval(pollBuildStatus, 1000);
 }
 
 async function pollBuildStatus() {
@@ -231,7 +241,7 @@ async function pollBuildStatus() {
     if (data.state === "done" || data.state === "error") {
       clearInterval(buildPollTimer);
       buildPollTimer = null;
-      buildButton.disabled = false;
+      setBuildButtonsDisabled(false);
       buildProgress.value = data.state === "done" ? 100 : 0;
       if (data.state === "done") loadHealth();
     }
@@ -240,6 +250,7 @@ async function pollBuildStatus() {
   }
 }
 
-buildButton.addEventListener("click", triggerBuild);
+buildCpuButton.addEventListener("click", () => triggerBuild("cpu"));
+buildGpuButton.addEventListener("click", () => triggerBuild("gpu"));
 
 loadHealth();

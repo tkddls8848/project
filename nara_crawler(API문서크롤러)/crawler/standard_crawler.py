@@ -5,10 +5,10 @@ import os
 from bs4 import BeautifulSoup
 from typing import List, Dict, Optional, Any
 
-from crawler.crawler.base_crawler import BaseCrawler
-from crawler.domain.schemas import CrawlResult, CrawlData
-from crawler.utils.text_utils import clean_text
-from crawler.utils.url_utils import ApiIdExtractor
+from crawler.base_crawler import BaseCrawler
+from domain.schemas import CrawlResult, CrawlData
+from utils.text_utils import clean_text
+from utils.url_utils import ApiIdExtractor
 
 class StandardCrawler(BaseCrawler):
     """Crawler for standard data type services."""

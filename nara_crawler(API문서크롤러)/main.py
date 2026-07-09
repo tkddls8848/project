@@ -6,19 +6,20 @@ import sys
 from typing import Dict, List, Optional
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
-BASE_DIR = os.path.dirname(current_dir)
+BASE_DIR = current_dir
 STAGE_DIR = current_dir
 
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
-from crawler.domain.schemas import CrawlerConfig
-from crawler.crawler.file_data_crawler import FileDataCrawler
-from crawler.managers.crawl_run_manager import CrawlRunManager
-from crawler.crawler.openapi_crawler import OpenAPICrawler
-from crawler.crawler.standard_crawler import StandardCrawler
-from crawler.utils.metadata_csv import MetadataCsvReader
-from crawler.utils.url_utils import URLGenerator
+from domain.schemas import CrawlerConfig
+from crawler.file_data_crawler import FileDataCrawler
+from managers.crawl_run_manager import CrawlRunManager
+from crawler.openapi_crawler import OpenAPICrawler
+from crawler.standard_crawler import StandardCrawler
+from utils.metadata_csv import MetadataCsvReader
+from utils.metadata_updater import maybe_update_metadata
+from utils.url_utils import URLGenerator
 
 
 DATA_TYPE_OUTPUT_DIRS = {
@@ -238,10 +239,24 @@ async def main():
     parser.add_argument("--crawl-run-id", help="Optional crawl run id. Defaults to current KST timestamp")
     default_csv_dir = os.path.join(STAGE_DIR, "scanner", "database")
     parser.add_argument("--csv-dir", default=default_csv_dir, help="Directory for CSV metadata")
+    parser.add_argument(
+        "--skip-update",
+        action="store_true",
+        help="Skip the auto metadata-list update check before crawling",
+    )
+    parser.add_argument(
+        "--force-update",
+        action="store_true",
+        help="Force re-download of the metadata list CSV even if not newer",
+    )
 
     args = parser.parse_args()
     if args.workers is not None and args.workers < 1:
         parser.error("--workers must be greater than 0")
+
+    # 크롤 시작 전 목록 CSV 신규 여부 자동 확인 후 필요 시 다운로드
+    if not args.skip_update:
+        await maybe_update_metadata(args.csv_dir, force=args.force_update)
 
     crawl_run_id = args.crawl_run_id or CrawlRunManager.create_run_id()
     run_manager = CrawlRunManager(BASE_DIR)

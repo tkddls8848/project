@@ -53,6 +53,10 @@ python -c "from huggingface_hub import snapshot_download; snapshot_download('jhg
 cd d:\project\nara_search
 pip install -r backend\requirements.txt
 
+# (선택) GPU 빌드: NVIDIA GPU + 드라이버가 있는 환경에서만.
+#   CUDA 지원 torch를 추가 설치한다. requirements-gpu.txt 안의 cu124를 드라이버에 맞게 조정.
+# pip install -r backend\requirements-gpu.txt
+
 # 방법 1: PowerShell 스크립트
 .\backend\run_server.ps1
 
@@ -60,9 +64,35 @@ pip install -r backend\requirements.txt
 python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-`http://127.0.0.1:8000/` 접속 → 단독 검색 UI. 처음 한 번 우상단 **"인덱스 빌드"** 클릭 (또는 `curl.exe -X POST http://127.0.0.1:8000/build`).
+`http://127.0.0.1:8000/` 접속 → 단독 검색 UI. 처음 한 번 우상단 **"빌드(CPU)"** 또는 **"빌드(GPU)"** 클릭
+(또는 `curl.exe -X POST http://127.0.0.1:8000/build -H "Content-Type: application/json" -d "{\"device\":\"gpu\"}"`).
+GPU 빌드는 CUDA 지원 torch가 설치돼 있어야 하며, 없으면 안내 메시지가 뜨고 빌드가 시작되지 않는다.
 
 빌드 완료 후 `storage/faiss.index`, `storage/metadata.jsonl` 생성, retriever 자동 reload.
+
+### WSL2에서 GPU 빌드 실행
+
+Windows에서 GPU 빌드를 쓰는 가장 깔끔한 경로는 WSL2다. **Linux에서는 기본 PyPI `torch` 휠이 이미 CUDA 빌드**라, 별도 `requirements-gpu.txt` 없이 기본 requirements만으로 GPU torch가 설치된다.
+
+전제 조건:
+- NVIDIA GPU + **Windows 호스트**에 최신 NVIDIA 드라이버(WSL 지원 포함). WSL 안에는 드라이버를 따로 설치하지 않는다 — 호스트 드라이버가 `libcuda`를 제공한다.
+- WSL2(WSL1 아님) + 배포판(Ubuntu 등).
+
+```bash
+# WSL(Ubuntu) 안에서
+nvidia-smi                          # GPU가 보이는지 먼저 확인
+
+cd /mnt/c/project/nara_search       # 또는 WSL 홈으로 프로젝트 복사(권장, I/O 빠름)
+python3 -m venv venv                # Windows venv/ 재사용 불가 — Linux venv 새로 생성
+source venv/bin/activate
+pip install -r backend/requirements.txt   # torch가 CUDA 빌드로 설치됨
+
+python -c "import torch; print(torch.cuda.is_available())"   # True 여야 함
+
+uvicorn backend.main:app --host 0.0.0.0 --port 8000
+```
+
+`torch.cuda.is_available()`가 `True`면 브라우저에서 **빌드(GPU)** 버튼이 그대로 동작한다(백엔드 `resolve_device()`는 OS와 무관하게 CUDA 가용성만 확인). `faiss-cpu`는 그대로 두면 되며, GPU 가속되는 부분은 임베딩 단계다.
 
 ## 엔드포인트
 

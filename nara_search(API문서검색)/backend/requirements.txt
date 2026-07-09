@@ -5,6 +5,9 @@ pydantic>=2.0.0
 
 # search / embedding
 faiss-cpu>=1.9.0
-sentence-transformers>=3.0.0
+sentence-transformers>=3.0.0   # CPU 전용 torch를 함께 설치한다
 huggingface_hub>=0.23.0
 numpy>=1.25.0
+
+# GPU 빌드(빌드(GPU) 버튼)를 쓰려면 CUDA 지원 torch가 필요하다.
+# 별도 설치: pip install -r backend/requirements-gpu.txt  (requirements-gpu.txt 참고)

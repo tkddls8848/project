@@ -5,11 +5,11 @@ import json
 from typing import List, Dict, Optional, Any
 from bs4 import BeautifulSoup
 
-from crawler.crawler.base_crawler import BaseCrawler
-from crawler.domain.schemas import CrawlResult, CrawlData
-from crawler.utils.text_utils import clean_text
-from crawler.utils.url_utils import ApiIdExtractor
-from crawler.infrastructure.nara_parser import NaraParser
+from crawler.base_crawler import BaseCrawler
+from domain.schemas import CrawlResult, CrawlData
+from utils.text_utils import clean_text
+from utils.url_utils import ApiIdExtractor
+from infrastructure.nara_parser import NaraParser
 
 class OpenAPICrawler(BaseCrawler):
     """

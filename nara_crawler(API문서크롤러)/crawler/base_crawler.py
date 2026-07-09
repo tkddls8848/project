@@ -7,10 +7,10 @@ from typing import List, Dict, Optional, Any
 from bs4 import BeautifulSoup, SoupStrainer
 from tqdm import tqdm
 
-from crawler.domain.schemas import CrawlerConfig, CrawlResult
-from crawler.managers.file_storage import DataExporter
+from domain.schemas import CrawlerConfig, CrawlResult
+from managers.file_storage import DataExporter
 
-from crawler.managers.summary_service import SummaryService
+from managers.summary_service import SummaryService
 
 class BaseCrawler(ABC):
     """Abstract base class for all crawlers."""

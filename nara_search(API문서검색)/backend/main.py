@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 from .catalog.detail_service import DetailUnavailableError, ServiceDetailProvider
 from .core import config
 from .core.service_id import ServiceIdError, normalize_service_id, to_canonical
-from .indexing.index_builder import build_status, run_build
+from .indexing.index_builder import build_status, resolve_device, run_build
 from .search.faiss_retriever import FAISSRetriever
 from .search.fusion import reciprocal_rank_fusion
 from .search.lexical_retriever import LexicalRetriever
@@ -42,6 +42,10 @@ class SearchRequest(BaseModel):
     query: str = Field(..., min_length=2, max_length=config.MAX_QUERY_LENGTH)
     top_k: int = Field(default=config.DEFAULT_TOP_K, ge=1, le=20)
     use_vector: bool = True
+
+
+class BuildRequest(BaseModel):
+    device: str = Field(default="cpu", pattern="^(cpu|gpu|cuda)$")
 
 
 def _relative_source_path(path: str) -> str:
@@ -152,18 +156,30 @@ def search(request: SearchRequest):
 
 
 @app.post("/build")
-def trigger_build():
+def trigger_build(request: BuildRequest | None = None):
     if build_status.state == "running":
         return {"ok": False, "message": "이미 빌드 중입니다."}
+
+    device = (request.device if request else "cpu")
+    # 빌드 스레드를 띄우기 전에 디바이스 가용성을 확인해 즉시 오류를 반환한다.
+    try:
+        resolved = resolve_device(device)
+    except (RuntimeError, ValueError) as exc:
+        return {"ok": False, "message": str(exc)}
 
     def _on_complete():
         retriever.reload()
         lexical_retriever.reload()
         detail_provider.reload()
 
-    thread = threading.Thread(target=run_build, kwargs={"on_complete": _on_complete}, daemon=True)
+    thread = threading.Thread(
+        target=run_build,
+        kwargs={"on_complete": _on_complete, "device": device},
+        daemon=True,
+    )
     thread.start()
-    return {"ok": True, "message": "빌드를 시작했습니다."}
+    label = "GPU" if resolved == "cuda" else "CPU"
+    return {"ok": True, "message": f"{label} 빌드를 시작했습니다.", "device": resolved}
 
 
 @app.get("/build/status")

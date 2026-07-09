@@ -1,0 +1,15 @@
+# GPU(CUDA) 빌드 전용 의존성 — NVIDIA GPU + 드라이버가 있는 환경에서만 설치.
+#
+# 기본 requirements.txt 설치 후, CUDA 지원 torch를 이 파일로 덮어쓴다:
+#
+#   pip install -r backend/requirements-gpu.txt
+#
+# 주의:
+#   - --index-url 은 PyTorch 전용 휠 저장소를 가리킨다. 일반 PyPI에는 CUDA 휠이 없다.
+#   - cu124 부분(CUDA 12.4)을 자신의 드라이버/GPU에 맞게 바꾼다: cu121 / cu124 / cu126 등.
+#     (설치 가능한 조합: https://pytorch.org/get-started/locally/)
+#   - 설치 확인:  python -c "import torch; print(torch.cuda.is_available())"  ->  True
+
+--index-url https://download.pytorch.org/whl/cu124
+
+torch>=2.2.0

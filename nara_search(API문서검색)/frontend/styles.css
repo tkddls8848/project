@@ -82,8 +82,22 @@ h1 {
 
 .search-form {
   display: grid;
-  grid-template-columns: 1fr 76px 82px 100px;
+  grid-template-columns: 1fr 76px;
   gap: 8px;
+}
+
+.form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+}
+
+.form-actions button {
+  flex: 1;
+}
+
+#buildGpuButton {
+  background: var(--accent-strong);
 }
 
 .build-bar {
@@ -381,6 +395,6 @@ summary {
   }
 
   .search-form {
-    grid-template-columns: 1fr 64px 72px;
+    grid-template-columns: 1fr 64px;
   }
 }

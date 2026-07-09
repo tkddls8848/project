@@ -18,6 +18,32 @@ def get_apidata_dir() -> Path:
     return d
 
 
+# ── 디바이스 선택 ────────────────────────────────────────────────────────────
+
+def resolve_device(device: str) -> str:
+    """요청 디바이스('cpu'/'gpu'/'cuda')를 SentenceTransformer용 값으로 정규화.
+
+    GPU 요청 시 CUDA 가용성을 확인하고, 사용할 수 없으면 명확한 오류를 낸다.
+    """
+    value = (device or "cpu").strip().lower()
+    if value in ("cpu", ""):
+        return "cpu"
+    if value in ("gpu", "cuda"):
+        try:
+            import torch
+        except ImportError as exc:  # pragma: no cover - 환경 의존
+            raise RuntimeError(
+                "GPU 빌드를 위해 CUDA 지원 torch가 필요하지만 torch를 불러올 수 없습니다."
+            ) from exc
+        if not torch.cuda.is_available():
+            raise RuntimeError(
+                "GPU 빌드를 요청했지만 사용 가능한 CUDA 디바이스가 없습니다. "
+                "CPU 빌드를 사용하거나 CUDA 지원 torch를 설치하세요."
+            )
+        return "cuda"
+    raise ValueError(f"알 수 없는 디바이스: {device!r} (cpu 또는 gpu)")
+
+
 # ── 텍스트 추출 헬퍼 ─────────────────────────────────────────────────────────
 
 def _safe_get(d, key, default=""):
@@ -106,6 +132,7 @@ class BuildStatus:
         self.total    = 0
         self.message  = ""
         self.data_path = ""
+        self.device   = ""      # cpu / cuda
         self.started_at: float | None  = None
         self.finished_at: float | None = None
 
@@ -128,6 +155,7 @@ class BuildStatus:
                 "total":     self.total,
                 "message":   self.message,
                 "data_path": self.data_path,
+                "device":    self.device,
                 "elapsed_s": elapsed,
             }
 
@@ -137,15 +165,21 @@ build_status = BuildStatus()
 
 # ── 빌드 실행 ────────────────────────────────────────────────────────────────
 
-def run_build(on_complete=None):
-    """백그라운드 스레드에서 실행. 완료 후 on_complete() 호출."""
+def run_build(on_complete=None, device="cpu"):
+    """백그라운드 스레드에서 실행. 완료 후 on_complete() 호출.
+
+    device: 'cpu' 또는 'gpu'/'cuda'. 임베딩 단계를 지정한 디바이스에서 수행한다.
+    """
     s = build_status
     s.update(state="running", started_at=time.time(), finished_at=None,
-             step=0, progress=0, total=0, message="시작 중...")
+             step=0, progress=0, total=0, device="", message="시작 중...")
     try:
         # 무거운 의존성은 빌드 시작 시점에만 import (미설치 시 build 오류로 보고)
         import faiss
         from sentence_transformers import SentenceTransformer
+
+        resolved_device = resolve_device(device)
+        s.update(device=resolved_device)
 
         # 1단계: 파일 탐색
         s.update(step=1, step_name="파일 탐색")
@@ -177,9 +211,10 @@ def run_build(on_complete=None):
         s.update(message=f"파싱 완료: {len(texts)}건 / 스킵 {skipped}건")
 
         # 3단계: 임베딩
-        s.update(step=3, step_name="임베딩 생성", progress=0, total=len(texts))
+        s.update(step=3, step_name=f"임베딩 생성 ({resolved_device})",
+                 progress=0, total=len(texts))
         model_path = config.ensure_local_model()
-        model = SentenceTransformer(model_path)
+        model = SentenceTransformer(model_path, device=resolved_device)
 
         batch_size = 64
         import numpy as np
@@ -194,7 +229,7 @@ def run_build(on_complete=None):
             ).astype("float32")
             all_embeddings.append(emb)
             done = min(start + batch_size, len(texts))
-            s.update(progress=done, message=f"임베딩 {done}/{len(texts)}")
+            s.update(progress=done, message=f"임베딩 {done}/{len(texts)} ({resolved_device})")
         embeddings = np.vstack(all_embeddings)
 
         # 4단계: 인덱스 저장

@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Nara API Search</title>
-    <link rel="stylesheet" href="/static/styles.css" />
+    <link rel="stylesheet" href="/static/styles.css?v=2" />
   </head>
   <body>
     <main class="shell">
@@ -35,8 +35,11 @@
             <option value="10">10</option>
             <option value="15">15</option>
           </select>
-          <button type="submit" id="searchButton">검색</button>
-          <button type="button" id="buildButton">인덱스 빌드</button>
+          <div class="form-actions">
+            <button type="submit" id="searchButton">검색</button>
+            <button type="button" id="buildCpuButton">빌드(CPU)</button>
+            <button type="button" id="buildGpuButton">빌드(GPU)</button>
+          </div>
         </form>
       </section>
 
@@ -56,7 +59,7 @@
         </section>
       </section>
     </main>
-    <script src="/static/app.js"></script>
+    <script src="/static/app.js?v=3"></script>
   </body>
 </html>
 
