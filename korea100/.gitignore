@@ -1,0 +1,13 @@
+node_modules/
+.next/
+out/
+.venv/
+.env*
+!web/.env.example
+.DS_Store
+
+# openclaw/omc agent working state — must not be committed
+.omc/
+
+# Korea100 local news candidate refresh output
+docs/news-candidates/latest.*

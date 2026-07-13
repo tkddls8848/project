@@ -1,0 +1,681 @@
+{
+ "slug": "power-plant-community-support",
+ "name": "발전소 주변지역 지원",
+ "oneLiner": "발전소 주변지역 지원사업 계획·신청·시행, 지원금 관리·평가·회수 절차",
+ "type": "재정배분형",
+ "priority": 155,
+ "whyFirst": "원전·화력·재생 대규모 발전의 주민수용·지역 환원 제도다.",
+ "asOfDate": "2026-07-12",
+ "status": "full",
+ "canvas": {
+  "purpose": "발전소 입지에 따른 지역 부담을 지원사업·고용 등으로 보상·상생한다.",
+  "stakeholders": "발전사업자, 지자체·주민, 기후에너지환경부, 지원사업 시행자.",
+  "legalBasis": [
+   {
+    "law": "발전소주변지역 지원에 관한 법률",
+    "articles": "제9~11조(계획·종류·신청·시행자), 제13~16조의5(재원·사용·중단·회수·평가), 제17조(우선고용)",
+    "kind": "법률"
+   }
+  ],
+  "authorities": [
+   {
+    "name": "기후에너지환경부",
+    "role": "심의·감독"
+   },
+   {
+    "name": "지자체·시행자",
+    "role": "사업 시행"
+   },
+   {
+    "name": "주민",
+    "role": "수혜·참여"
+   }
+  ],
+  "procedure": [
+   "주변지역 해당성",
+   "지원사업계획 수립",
+   "신청·심의",
+   "지원금 교부·사용",
+   "평가",
+   "중단·회수(해당)"
+  ],
+  "moneyFlow": "발전사업자 출연 등 지원금, 사업비 집행, 회수금.",
+  "docsFlow": "계획 → 신청 → 심의 → 교부 → 집행 보고 → 평가.",
+  "bottlenecks": [
+   "지원 범위 다툼",
+   "집행 지연",
+   "평가 형식화",
+   "회수 분쟁"
+  ],
+  "reformPoints": [
+   "지원 기준 공개",
+   "주민 참여 강화",
+   "평가 환류"
+  ]
+ },
+ "related": [
+  "발전사업 허가·전력계통 접속",
+  "해상풍력 지구·사업 선정",
+  "전력수급기본계획",
+  "환경영향평가"
+ ],
+ "fieldVerification": [
+  "주변지역 범위 기준",
+  "지원금 요율",
+  "심의위원회 구성"
+ ],
+ "process": {
+  "institution_name": "발전소 주변지역 지원",
+  "law_name": "발전소주변지역 지원에 관한 법률",
+  "lanes": [
+   "발전사업자",
+   "지자체·시행자",
+   "주민",
+   "기후에너지환경부",
+   "심의위원회",
+   "감독"
+  ],
+  "stages": [
+   "G0 해당",
+   "G1 계획",
+   "G2 신청",
+   "G3 교부",
+   "G4 시행",
+   "G5 평가·회수"
+  ],
+  "nodes": [
+   {
+    "id": "P01",
+    "name": "주변지역 해당성 확인",
+    "lane": "발전사업자",
+    "stage": "G0 해당",
+    "type": "task",
+    "status": "done",
+    "progress": 100,
+    "actor": "발전사업자",
+    "action": "주변지역 해당성 확인",
+    "output_documents": [
+     "해당"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "발전소주변지역 지원에 관한 법률",
+      "article": "제9조(지원사업계획의 수립)",
+      "text": "지원사업계획의 수립"
+     }
+    ]
+   },
+   {
+    "id": "P02",
+    "name": "지원사업계획 수립",
+    "lane": "발전사업자",
+    "stage": "G1 계획",
+    "type": "task",
+    "status": "done",
+    "progress": 100,
+    "actor": "발전사업자",
+    "action": "지원사업계획 수립",
+    "output_documents": [
+     "계획"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "발전소주변지역 지원에 관한 법률",
+      "article": "제9조제1항",
+      "text": "기후에너지환경부장관은 매년 지원사업에 관한 계획을 수립하여야 한다."
+     },
+     {
+      "law": "발전소주변지역 지원에 관한 법률",
+      "article": "제9조제2항",
+      "text": "주변지역 관할 지자체장은 필요 시 장관과 협의하여 지역 지원사업 장기계획을 수립할 수 있다."
+     },
+     {
+      "law": "발전소주변지역 지원에 관한 법률",
+      "article": "제10조(지원사업의 종류 등)",
+      "text": "기본·특별·홍보·기타 지원사업의 종류를 정한다."
+     }
+    ],
+    "deadline": "매년(장관 계획)"
+   },
+   {
+    "id": "P03",
+    "name": "지원사업 신청",
+    "lane": "지자체·시행자",
+    "stage": "G2 신청",
+    "type": "task",
+    "status": "current",
+    "progress": 40,
+    "actor": "지자체·시행자",
+    "action": "지원사업 신청",
+    "output_documents": [
+     "신청"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "발전소주변지역 지원에 관한 법률",
+      "article": "제10조의2(지원사업의 신청)",
+      "text": "지원사업의 신청"
+     },
+     {
+      "law": "발전소주변지역 지원에 관한 법률",
+      "article": "제11조(지원사업의 시행자)",
+      "text": "지원사업의 시행자"
+     }
+    ]
+   },
+   {
+    "id": "P04",
+    "name": "심의·재원 결정",
+    "lane": "심의위원회",
+    "stage": "G2 신청",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "심의위원회",
+    "action": "심의·재원 결정",
+    "output_documents": [
+     "심의"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "발전소주변지역 지원에 관한 법률",
+      "article": "제3조(주변지역지원사업심의위원회 등의 설치)",
+      "text": "주변지역지원사업심의위원회 등의 설치"
+     },
+     {
+      "law": "발전소주변지역 지원에 관한 법률",
+      "article": "제13조(재원과 지원금의 결정)",
+      "text": "재원과 지원금의 결정"
+     }
+    ]
+   },
+   {
+    "id": "P05",
+    "name": "보완 요구",
+    "lane": "지자체·시행자",
+    "stage": "G2 신청",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "지자체·시행자",
+    "action": "보완 요구",
+    "output_documents": [
+     "보완"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "발전소주변지역 지원에 관한 법률",
+      "article": "제10조의2(지원사업의 신청)",
+      "text": "지원사업의 신청"
+     }
+    ]
+   },
+   {
+    "id": "P06",
+    "name": "지원금 교부",
+    "lane": "기후에너지환경부",
+    "stage": "G3 교부",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "기후에너지환경부",
+    "action": "지원금 교부",
+    "output_documents": [
+     "교부"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "발전소주변지역 지원에 관한 법률",
+      "article": "제13조제1항",
+      "text": "지원사업 비용은 전기사업법 제48조에 따른 전력산업기반기금에서 부담한다."
+     },
+     {
+      "law": "발전소주변지역 지원에 관한 법률",
+      "article": "제13조제2항",
+      "text": "지원금의 결정기준은 발전소 종류·규모·발전량과 주변지역 여건 등을 고려하여 5년마다 대통령령으로 정한다."
+     },
+     {
+      "law": "발전소주변지역 지원에 관한 법률",
+      "article": "제14조(지원금의 사용)",
+      "text": "지원금은 대통령령으로 정하는 바에 따라 주변지역에 사용한다."
+     }
+    ],
+    "deadline": "지원금 결정기준 5년마다"
+   },
+   {
+    "id": "P07",
+    "name": "교부 결과 수령",
+    "lane": "지자체·시행자",
+    "stage": "G3 교부",
+    "type": "notice",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "지자체·시행자",
+    "action": "교부 결과 수령",
+    "output_documents": [
+     "통지"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "발전소주변지역 지원에 관한 법률",
+      "article": "제13조(재원과 지원금의 결정)",
+      "text": "재원과 지원금의 결정"
+     }
+    ]
+   },
+   {
+    "id": "P08",
+    "name": "사업 시행·우선고용",
+    "lane": "지자체·시행자",
+    "stage": "G4 시행",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "지자체·시행자",
+    "action": "사업 시행·우선고용",
+    "output_documents": [
+     "시행"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "발전소주변지역 지원에 관한 법률",
+      "article": "제14조(지원금의 사용)",
+      "text": "지원금의 사용"
+     },
+     {
+      "law": "발전소주변지역 지원에 관한 법률",
+      "article": "제17조(지역주민의 우선고용)",
+      "text": "지역주민의 우선고용"
+     }
+    ]
+   },
+   {
+    "id": "P09",
+    "name": "주민 참여·수혜",
+    "lane": "주민",
+    "stage": "G4 시행",
+    "type": "notice",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "주민",
+    "action": "주민 참여·수혜",
+    "output_documents": [
+     "수혜"
+    ],
+    "confidence": 0.85,
+    "legal_basis": [
+     {
+      "law": "발전소주변지역 지원에 관한 법률",
+      "article": "제17조(지역주민의 우선고용)",
+      "text": "지역주민의 우선고용"
+     }
+    ]
+   },
+   {
+    "id": "P10",
+    "name": "집행 보고",
+    "lane": "지자체·시행자",
+    "stage": "G4 시행",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "지자체·시행자",
+    "action": "집행 보고",
+    "output_documents": [
+     "보고"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "발전소주변지역 지원에 관한 법률",
+      "article": "제16조의2(지원금의 관리 등)",
+      "text": "지원금의 관리 등"
+     },
+     {
+      "law": "발전소주변지역 지원에 관한 법률",
+      "article": "제19조(보고 및 검사 등)",
+      "text": "보고 및 검사 등"
+     }
+    ]
+   },
+   {
+    "id": "P11",
+    "name": "지원사업 평가",
+    "lane": "기후에너지환경부",
+    "stage": "G5 평가·회수",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "기후에너지환경부",
+    "action": "지원사업 평가",
+    "output_documents": [
+     "평가"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "발전소주변지역 지원에 관한 법률",
+      "article": "제16조의5제1항·제2항",
+      "text": "기후에너지환경부장관은 지원사업을 평가할 수 있으며, 평가를 전문법인·단체 등에 위탁할 수 있다."
+     },
+     {
+      "law": "발전소주변지역 지원에 관한 법률",
+      "article": "제16조의5제3항",
+      "text": "평가 결과에 따라 지원금의 10퍼센트 이내의 범위에서 대통령령으로 정하는 비율로 지원금을 증액 또는 감액하여 지원할 수 있다."
+     }
+    ]
+   },
+   {
+    "id": "P12",
+    "name": "중단·회수",
+    "lane": "감독",
+    "stage": "G5 평가·회수",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "감독",
+    "action": "중단·회수",
+    "output_documents": [
+     "회수"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "발전소주변지역 지원에 관한 법률",
+      "article": "제16조의3(지원사업의 중단)",
+      "text": "지원사업의 중단"
+     },
+     {
+      "law": "발전소주변지역 지원에 관한 법률",
+      "article": "제16조의4(지원금의 회수 등)",
+      "text": "지원금의 회수 등"
+     }
+    ]
+   },
+   {
+    "id": "P13",
+    "name": "처분 통지",
+    "lane": "지자체·시행자",
+    "stage": "G5 평가·회수",
+    "type": "notice",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "지자체·시행자",
+    "action": "처분 통지",
+    "output_documents": [
+     "통지"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "발전소주변지역 지원에 관한 법률",
+      "article": "제16조의4(지원금의 회수 등)",
+      "text": "지원금의 회수 등"
+     }
+    ]
+   },
+   {
+    "id": "P14",
+    "name": "원자력·수력 특례 지원",
+    "lane": "발전사업자",
+    "stage": "G1 계획",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "발전사업자",
+    "action": "원자력·수력 특례 지원",
+    "output_documents": [
+     "특례"
+    ],
+    "confidence": 0.85,
+    "legal_basis": [
+     {
+      "law": "발전소주변지역 지원에 관한 법률",
+      "article": "제13조의2(원자력ㆍ수력발전사업자의 지역지원사업)",
+      "text": "원자력ㆍ수력발전사업자의 지역지원사업"
+     }
+    ]
+   },
+   {
+    "id": "P15",
+    "name": "조기 사용 승인",
+    "lane": "기후에너지환경부",
+    "stage": "G3 교부",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "기후에너지환경부",
+    "action": "조기 사용 승인",
+    "output_documents": [
+     "조기"
+    ],
+    "confidence": 0.8,
+    "legal_basis": [
+     {
+      "law": "발전소주변지역 지원에 관한 법률",
+      "article": "제16조(지원금의 조기 사용 등)",
+      "text": "지원금의 조기 사용 등"
+     }
+    ]
+   },
+   {
+    "id": "P16",
+    "name": "재신청 루프",
+    "lane": "지자체·시행자",
+    "stage": "G2 신청",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "지자체·시행자",
+    "action": "재신청 루프",
+    "output_documents": [
+     "재신청"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "발전소주변지역 지원에 관한 법률",
+      "article": "제10조의2(지원사업의 신청)",
+      "text": "지원사업의 신청"
+     }
+    ]
+   },
+   {
+    "id": "P17",
+    "name": "결산보고서 제출",
+    "lane": "지자체·시행자",
+    "stage": "G5 평가·회수",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "지원사업 시행자",
+    "receiver": "기후에너지환경부",
+    "action": "연간 지원사업 결산보고서 작성·제출",
+    "output_documents": [
+     "지원사업 결산보고서"
+    ],
+    "deadline": "다음 해 2월 10일까지",
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "발전소주변지역 지원에 관한 법률",
+      "article": "제18조(결산 보고)",
+      "text": "지원사업의 시행자는 매년 지원사업에 관한 결산보고서를 작성하여 다음 해 2월 10일까지 기후에너지환경부장관에게 제출하여야 한다."
+     }
+    ]
+   }
+  ],
+  "edges": [
+   {
+    "id": "E01",
+    "source": "P01",
+    "target": "P02",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E02",
+    "source": "P02",
+    "target": "P14",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E03",
+    "source": "P14",
+    "target": "P03",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E04",
+    "source": "P03",
+    "target": "P04",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E05",
+    "source": "P04",
+    "target": "P05",
+    "type": "sequence",
+    "label": "보완"
+   },
+   {
+    "id": "E06",
+    "source": "P05",
+    "target": "P16",
+    "type": "loop",
+    "label": null
+   },
+   {
+    "id": "E07",
+    "source": "P16",
+    "target": "P03",
+    "type": "loop",
+    "label": null
+   },
+   {
+    "id": "E08",
+    "source": "P04",
+    "target": "P06",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E09",
+    "source": "P06",
+    "target": "P15",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E10",
+    "source": "P06",
+    "target": "P07",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E11",
+    "source": "P07",
+    "target": "P08",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E12",
+    "source": "P08",
+    "target": "P09",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E13",
+    "source": "P08",
+    "target": "P10",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E14",
+    "source": "P10",
+    "target": "P11",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E15",
+    "source": "P11",
+    "target": "P12",
+    "type": "sequence",
+    "label": "부정"
+   },
+   {
+    "id": "E16",
+    "source": "P12",
+    "target": "P13",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "M01",
+    "source": "P10",
+    "target": "P17",
+    "type": "message",
+    "label": "연간 결산보고(2.10까지)"
+   },
+   {
+    "id": "M02",
+    "source": "P17",
+    "target": "P11",
+    "type": "message",
+    "label": "결산 반영 평가"
+   }
+  ],
+  "warnings": [
+   "MST 276507.",
+   "2026-07-13 L2 블라인드 재구성 대조 정정: (E/D) P17 결산보고서 제출(제18조, 다음 해 2월 10일까지) 노드 신설 — 시행자의 필수 결산보고 의무·법정기한 누락 보완. (C) P02 계획수립 근거를 제9조제1항(장관 매년 수립)·제9조제2항(지자체 장기계획)으로 정밀화. (D) P06 지원금 결정기준 5년마다(제13조제2항)·P11 평가 결과 지원금 ±10% 이내 증감(제16조의5제3항) 기한·효과 반영. 대조 MST: 발전소주변지역법 276507, 시행령 281193. 법의 침묵: 지원금 교부(집행) 시기·교부 결정 처리기한은 법률 미규정, 시행령·기금 운용에 위임. 법의 침묵: 심의위원회 심의 처리기한 명문 없음(제3조 대통령령 위임). 법의 침묵: 주변지역 범위·거리 기준의 구체 수치는 법률에 없고 대통령령(제2조·제14조 위임)."
+  ]
+ },
+ "verification": {
+  "status": "article-verified",
+  "verifiedAt": "2026-07-13",
+  "method": "국가법령정보센터 Open API (Korean Law MCP CLI) 출처·조문 대조",
+  "scope": "법적 근거 1건 중 공식 원문 1건을 연결했다. 캔버스와 절차 노드의 명시 조문 33건 가운데 33건의 조문 번호 존재를 확인했고, 0건은 불일치, 0건은 자동 검증 불가로 분류했다. 인용 문구의 해석·적용 타당성은 검증 범위에 포함하지 않는다.",
+  "notes": [
+   "발전소주변지역법 MST 276507, 시행령 MST 281193"
+  ],
+  "sources": [
+   {
+    "law": "발전소주변지역 지원에 관한 법률",
+    "kind": "법률",
+    "sourceType": "statute",
+    "officialName": "발전소주변지역 지원에 관한 법률",
+    "lawId": "000283",
+    "mst": "276507",
+    "promulgatedOn": "2025-10-01",
+    "effectiveOn": "2025-10-01",
+    "officialUrl": "https://law.go.kr/법령/발전소주변지역지원에관한법률"
+   }
+  ],
+  "articleVerification": {
+   "checkedAt": "2026-07-13",
+   "method": "현행 법령 조문 일괄조회 및 행정규칙 전문조회",
+   "citationEntries": 28,
+   "explicitCitationEntries": 28,
+   "articleReferences": 33,
+   "verifiedReferences": 33,
+   "missingReferences": 0,
+   "uncheckableReferences": 0
+  }
+ }
+}

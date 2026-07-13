@@ -1,0 +1,659 @@
+{
+ "slug": "special-housing-supply",
+ "name": "주택 특별공급",
+ "oneLiner": "신혼·다자녀 등 특별공급 자격 확인, 청약 신청·당첨, 부적격 처리 절차",
+ "type": "배분·추첨형",
+ "priority": 170,
+ "whyFirst": "청약 경쟁의 핵심 우대 공급 경로다.",
+ "asOfDate": "2026-07-12",
+ "status": "full",
+ "canvas": {
+  "purpose": "정책 우선 계층에 주택을 우선 공급한다.",
+  "stakeholders": "특공 신청자, 사업주체, 청약기관, 국토부.",
+  "legalBasis": [
+   {
+    "law": "주택법",
+    "articles": "제54·54조의2·56조의2·57조의2·64~65·96조",
+    "kind": "법률"
+   },
+   {
+    "law": "주택공급에 관한 규칙",
+    "articles": "제20~21·23·35~36·52·57~59조",
+    "kind": "부령"
+   }
+  ],
+  "authorities": [
+   {
+    "name": "사업주체·청약기관",
+    "role": "모집·선정"
+   },
+   {
+    "name": "신청자",
+    "role": "청약"
+   }
+  ],
+  "procedure": [
+   "공고",
+   "신청",
+   "검증",
+   "당첨",
+   "계약"
+  ],
+  "moneyFlow": "청약금·계약금.",
+  "docsFlow": "공고 → 신청 → 자격서류 → 당첨 → 계약.",
+  "bottlenecks": [
+   "자격 해석",
+   "경쟁률",
+   "부적격"
+  ],
+  "reformPoints": [
+   "기준 안내 강화",
+   "검증 기한",
+   "부정 청약 제재"
+  ]
+ },
+ "related": [
+  "주택청약",
+  "전매제한·실거주 의무",
+  "분양가상한제",
+  "민간임대주택 등록·공급"
+ ],
+ "fieldVerification": [
+  "주택공급에 관한 규칙 특공 유형",
+  "소득·자산 기준 고시",
+  "부적격 처리 지침"
+ ],
+ "process": {
+  "institution_name": "주택 특별공급",
+  "law_name": "주택법",
+  "lanes": [
+   "청약 신청자",
+   "사업주체",
+   "청약기관",
+   "지자체·국토부",
+   "부적격 심사",
+   "감독"
+  ],
+  "stages": [
+   "G0 자격",
+   "G1 공고",
+   "G2 신청",
+   "G3 당첨",
+   "G4 계약",
+   "G5 사후"
+  ],
+  "nodes": [
+   {
+    "id": "P01",
+    "name": "특공 유형·자격 확인",
+    "lane": "청약 신청자",
+    "stage": "G0 자격",
+    "type": "task",
+    "status": "done",
+    "progress": 100,
+    "actor": "청약 신청자",
+    "action": "특공 유형·자격 확인",
+    "output_documents": [
+     "자격"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "주택법",
+      "article": "제54조(주택의 공급)",
+      "text": "주택의 공급"
+     }
+    ]
+   },
+   {
+    "id": "P02",
+    "name": "입주자모집 공고",
+    "lane": "사업주체",
+    "stage": "G1 공고",
+    "type": "task",
+    "status": "done",
+    "progress": 100,
+    "actor": "사업주체",
+    "action": "입주자모집 공고",
+    "output_documents": [
+     "공고"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "주택법",
+      "article": "제54조(주택의 공급)",
+      "text": "주택의 공급"
+     },
+     {
+      "law": "주택법",
+      "article": "제54조의2(주택의 공급업무의 대행 등)",
+      "text": "주택의 공급업무의 대행 등"
+     },
+     {
+      "law": "주택공급에 관한 규칙",
+      "article": "제21조(입주자모집 공고)",
+      "text": "입주자모집공고는 최초 청약 신청 접수일 10일 전에 해야 한다. 다만 특별공급의 경우 공급물량이 적거나 청약 관심도가 낮으면 5일 전으로 단축할 수 있다."
+     },
+     {
+      "law": "주택공급에 관한 규칙",
+      "article": "제20조(입주자모집 승인 및 통보)",
+      "text": "사업주체는 입주자를 모집하려면 시장ㆍ군수ㆍ구청장의 승인을 받아야 한다."
+     }
+    ],
+    "deadline": "입주자모집공고는 최초 청약 신청 접수일 10일 전(특별공급은 5일 전 단축 가능)(주택공급규칙 제21조제2항)"
+   },
+   {
+    "id": "P03",
+    "name": "특별공급 청약 신청",
+    "lane": "청약 신청자",
+    "stage": "G2 신청",
+    "type": "task",
+    "status": "current",
+    "progress": 40,
+    "actor": "청약 신청자",
+    "action": "특별공급 청약 신청",
+    "output_documents": [
+     "신청"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "주택법",
+      "article": "제54조(주택의 공급)",
+      "text": "주택의 공급"
+     },
+     {
+      "law": "주택법",
+      "article": "제56조의2(주택청약업무수행기관)",
+      "text": "주택청약업무수행기관"
+     }
+    ]
+   },
+   {
+    "id": "P04",
+    "name": "접수·자격 검증",
+    "lane": "청약기관",
+    "stage": "G2 신청",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "청약기관",
+    "action": "접수·자격 검증",
+    "output_documents": [
+     "검증"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "주택법",
+      "article": "제56조의2(주택청약업무수행기관)",
+      "text": "주택청약업무수행기관"
+     },
+     {
+      "law": "주택법",
+      "article": "제65조(공급질서 교란 금지)",
+      "text": "공급질서 교란 금지"
+     }
+    ]
+   },
+   {
+    "id": "P05",
+    "name": "보완 제출",
+    "lane": "청약 신청자",
+    "stage": "G2 신청",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "청약 신청자",
+    "action": "보완 제출",
+    "output_documents": [
+     "보완"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "주택법",
+      "article": "제54조(주택의 공급)",
+      "text": "주택의 공급"
+     }
+    ]
+   },
+   {
+    "id": "P06",
+    "name": "당첨자 선정",
+    "lane": "청약기관",
+    "stage": "G3 당첨",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "청약기관",
+    "action": "당첨자 선정",
+    "output_documents": [
+     "당첨"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "주택공급에 관한 규칙",
+      "article": "제35조(국민주택의 특별공급)",
+      "text": "사업주체는 건설하여 공급하는 국민주택을 그 건설량의 10퍼센트의 범위에서 무주택세대구성원으로서 각 호의 어느 하나에 해당하는 자에게 관계기관의 장이 정하는 우선순위기준에 따라 한 차례에 한정하여 특별공급할 수 있다."
+     },
+     {
+      "law": "주택공급에 관한 규칙",
+      "article": "제36조(85제곱미터 이하 민영주택의 특별공급)",
+      "text": "사업주체는 85제곱미터 이하 민영주택을 대상으로 특별공급할 수 있다."
+     },
+     {
+      "law": "주택공급에 관한 규칙",
+      "article": "제57조(당첨자의 명단관리)",
+      "text": "사업주체는 당첨자 명단이 확정된 경우 지체 없이 주택청약업무수행기관에 통보해야 한다."
+     }
+    ]
+   },
+   {
+    "id": "P07",
+    "name": "당첨 통지 수령",
+    "lane": "청약 신청자",
+    "stage": "G3 당첨",
+    "type": "notice",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "청약 신청자",
+    "action": "당첨 통지 수령",
+    "output_documents": [
+     "통지"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "주택법",
+      "article": "제54조(주택의 공급)",
+      "text": "주택의 공급"
+     }
+    ]
+   },
+   {
+    "id": "P08",
+    "name": "부적격 여부 심사",
+    "lane": "부적격 심사",
+    "stage": "G3 당첨",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "부적격 심사",
+    "action": "부적격 여부 심사",
+    "output_documents": [
+     "부적격"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "주택공급에 관한 규칙",
+      "article": "제52조(입주대상자 자격 확인 등)",
+      "text": "사업주체는 전산검색 및 제출서류 확인 결과 부적격자로 판정된 자에게 그 결과를 통보하고, 통보한 날부터 7일 이상의 기간을 정하여 소명서류를 제출하게 하여야 한다."
+     },
+     {
+      "law": "주택공급에 관한 규칙",
+      "article": "제58조(부적격 당첨자의 명단관리 등)",
+      "text": "부적격 당첨자가 소명기간에 소명하지 못하여 당첨이 취소되는 경우 사업주체는 7일 이내에 그 명단을 주택청약업무수행기관에 통보해야 한다."
+     }
+    ],
+    "deadline": "부적격 판정 통보 후 7일 이상 소명기간, 당첨취소 시 7일 이내 명단 통보(주택공급규칙 제52조·제58조)"
+   },
+   {
+    "id": "P09",
+    "name": "계약 체결",
+    "lane": "사업주체",
+    "stage": "G4 계약",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "사업주체",
+    "action": "계약 체결",
+    "output_documents": [
+     "계약"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "주택법",
+      "article": "제54조(주택의 공급)",
+      "text": "주택의 공급"
+     },
+     {
+      "law": "주택공급에 관한 규칙",
+      "article": "제59조(주택의 공급계약)",
+      "text": "공급계약은 입주자 및 예비입주자 선정사실 공고일부터 11일이 경과한 후 3일 이상의 기간을 정하여 체결하여야 한다."
+     }
+    ],
+    "deadline": "입주자 선정사실 공고일부터 11일 경과 후 3일 이상 기간 내 체결(주택공급규칙 제59조제2항)"
+   },
+   {
+    "id": "P10",
+    "name": "전매·거주 의무 안내",
+    "lane": "사업주체",
+    "stage": "G4 계약",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "사업주체",
+    "action": "전매·거주 의무 안내",
+    "output_documents": [
+     "의무"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "주택법",
+      "article": "제64조(주택의 전매행위 제한 등)",
+      "text": "주택의 전매행위 제한 등"
+     },
+     {
+      "law": "주택법",
+      "article": "제57조의2(분양가상한제 적용주택 등의 입주자의 거주의무 등)",
+      "text": "분양가상한제 적용주택 등의 입주자의 거주의무 등"
+     }
+    ]
+   },
+   {
+    "id": "P11",
+    "name": "공급질서 위반 제재",
+    "lane": "감독",
+    "stage": "G5 사후",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "감독",
+    "action": "공급질서 위반 제재",
+    "output_documents": [
+     "제재"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "주택법",
+      "article": "제65조(공급질서 교란 금지)",
+      "text": "공급질서 교란 금지"
+     },
+     {
+      "law": "주택법",
+      "article": "제96조(청문)",
+      "text": "청문"
+     }
+    ]
+   },
+   {
+    "id": "P12",
+    "name": "처분 통지",
+    "lane": "청약 신청자",
+    "stage": "G5 사후",
+    "type": "notice",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "청약 신청자",
+    "action": "처분 통지",
+    "output_documents": [
+     "통지"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "주택법",
+      "article": "제96조(청문)",
+      "text": "청문"
+     }
+    ]
+   },
+   {
+    "id": "P13",
+    "name": "낙첨·재청약",
+    "lane": "청약 신청자",
+    "stage": "G3 당첨",
+    "type": "notice",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "청약 신청자",
+    "action": "낙첨·재청약",
+    "output_documents": [
+     "낙첨"
+    ],
+    "confidence": 0.85,
+    "legal_basis": [
+     {
+      "law": "주택법",
+      "article": "제54조(주택의 공급)",
+      "text": "주택의 공급"
+     }
+    ]
+   },
+   {
+    "id": "P14",
+    "name": "서류 위조 신고 포상",
+    "lane": "지자체·국토부",
+    "stage": "G5 사후",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "지자체·국토부",
+    "action": "서류 위조 신고 포상",
+    "output_documents": [
+     "포상"
+    ],
+    "confidence": 0.8,
+    "legal_basis": [
+     {
+      "law": "주택법",
+      "article": "제92조(분양권 전매 등에 대한 신고포상금)",
+      "text": "분양권 전매 등에 대한 신고포상금"
+     }
+    ]
+   },
+   {
+    "id": "P15",
+    "name": "재신청 루프",
+    "lane": "청약 신청자",
+    "stage": "G2 신청",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "청약 신청자",
+    "action": "재신청 루프",
+    "output_documents": [
+     "재신청"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "주택법",
+      "article": "제54조(주택의 공급)",
+      "text": "주택의 공급"
+     }
+    ]
+   },
+   {
+    "id": "P16",
+    "name": "계약 결과 수령",
+    "lane": "청약 신청자",
+    "stage": "G4 계약",
+    "type": "notice",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "청약 신청자",
+    "action": "계약 결과 수령",
+    "output_documents": [
+     "계약서"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "주택법",
+      "article": "제54조(주택의 공급)",
+      "text": "주택의 공급"
+     }
+    ]
+   }
+  ],
+  "edges": [
+   {
+    "id": "E01",
+    "source": "P01",
+    "target": "P02",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E02",
+    "source": "P02",
+    "target": "P03",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E03",
+    "source": "P03",
+    "target": "P04",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E04",
+    "source": "P04",
+    "target": "P05",
+    "type": "sequence",
+    "label": "보완"
+   },
+   {
+    "id": "E05",
+    "source": "P05",
+    "target": "P15",
+    "type": "loop",
+    "label": null
+   },
+   {
+    "id": "E06",
+    "source": "P15",
+    "target": "P03",
+    "type": "loop",
+    "label": null
+   },
+   {
+    "id": "E07",
+    "source": "P04",
+    "target": "P06",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E08",
+    "source": "P06",
+    "target": "P07",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E09",
+    "source": "P07",
+    "target": "P08",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E10",
+    "source": "P08",
+    "target": "P09",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E11",
+    "source": "P09",
+    "target": "P10",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E12",
+    "source": "P10",
+    "target": "P16",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E13",
+    "source": "P06",
+    "target": "P13",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E14",
+    "source": "P08",
+    "target": "P11",
+    "type": "sequence",
+    "label": "위반"
+   },
+   {
+    "id": "E15",
+    "source": "P11",
+    "target": "P12",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E16",
+    "source": "P14",
+    "target": "P12",
+    "type": "sequence",
+    "label": null
+   }
+  ],
+  "warnings": [
+   "2026-07-12 부동산 패키지. MST 284095.",
+   "2026-07-13 L2 블라인드 재구성 대조 정정: 특별공급 절차 상세는 주택공급에 관한 규칙 소관인데 파일이 주택법 위임조문만 인용 → (C) P08 부적격 심사 근거 주택법 제65조(공급질서 교란)는 자격 부적격 소명 절차가 아님 → 주택공급규칙 제52조(입주대상자 자격 확인)·제58조로 교체. (D) P02 입주자모집 공고 10일 전 기한(규칙 제21조제2항)·P08 부적격 7일 소명·취소 7일 통보(규칙 제52·58조)·P09 공급계약 선정공고일+11일 경과 후 3일 기한(규칙 제59조제2항) 추가. (E, 근거 정밀화) P06 당첨자 선정에 특별공급 실체 근거 규칙 제35조(국민주택 특별공급)·제36조(민영)·제57조 명단관리 추가. 주택공급규칙(MST 286965) 출처 추가. 참조 MST: 주택공급규칙 286965, 주택법 284095. 법의 침묵: 특별공급 유형 경합 시 배정 우선순위는 관계기관 장 고시 위임. 법의 침묵: 입주자모집 승인 처리기한 명시 없음."
+  ]
+ },
+ "verification": {
+  "status": "article-verified",
+  "verifiedAt": "2026-07-13",
+  "method": "국가법령정보센터 Open API (Korean Law MCP CLI) 출처·조문 대조",
+  "scope": "법적 근거 2건 중 공식 원문 2건을 연결했다. 캔버스와 절차 노드의 명시 조문 27건 가운데 27건의 조문 번호 존재를 확인했고, 0건은 불일치, 0건은 자동 검증 불가로 분류했다. 인용 문구의 해석·적용 타당성은 검증 범위에 포함하지 않는다.",
+  "notes": [
+   "주택법 MST 284095"
+  ],
+  "sources": [
+   {
+    "law": "주택법",
+    "kind": "법률",
+    "sourceType": "statute",
+    "officialName": "주택법",
+    "lawId": "001809",
+    "mst": "284095",
+    "promulgatedOn": "2026-03-05",
+    "effectiveOn": "2026-07-01",
+    "officialUrl": "https://law.go.kr/법령/주택법"
+   },
+   {
+    "law": "주택공급에 관한 규칙",
+    "kind": "부령",
+    "sourceType": "statute",
+    "officialName": "주택공급에 관한 규칙",
+    "lawId": "008243",
+    "mst": "286965",
+    "promulgatedOn": "2026-06-15",
+    "effectiveOn": "2026-06-15",
+    "officialUrl": "https://law.go.kr/법령/주택공급에관한규칙"
+   }
+  ],
+  "articleVerification": {
+   "checkedAt": "2026-07-13",
+   "method": "현행 법령 조문 일괄조회 및 행정규칙 전문조회",
+   "citationEntries": 29,
+   "explicitCitationEntries": 27,
+   "articleReferences": 27,
+   "verifiedReferences": 27,
+   "missingReferences": 0,
+   "uncheckableReferences": 0
+  }
+ }
+}

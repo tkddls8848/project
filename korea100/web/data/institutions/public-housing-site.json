@@ -1,0 +1,629 @@
+{
+ "slug": "public-housing-site",
+ "name": "공공택지·주택지구 조성",
+ "oneLiner": "공공주택지구 지정, 협의·고시, 조성 토지 공급·전매 제한 절차",
+ "type": "국토·계획형",
+ "priority": 187,
+ "whyFirst": "공공 주택 공급의 토지 파이프라인이다.",
+ "asOfDate": "2026-07-12",
+ "status": "full",
+ "canvas": {
+  "purpose": "공공이 택지·주택지구를 지정·조성한다.",
+  "stakeholders": "공공사업자, 주민, 국토부.",
+  "legalBasis": [
+   {
+    "law": "공공주택 특별법",
+    "articles": "제6~8·12·18·27의3·32·32의3·33·40의7조",
+    "kind": "법률"
+   }
+  ],
+  "authorities": [
+   {
+    "name": "국토부",
+    "role": "지정"
+   },
+   {
+    "name": "공공사업자",
+    "role": "조성"
+   }
+  ],
+  "procedure": [
+   "입지",
+   "협의",
+   "고시",
+   "조성",
+   "공급"
+  ],
+  "moneyFlow": "조성원가, 공급대금, 보상비.",
+  "docsFlow": "신청 → 협의 → 고시 → 공급.",
+  "bottlenecks": [
+   "수용",
+   "주민 갈등"
+  ],
+  "reformPoints": [
+   "절차 단축",
+   "주민 지원"
+  ]
+ },
+ "related": [
+  "공공주택 공급·입주",
+  "공익사업 토지보상",
+  "도시계획(도시·군관리계획)",
+  "개발행위허가"
+ ],
+ "fieldVerification": [
+  "지구 지정 기준",
+  "보상 연계",
+  "전매 제한 기간"
+ ],
+ "process": {
+  "institution_name": "공공택지·주택지구 조성",
+  "law_name": "공공주택 특별법",
+  "lanes": [
+   "공공사업자",
+   "국토부·지자체",
+   "주민·권리자",
+   "관계기관",
+   "수분양자",
+   "감독"
+  ],
+  "stages": [
+   "G0 입지",
+   "G1 지정",
+   "G2 협의",
+   "G3 고시",
+   "G4 조성",
+   "G5 공급"
+  ],
+  "nodes": [
+   {
+    "id": "P01",
+    "name": "입지 조사",
+    "lane": "공공사업자",
+    "stage": "G0 입지",
+    "type": "task",
+    "status": "done",
+    "progress": 100,
+    "actor": "공공사업자",
+    "action": "입지 조사",
+    "output_documents": [
+     "조사"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "공공주택 특별법",
+      "article": "제6조(공공주택지구의 지정 등)",
+      "text": "공공주택지구의 지정 등"
+     }
+    ]
+   },
+   {
+    "id": "P02",
+    "name": "지정 신청",
+    "lane": "공공사업자",
+    "stage": "G1 지정",
+    "type": "task",
+    "status": "current",
+    "progress": 40,
+    "actor": "공공사업자",
+    "action": "지정 신청",
+    "output_documents": [
+     "신청"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "공공주택 특별법",
+      "article": "제6조(공공주택지구의 지정 등)",
+      "text": "공공주택지구의 지정 등"
+     },
+     {
+      "law": "공공주택 특별법",
+      "article": "제7조(중소규모 주택지구 지정 등)",
+      "text": "중소규모 주택지구 지정 등"
+     }
+    ]
+   },
+   {
+    "id": "P03",
+    "name": "관계기관 협의",
+    "lane": "관계기관",
+    "stage": "G2 협의",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "관계기관",
+    "action": "관계기관 협의",
+    "output_documents": [
+     "협의"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "공공주택 특별법",
+      "article": "제8조(주택지구 지정 등을 위한 관계기관 협의)",
+      "text": "주택지구 지정 등을 위한 관계기관 협의"
+     }
+    ]
+   },
+   {
+    "id": "P04",
+    "name": "주민 의견",
+    "lane": "주민·권리자",
+    "stage": "G2 협의",
+    "type": "notice",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "주민·권리자",
+    "action": "주민 의견",
+    "output_documents": [
+     "의견"
+    ],
+    "confidence": 0.85,
+    "legal_basis": [
+     {
+      "law": "공공주택 특별법",
+      "article": "제10조(주민 등의 의견청취)",
+      "text": "국토교통부장관은 주택지구를 지정 또는 변경하려면 공고를 하여 주민 및 관계 전문가 등의 의견을 들어야 한다."
+     }
+    ]
+   },
+   {
+    "id": "P05",
+    "name": "보완",
+    "lane": "공공사업자",
+    "stage": "G1 지정",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "공공사업자",
+    "action": "보완",
+    "output_documents": [
+     "보완"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "공공주택 특별법",
+      "article": "제6조(공공주택지구의 지정 등)",
+      "text": "공공주택지구의 지정 등"
+     }
+    ]
+   },
+   {
+    "id": "P06",
+    "name": "지정·고시",
+    "lane": "국토부·지자체",
+    "stage": "G3 고시",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "국토부·지자체",
+    "action": "지정·고시",
+    "output_documents": [
+     "고시"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "공공주택 특별법",
+      "article": "제12조(주택지구 지정 등의 고시 등)",
+      "text": "주택지구 지정 등의 고시 등"
+     }
+    ]
+   },
+   {
+    "id": "P07",
+    "name": "고시 수령",
+    "lane": "공공사업자",
+    "stage": "G3 고시",
+    "type": "notice",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "공공사업자",
+    "action": "고시 수령",
+    "output_documents": [
+     "통지"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "공공주택 특별법",
+      "article": "제12조(주택지구 지정 등의 고시 등)",
+      "text": "주택지구 지정 등의 고시 등"
+     }
+    ]
+   },
+   {
+    "id": "P08",
+    "name": "의제·사업 시행",
+    "lane": "공공사업자",
+    "stage": "G4 조성",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "공공사업자",
+    "action": "의제·사업 시행",
+    "output_documents": [
+     "시행"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "공공주택 특별법",
+      "article": "제18조(다른 법률에 따른 인가ㆍ허가 등의 의제)",
+      "text": "다른 법률에 따른 인가ㆍ허가 등의 의제"
+     }
+    ]
+   },
+   {
+    "id": "P09",
+    "name": "주민 지원대책",
+    "lane": "주민·권리자",
+    "stage": "G4 조성",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "주민·권리자",
+    "action": "주민 지원대책",
+    "output_documents": [
+     "지원"
+    ],
+    "confidence": 0.85,
+    "legal_basis": [
+     {
+      "law": "공공주택 특별법",
+      "article": "제27조의3(주택지구 주민에 대한 지원대책의 수립ㆍ시행)",
+      "text": "주택지구 주민에 대한 지원대책의 수립ㆍ시행"
+     }
+    ]
+   },
+   {
+    "id": "P10",
+    "name": "조성토지 공급",
+    "lane": "공공사업자",
+    "stage": "G5 공급",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "공공사업자",
+    "action": "조성토지 공급",
+    "output_documents": [
+     "공급"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "공공주택 특별법",
+      "article": "제32조(조성된 토지의 공급)",
+      "text": "조성된 토지의 공급"
+     }
+    ]
+   },
+   {
+    "id": "P11",
+    "name": "전매 제한",
+    "lane": "수분양자",
+    "stage": "G5 공급",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "수분양자",
+    "action": "전매 제한",
+    "output_documents": [
+     "전매"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "공공주택 특별법",
+      "article": "제32조의3(조성된 토지의 전매행위 제한 등)",
+      "text": "조성된 토지의 전매행위 제한 등"
+     }
+    ]
+   },
+   {
+    "id": "P12",
+    "name": "공급 수령",
+    "lane": "수분양자",
+    "stage": "G5 공급",
+    "type": "notice",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "수분양자",
+    "action": "공급 수령",
+    "output_documents": [
+     "계약"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "공공주택 특별법",
+      "article": "제32조(조성된 토지의 공급)",
+      "text": "조성된 토지의 공급"
+     }
+    ]
+   },
+   {
+    "id": "P13",
+    "name": "택지개발 연계",
+    "lane": "공공사업자",
+    "stage": "G0 입지",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "공공사업자",
+    "action": "택지개발 연계",
+    "output_documents": [
+     "택지"
+    ],
+    "confidence": 0.75,
+    "legal_basis": [
+     {
+      "law": "택지개발촉진법",
+      "article": "제1조(목적)",
+      "text": "목적"
+     }
+    ]
+   },
+   {
+    "id": "P14",
+    "name": "재신청",
+    "lane": "공공사업자",
+    "stage": "G1 지정",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "공공사업자",
+    "action": "재신청",
+    "output_documents": [
+     "재신청"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "공공주택 특별법",
+      "article": "제6조(공공주택지구의 지정 등)",
+      "text": "공공주택지구의 지정 등"
+     }
+    ]
+   },
+   {
+    "id": "P15",
+    "name": "통합심의",
+    "lane": "국토부·지자체",
+    "stage": "G2 협의",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "국토부·지자체",
+    "action": "통합심의",
+    "output_documents": [
+     "심의"
+    ],
+    "confidence": 0.85,
+    "legal_basis": [
+     {
+      "law": "공공주택 특별법",
+      "article": "제33조(공공주택통합심의위원회의 설치 등)",
+      "text": "공공주택통합심의위원회의 설치 등"
+     }
+    ]
+   },
+   {
+    "id": "P16",
+    "name": "도심복합 특례",
+    "lane": "공공사업자",
+    "stage": "G1 지정",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "공공사업자",
+    "action": "도심복합 특례",
+    "output_documents": [
+     "복합"
+    ],
+    "confidence": 0.85,
+    "legal_basis": [
+     {
+      "law": "공공주택 특별법",
+      "article": "제40조의7(도심 공공주택 복합지구의 지정 등)",
+      "text": "도심 공공주택 복합지구의 지정 등"
+     }
+    ]
+   },
+   {
+    "id": "P17",
+    "name": "감독 (허가·승인 취소·공사중지 등 명령)",
+    "lane": "감독",
+    "stage": "G4 조성",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "국토교통부장관",
+    "receiver": "공공사업자",
+    "action": "감독 처분·명령",
+    "output_documents": [
+     "감독 처분·명령 고시"
+    ],
+    "confidence": 0.85,
+    "legal_basis": [
+     {
+      "law": "공공주택 특별법",
+      "article": "제55조(감독)",
+      "text": "국토교통부장관은 공공주택사업자가 각 호에 해당하는 경우 이 법에 따른 허가 또는 승인을 취소하거나 공사의 중지ㆍ변경, 시설물·물건의 개축ㆍ변경 또는 이전 등을 명할 수 있고, 처분·명령 시 이를 고시하여야 한다."
+     }
+    ]
+   }
+  ],
+  "edges": [
+   {
+    "id": "E01",
+    "source": "P01",
+    "target": "P13",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E02",
+    "source": "P13",
+    "target": "P02",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E03",
+    "source": "P02",
+    "target": "P16",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E04",
+    "source": "P02",
+    "target": "P03",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E05",
+    "source": "P03",
+    "target": "P15",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E06",
+    "source": "P15",
+    "target": "P04",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E07",
+    "source": "P04",
+    "target": "P05",
+    "type": "loop",
+    "label": "보완 회귀"
+   },
+   {
+    "id": "E08",
+    "source": "P05",
+    "target": "P14",
+    "type": "loop",
+    "label": null
+   },
+   {
+    "id": "E09",
+    "source": "P14",
+    "target": "P02",
+    "type": "loop",
+    "label": null
+   },
+   {
+    "id": "E10",
+    "source": "P04",
+    "target": "P06",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E11",
+    "source": "P06",
+    "target": "P07",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E12",
+    "source": "P07",
+    "target": "P08",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E13",
+    "source": "P08",
+    "target": "P09",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E14",
+    "source": "P08",
+    "target": "P10",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E15",
+    "source": "P10",
+    "target": "P11",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E16",
+    "source": "P11",
+    "target": "P12",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "M01",
+    "source": "P08",
+    "target": "P17",
+    "type": "message",
+    "label": "사업 시행 감독"
+   }
+  ],
+  "warnings": [
+   "2026-07-12 부동산.",
+   "2026-07-13 L2 블라인드 재구성 대조 정정: (L0 backward-sequence) E07 P04(주민 의견)→P05(보완) — 주민 의견청취 단계에서 공공사업자 보완 단계로 되돌아가는 엣지가 type 'sequence'로 표기됨. P05(보완)→P14(재신청)→P02(지정 신청)로 이어지는(E08·E09 loop) 명백한 보완·재신청 회귀의 진입 엣지이므로 type을 'loop'로 정정(label '보완 회귀'). (C) P04 주민 의견 근거 오인용 — 주민 의견청취는 제12조(고시)가 아니라 제10조(주민 등의 의견청취)가 근거이므로 정정. (E) 빈 레인 '감독' 보강 — 공공주택 특별법 제55조(감독)는 국토교통부장관의 허가·승인 취소·공사중지·개축·이전 명령을 명문화하므로 P17 감독 노드(waiting) 신설, P08 사업 시행에 message 엣지(M01) 연결. 참조 MST: 공공주택 특별법 MST=276937, 택지개발촉진법 MST=277037. 법의 침묵: (1) 지구계획 승인 처리기한 — 제17조는 통합심의 심의만 정하고 승인 처리기한을 직접 규정하지 않음. (2) 감독 명령 이행기간 — 제55조는 명령 근거만 두고 이행기간 상한을 규정하지 않음."
+  ]
+ },
+ "verification": {
+  "status": "article-verified",
+  "verifiedAt": "2026-07-13",
+  "method": "국가법령정보센터 Open API (Korean Law MCP CLI) 출처·조문 대조",
+  "scope": "법적 근거 1건 중 공식 원문 1건을 연결했다. 캔버스와 절차 노드의 명시 조문 18건 가운데 18건의 조문 번호 존재를 확인했고, 0건은 불일치, 0건은 자동 검증 불가로 분류했다. 인용 문구의 해석·적용 타당성은 검증 범위에 포함하지 않는다.",
+  "notes": [
+   "공공주택 특별법"
+  ],
+  "sources": [
+   {
+    "law": "공공주택 특별법",
+    "kind": "법률",
+    "sourceType": "statute",
+    "officialName": "공공주택 특별법",
+    "lawId": "009595",
+    "mst": "276937",
+    "promulgatedOn": "2025-10-01",
+    "effectiveOn": "2026-01-02",
+    "officialUrl": "https://law.go.kr/법령/공공주택특별법"
+   },
+   {
+    "law": "택지개발촉진법",
+    "kind": "법률",
+    "sourceType": "statute",
+    "officialName": "택지개발촉진법",
+    "lawId": "000242",
+    "mst": "277037",
+    "promulgatedOn": "2025-10-01",
+    "effectiveOn": "2026-01-02",
+    "officialUrl": "https://law.go.kr/법령/택지개발촉진법"
+   }
+  ],
+  "articleVerification": {
+   "checkedAt": "2026-07-13",
+   "method": "현행 법령 조문 일괄조회 및 행정규칙 전문조회",
+   "citationEntries": 19,
+   "explicitCitationEntries": 18,
+   "articleReferences": 18,
+   "verifiedReferences": 18,
+   "missingReferences": 0,
+   "uncheckableReferences": 0
+  }
+ }
+}

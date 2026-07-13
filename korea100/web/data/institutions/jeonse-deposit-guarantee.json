@@ -1,0 +1,674 @@
+{
+ "slug": "jeonse-deposit-guarantee",
+ "name": "전세보증금 반환보증",
+ "oneLiner": "전세보증 가입, 사고 신고, 보증금 대위변제·구상 절차",
+ "type": "권리구제형",
+ "priority": 176,
+ "whyFirst": "전세 사고 시 보증금 회수의 핵심 안전망이다.",
+ "asOfDate": "2026-07-12",
+ "status": "full",
+ "canvas": {
+  "purpose": "전세보증금 미반환 위험을 보증으로 이전·완화한다.",
+  "stakeholders": "임차인, 임대인, 보증기관.",
+  "legalBasis": [
+   {
+    "law": "민간임대주택에 관한 특별법",
+    "articles": "제14조",
+    "kind": "법률"
+   },
+   {
+    "law": "주택임대차보호법",
+    "articles": "제3조의2 등",
+    "kind": "법률"
+   }
+  ],
+  "authorities": [
+   {
+    "name": "보증기관",
+    "role": "심사·지급"
+   },
+   {
+    "name": "임차인",
+    "role": "가입·청구"
+   }
+  ],
+  "procedure": [
+   "가입",
+   "유지",
+   "사고",
+   "지급",
+   "구상"
+  ],
+  "moneyFlow": "보증료, 대위변제금, 구상금.",
+  "docsFlow": "가입신청 → 보증서 → 사고신고 → 지급.",
+  "bottlenecks": [
+   "가입 거절",
+   "조사 지연",
+   "구상 실효"
+  ],
+  "reformPoints": [
+   "의무 가입 확대",
+   "처리 기한",
+   "상품 비교 공개"
+  ]
+ },
+ "related": [
+  "주택임대차 보호",
+  "전세사기 피해지원",
+  "민간임대주택 등록·공급",
+  "버팀목 전세자금대출"
+ ],
+ "fieldVerification": [
+  "HUG·SGI 상품 요건",
+  "가입 가능 보증금 한도",
+  "사고 접수 서류"
+ ],
+ "process": {
+  "institution_name": "전세보증금 반환보증",
+  "law_name": "민간임대주택에 관한 특별법",
+  "lanes": [
+   "임차인",
+   "임대인·사업자",
+   "보증기관",
+   "감정·조사",
+   "구상",
+   "감독"
+  ],
+  "stages": [
+   "G0 가입",
+   "G1 계약",
+   "G2 유지",
+   "G3 사고",
+   "G4 지급",
+   "G5 구상"
+  ],
+  "nodes": [
+   {
+    "id": "P01",
+    "name": "보증 가입 필요성 확인",
+    "lane": "임차인",
+    "stage": "G0 가입",
+    "type": "task",
+    "status": "done",
+    "progress": 100,
+    "actor": "임차인",
+    "action": "보증 가입 필요성 확인",
+    "output_documents": [
+     "확인"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "민간임대주택에 관한 특별법",
+      "article": "제14조(보증상품의 가입)",
+      "text": "보증상품의 가입"
+     },
+     {
+      "law": "주택임대차보호법",
+      "article": "제3조의2(보증금의 회수)",
+      "text": "보증금의 회수"
+     }
+    ]
+   },
+   {
+    "id": "P02",
+    "name": "보증 상품 신청",
+    "lane": "임차인",
+    "stage": "G0 가입",
+    "type": "task",
+    "status": "current",
+    "progress": 40,
+    "actor": "임차인",
+    "action": "보증 상품 신청",
+    "output_documents": [
+     "신청"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "주택도시기금법",
+      "article": "제26조(업무)",
+      "text": "주택도시보증공사의 전세보증금반환보증 업무(제1항제2호)"
+     }
+    ]
+   },
+   {
+    "id": "P03",
+    "name": "심사·가입",
+    "lane": "보증기관",
+    "stage": "G1 계약",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "보증기관",
+    "action": "심사·가입",
+    "output_documents": [
+     "가입"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "주택도시기금법",
+      "article": "제26조(업무)",
+      "text": "주택도시보증공사의 전세보증금반환보증 업무(제1항제2호)"
+     }
+    ]
+   },
+   {
+    "id": "P04",
+    "name": "보완 제출",
+    "lane": "임차인",
+    "stage": "G0 가입",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "임차인",
+    "action": "보완 제출",
+    "output_documents": [
+     "보완"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "민간임대주택에 관한 특별법",
+      "article": "제14조(보증상품의 가입)",
+      "text": "보증상품의 가입"
+     }
+    ]
+   },
+   {
+    "id": "P05",
+    "name": "보증서 수령",
+    "lane": "임차인",
+    "stage": "G1 계약",
+    "type": "notice",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "임차인",
+    "action": "보증서 수령",
+    "output_documents": [
+     "보증서"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "주택도시기금법",
+      "article": "제26조(업무)",
+      "text": "주택도시보증공사의 전세보증금반환보증 업무(제1항제2호)"
+     }
+    ]
+   },
+   {
+    "id": "P06",
+    "name": "임대차 유지·갱신 통지",
+    "lane": "임차인",
+    "stage": "G2 유지",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "임차인",
+    "action": "임대차 유지·갱신 통지",
+    "output_documents": [
+     "유지"
+    ],
+    "confidence": 0.85,
+    "legal_basis": [
+     {
+      "law": "주택임대차보호법",
+      "article": "제6조의3(계약갱신 요구 등)",
+      "text": "계약갱신 요구 등"
+     }
+    ]
+   },
+   {
+    "id": "P07",
+    "name": "사고(미반환) 발생 신고",
+    "lane": "임차인",
+    "stage": "G3 사고",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "임차인",
+    "action": "사고(미반환) 발생 신고",
+    "output_documents": [
+     "사고신고"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "주택임대차보호법",
+      "article": "제3조의2(보증금의 회수)",
+      "text": "보증금의 회수"
+     },
+     {
+      "law": "민간임대주택에 관한 특별법",
+      "article": "제14조(보증상품의 가입)",
+      "text": "보증상품의 가입"
+     }
+    ]
+   },
+   {
+    "id": "P08",
+    "name": "사고 조사",
+    "lane": "감정·조사",
+    "stage": "G3 사고",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "감정·조사",
+    "action": "사고 조사",
+    "output_documents": [
+     "조사"
+    ],
+    "confidence": 0.85,
+    "legal_basis": [
+     {
+      "law": "민간임대주택에 관한 특별법",
+      "article": "제14조(보증상품의 가입)",
+      "text": "보증상품의 가입"
+     }
+    ]
+   },
+   {
+    "id": "P09",
+    "name": "보증금 대위 지급",
+    "lane": "보증기관",
+    "stage": "G4 지급",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "보증기관",
+    "action": "보증금 대위 지급",
+    "output_documents": [
+     "지급"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "주택도시기금법",
+      "article": "제26조(업무)",
+      "text": "주택도시보증공사의 전세보증금반환보증 업무(제1항제2호)"
+     }
+    ]
+   },
+   {
+    "id": "P10",
+    "name": "지급 결과 수령",
+    "lane": "임차인",
+    "stage": "G4 지급",
+    "type": "notice",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "임차인",
+    "action": "지급 결과 수령",
+    "output_documents": [
+     "수령"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "민간임대주택에 관한 특별법",
+      "article": "제14조(보증상품의 가입)",
+      "text": "보증상품의 가입"
+     }
+    ]
+   },
+   {
+    "id": "P11",
+    "name": "구상권 행사",
+    "lane": "구상",
+    "stage": "G5 구상",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "구상",
+    "action": "구상권 행사",
+    "output_documents": [
+     "구상"
+    ],
+    "confidence": 0.85,
+    "legal_basis": [
+     {
+      "law": "주택도시기금법",
+      "article": "제26조(업무)",
+      "text": "보증 이행 및 구상권 행사를 위한 업무(제1항제3호)"
+     }
+    ]
+   },
+   {
+    "id": "P12",
+    "name": "임대인 변제·협의",
+    "lane": "임대인·사업자",
+    "stage": "G5 구상",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "임대인·사업자",
+    "action": "임대인 변제·협의",
+    "output_documents": [
+     "변제"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "주택임대차보호법",
+      "article": "제3조의2(보증금의 회수)",
+      "text": "보증금의 회수"
+     }
+    ]
+   },
+   {
+    "id": "P13",
+    "name": "거절·이의",
+    "lane": "임차인",
+    "stage": "G3 사고",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "임차인",
+    "action": "거절·이의",
+    "output_documents": [
+     "이의"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "민간임대주택에 관한 특별법",
+      "article": "제14조(보증상품의 가입)",
+      "text": "보증상품의 가입"
+     }
+    ]
+   },
+   {
+    "id": "P14",
+    "name": "재신청·추가 자료",
+    "lane": "임차인",
+    "stage": "G3 사고",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "임차인",
+    "action": "재신청·추가 자료",
+    "output_documents": [
+     "추가"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "민간임대주택에 관한 특별법",
+      "article": "제14조(보증상품의 가입)",
+      "text": "보증상품의 가입"
+     }
+    ]
+   },
+   {
+    "id": "P15",
+    "name": "등록 임대 의무 가입 연계",
+    "lane": "임대인·사업자",
+    "stage": "G0 가입",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "임대인·사업자",
+    "action": "등록 임대 의무 가입 연계",
+    "output_documents": [
+     "의무"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "민간임대주택에 관한 특별법",
+      "article": "제14조(보증상품의 가입)",
+      "text": "보증상품의 가입"
+     }
+    ]
+   },
+   {
+    "id": "P16",
+    "name": "전세사기 지원 연계",
+    "lane": "임차인",
+    "stage": "G4 지급",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "임차인",
+    "action": "전세사기 지원 연계",
+    "output_documents": [
+     "연계"
+    ],
+    "confidence": 0.75,
+    "legal_basis": [
+     {
+      "law": "주택임대차보호법",
+      "article": "제3조의2(보증금의 회수)",
+      "text": "보증금의 회수"
+     }
+    ]
+   },
+   {
+    "id": "N01",
+    "name": "공사 감독·보고·검사",
+    "lane": "감독",
+    "stage": "G5 구상",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "국토교통부장관(금융위원회 경영건전성 검사)",
+    "action": "주택도시보증공사 보증업무 감독 및 감독상 필요한 명령, 업무·회계·재산 보고 및 검사(경영건전성 검사는 금융위원회 위탁, 결과 국토부장관 통보). 상습 채무불이행자 임차주택 공매 승인(제34조의6)",
+    "output_documents": [
+     "감독명령·검사결과"
+    ],
+    "confidence": 0.85,
+    "legal_basis": [
+     {
+      "law": "주택도시기금법",
+      "article": "제31조(감독)",
+      "text": "국토교통부장관의 공사 업무 감독 및 감독상 필요한 명령"
+     },
+     {
+      "law": "주택도시기금법",
+      "article": "제32조(보고ㆍ검사 등)",
+      "text": "보고·검사, 금융위원회 경영건전성 검사 위탁 및 결과 통보"
+     }
+    ]
+   }
+  ],
+  "edges": [
+   {
+    "id": "E01",
+    "source": "P01",
+    "target": "P15",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E02",
+    "source": "P15",
+    "target": "P02",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E03",
+    "source": "P02",
+    "target": "P03",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E04",
+    "source": "P03",
+    "target": "P04",
+    "type": "loop",
+    "label": "보완"
+   },
+   {
+    "id": "E05",
+    "source": "P04",
+    "target": "P02",
+    "type": "loop",
+    "label": null
+   },
+   {
+    "id": "E06",
+    "source": "P03",
+    "target": "P05",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E07",
+    "source": "P05",
+    "target": "P06",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E08",
+    "source": "P06",
+    "target": "P07",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E09",
+    "source": "P07",
+    "target": "P08",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E10",
+    "source": "P08",
+    "target": "P13",
+    "type": "sequence",
+    "label": "이의"
+   },
+   {
+    "id": "E11",
+    "source": "P13",
+    "target": "P14",
+    "type": "loop",
+    "label": null
+   },
+   {
+    "id": "E12",
+    "source": "P14",
+    "target": "P08",
+    "type": "loop",
+    "label": null
+   },
+   {
+    "id": "E13",
+    "source": "P08",
+    "target": "P09",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E14",
+    "source": "P09",
+    "target": "P10",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E15",
+    "source": "P10",
+    "target": "P16",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E16",
+    "source": "P09",
+    "target": "P11",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E17",
+    "source": "P11",
+    "target": "P12",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E18",
+    "source": "P03",
+    "target": "N01",
+    "type": "message",
+    "label": "감독·검사"
+   },
+   {
+    "id": "E19",
+    "source": "P09",
+    "target": "N01",
+    "type": "message",
+    "label": "보고·검사"
+   }
+  ],
+  "warnings": [
+   "2026-07-12 부동산 패키지. MST 276995.",
+   {
+    "date": "2026-07-13",
+    "type": "L2-blind-recon",
+    "message": "2026-07-13 L2 블라인드 재구성 대조 정정: (C) P02·P03·P05·P09 legal_basis — 민간임대주택에 관한 특별법 제14조(보증상품의 가입)는 자기관리형 주택임대관리업자의 보증상품 조항으로 전세보증금반환보증(주택도시보증공사 업무)을 규율하지 않으므로 주택도시기금법 제26조(업무) 제1항제2호로 정정. (C) P11 구상권 행사 — 주택임대차보호법 제3조의2가 아니라 주택도시기금법 제26조제1항제3호(보증 이행·구상권 행사 업무)가 직접 근거이므로 정정. (loop) E04 — L0 backward-sequence P03(심사·가입)→P04(보완 제출) 판정: 보증 심사 중 보완 요구 후 P04→P02 재신청(E05 loop)으로 회귀하는 반려·보완 구조이므로 edge type을 sequence→loop로 정정. (E) N01 신설 — L0 empty-lane '감독' 판정: 주택도시기금법 제31조(감독 명령)·제32조(보고·검사, 금융위원회 경영건전성 검사 위탁)가 국토교통부장관의 필수 감독 행위이나 노드 부재하여 공사 감독·보고·검사 노드(status waiting) 추가, P03·P09에서 message 에지 연결. 참조 MST: 주택도시기금법 MST=286599. 법의 침묵: (1) 전세보증금반환보증의 보증 심사 처리기한이 법률에 명시되지 않고 공사 정관·약관에 위임됨. (2) 보증사고 판정 후 대위 지급까지의 법정 기한이 주택도시기금법 본문에 정해져 있지 않음."
+   }
+  ]
+ },
+ "verification": {
+  "status": "article-verified",
+  "verifiedAt": "2026-07-13",
+  "method": "국가법령정보센터 Open API (Korean Law MCP CLI) 출처·조문 대조",
+  "scope": "법적 근거 2건 중 공식 원문 2건을 연결했다. 캔버스와 절차 노드의 명시 조문 22건 가운데 22건의 조문 번호 존재를 확인했고, 0건은 불일치, 0건은 자동 검증 불가로 분류했다. 인용 문구의 해석·적용 타당성은 검증 범위에 포함하지 않는다.",
+  "notes": [
+   "민간임대주택에 관한 특별법 MST 276995"
+  ],
+  "sources": [
+   {
+    "law": "민간임대주택에 관한 특별법",
+    "kind": "법률",
+    "sourceType": "statute",
+    "officialName": "민간임대주택에 관한 특별법",
+    "lawId": "000243",
+    "mst": "276995",
+    "promulgatedOn": "2025-10-01",
+    "effectiveOn": "2026-01-02",
+    "officialUrl": "https://law.go.kr/법령/민간임대주택에관한특별법"
+   },
+   {
+    "law": "주택임대차보호법",
+    "kind": "법률",
+    "sourceType": "statute",
+    "officialName": "주택임대차보호법",
+    "lawId": "001248",
+    "mst": "276291",
+    "promulgatedOn": "2025-10-01",
+    "effectiveOn": "2026-01-02",
+    "officialUrl": "https://law.go.kr/법령/주택임대차보호법"
+   },
+   {
+    "law": "주택도시기금법",
+    "kind": "법률",
+    "sourceType": "statute",
+    "officialName": "주택도시기금법",
+    "lawId": "012226",
+    "mst": "286599",
+    "promulgatedOn": "2026-06-02",
+    "effectiveOn": "2026-06-02",
+    "officialUrl": "https://law.go.kr/법령/주택도시기금법"
+   }
+  ],
+  "articleVerification": {
+   "checkedAt": "2026-07-13",
+   "method": "현행 법령 조문 일괄조회 및 행정규칙 전문조회",
+   "citationEntries": 22,
+   "explicitCitationEntries": 22,
+   "articleReferences": 22,
+   "verifiedReferences": 22,
+   "missingReferences": 0,
+   "uncheckableReferences": 0
+  }
+ }
+}

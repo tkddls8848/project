@@ -1,0 +1,639 @@
+{
+ "slug": "reconstruction-safety-diagnosis",
+ "name": "재건축 안전진단·정비 착수",
+ "oneLiner": "노후 건축물 안전진단과 정비계획 입안·정비구역 지정으로 이어지는 재건축 착수 절차",
+ "type": "인허가형",
+ "priority": 169,
+ "whyFirst": "“재건축 된다/안 된다”의 기술적·행정적 입구다.",
+ "asOfDate": "2026-07-12",
+ "status": "full",
+ "canvas": {
+  "purpose": "안전·노후도를 평가해 정비사업 착수 여부를 가른다.",
+  "stakeholders": "소유자, 지자체, 진단기관, 주민.",
+  "legalBasis": [
+   {
+    "law": "도시 및 주거환경정비법",
+    "articles": "제8·12~13·13조의2·16~17·20~21·35조",
+    "kind": "법률"
+   }
+  ],
+  "authorities": [
+   {
+    "name": "시장·군수·시·도",
+    "role": "입안·지정"
+   },
+   {
+    "name": "진단기관",
+    "role": "안전진단"
+   }
+  ],
+  "procedure": [
+   "요청",
+   "진단",
+   "입안",
+   "구역지정",
+   "조합 연계"
+  ],
+  "moneyFlow": "진단 비용(소유자·공공 분담 실무).",
+  "docsFlow": "요청서 → 진단보고서 → 정비계획 → 구역고시.",
+  "bottlenecks": [
+   "진단 기준",
+   "정치적 지정",
+   "비용"
+  ],
+  "reformPoints": [
+   "기준 공개",
+   "처리 기한",
+   "결과 열람"
+  ]
+ },
+ "related": [
+  "정비사업 조합 설립·인가",
+  "재건축·재개발 정비사업",
+  "건축허가"
+ ],
+ "fieldVerification": [
+  "재건축 안전진단 기준 고시",
+  "구조안전·주거환경 평가 배점",
+  "특례 완화 요건"
+ ],
+ "process": {
+  "institution_name": "재건축 안전진단·정비 착수",
+  "law_name": "도시 및 주거환경정비법",
+  "lanes": [
+   "소유자·추진주체",
+   "시장·군수",
+   "안전진단기관",
+   "주민",
+   "시·도",
+   "감독"
+  ],
+  "stages": [
+   "G0 요청",
+   "G1 진단",
+   "G2 결과",
+   "G3 입안",
+   "G4 구역",
+   "G5 사후"
+  ],
+  "nodes": [
+   {
+    "id": "P01",
+    "name": "안전진단·정비 필요성 검토",
+    "lane": "소유자·추진주체",
+    "stage": "G0 요청",
+    "type": "task",
+    "status": "done",
+    "progress": 100,
+    "actor": "소유자·추진주체",
+    "action": "안전진단·정비 필요성 검토",
+    "output_documents": [
+     "검토"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "도시 및 주거환경정비법",
+      "article": "제13조의2(정비구역의 지정을 위한 정비계획의 입안 요청 등)",
+      "text": "정비구역의 지정을 위한 정비계획의 입안 요청 등"
+     }
+    ]
+   },
+   {
+    "id": "P02",
+    "name": "진단·입안 요청",
+    "lane": "소유자·추진주체",
+    "stage": "G0 요청",
+    "type": "task",
+    "status": "current",
+    "progress": 40,
+    "actor": "소유자·추진주체",
+    "action": "진단·입안 요청",
+    "output_documents": [
+     "요청"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "도시 및 주거환경정비법",
+      "article": "제13조의2(정비구역의 지정을 위한 정비계획의 입안 요청 등)",
+      "text": "정비구역의 지정을 위한 정비계획의 입안 요청 등"
+     }
+    ]
+   },
+   {
+    "id": "P03",
+    "name": "안전진단 실시",
+    "lane": "안전진단기관",
+    "stage": "G1 진단",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "안전진단기관",
+    "action": "안전진단 실시",
+    "output_documents": [
+     "진단"
+    ],
+    "confidence": 0.85,
+    "legal_basis": [
+     {
+      "law": "도시 및 주거환경정비법",
+      "article": "제12조(재건축사업을 위한 재건축진단)",
+      "text": "시장ㆍ군수등은 정비계획 수립시기 도래 때부터 사업시행계획인가 전까지 재건축진단기관에 의뢰하여 주거환경 적합성ㆍ구조안전성 등에 관한 재건축진단을 실시하여야 하며, 진단기관은 결과보고서를 작성하여 제출한다."
+     }
+    ],
+    "deadline": "정비계획 수립시기 도래 때부터 사업시행계획인가 전까지 실시(제12조제1항)"
+   },
+   {
+    "id": "P04",
+    "name": "진단 결과 통지",
+    "lane": "소유자·추진주체",
+    "stage": "G2 결과",
+    "type": "notice",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "소유자·추진주체",
+    "action": "진단 결과 통지",
+    "output_documents": [
+     "결과"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "도시 및 주거환경정비법",
+      "article": "제12조(재건축사업을 위한 재건축진단)",
+      "text": "시장ㆍ군수등은 정비계획 수립시기 도래 때부터 사업시행계획인가 전까지 재건축진단기관에 의뢰하여 주거환경 적합성ㆍ구조안전성 등에 관한 재건축진단을 실시하여야 하며, 진단기관은 결과보고서를 작성하여 제출한다."
+     }
+    ]
+   },
+   {
+    "id": "P05",
+    "name": "정비계획 입안",
+    "lane": "시장·군수",
+    "stage": "G3 입안",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "시장·군수",
+    "action": "정비계획 입안",
+    "output_documents": [
+     "입안"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "도시 및 주거환경정비법",
+      "article": "제13조의2(정비구역의 지정을 위한 정비계획의 입안 요청 등)",
+      "text": "정비구역의 지정을 위한 정비계획의 입안 요청 등"
+     }
+    ]
+   },
+   {
+    "id": "P06",
+    "name": "주민 의견 청취",
+    "lane": "주민",
+    "stage": "G3 입안",
+    "type": "notice",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "주민",
+    "action": "주민 의견 청취",
+    "output_documents": [
+     "의견"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "도시 및 주거환경정비법",
+      "article": "제16조(정비계획의 결정 및 정비구역의 지정ㆍ고시)",
+      "text": "정비계획의 결정 및 정비구역의 지정ㆍ고시"
+     }
+    ]
+   },
+   {
+    "id": "P07",
+    "name": "보완 요청",
+    "lane": "소유자·추진주체",
+    "stage": "G1 진단",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "소유자·추진주체",
+    "action": "보완 요청",
+    "output_documents": [
+     "보완"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "도시 및 주거환경정비법",
+      "article": "제13조의2(정비구역의 지정을 위한 정비계획의 입안 요청 등)",
+      "text": "정비구역의 지정을 위한 정비계획의 입안 요청 등"
+     }
+    ]
+   },
+   {
+    "id": "P08",
+    "name": "정비구역 지정·고시",
+    "lane": "시·도",
+    "stage": "G4 구역",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "시·도",
+    "action": "정비구역 지정·고시",
+    "output_documents": [
+     "지정"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "도시 및 주거환경정비법",
+      "article": "제16조(정비계획의 결정 및 정비구역의 지정ㆍ고시)",
+      "text": "정비계획의 결정 및 정비구역의 지정ㆍ고시"
+     },
+     {
+      "law": "도시 및 주거환경정비법",
+      "article": "제8조(정비구역의 지정)",
+      "text": "정비구역의 지정"
+     }
+    ]
+   },
+   {
+    "id": "P09",
+    "name": "지정 효력 발생",
+    "lane": "소유자·추진주체",
+    "stage": "G4 구역",
+    "type": "notice",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "소유자·추진주체",
+    "action": "지정 효력 발생",
+    "output_documents": [
+     "효력"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "도시 및 주거환경정비법",
+      "article": "제17조(정비구역 지정ㆍ고시의 효력 등)",
+      "text": "정비구역 지정ㆍ고시의 효력 등"
+     }
+    ]
+   },
+   {
+    "id": "P10",
+    "name": "조합 설립 연계",
+    "lane": "소유자·추진주체",
+    "stage": "G4 구역",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "소유자·추진주체",
+    "action": "조합 설립 연계",
+    "output_documents": [
+     "조합"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "도시 및 주거환경정비법",
+      "article": "제35조(조합설립인가 등)",
+      "text": "조합설립인가 등"
+     }
+    ]
+   },
+   {
+    "id": "P11",
+    "name": "구역 해제(해당)",
+    "lane": "시·도",
+    "stage": "G5 사후",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "시·도",
+    "action": "구역 해제(해당)",
+    "output_documents": [
+     "해제"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "도시 및 주거환경정비법",
+      "article": "제20조(정비구역등의 해제)",
+      "text": "정비구역등의 해제"
+     },
+     {
+      "law": "도시 및 주거환경정비법",
+      "article": "제21조(정비구역등의 직권해제)",
+      "text": "정비구역등의 직권해제"
+     }
+    ]
+   },
+   {
+    "id": "P12",
+    "name": "처분 통지",
+    "lane": "소유자·추진주체",
+    "stage": "G5 사후",
+    "type": "notice",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "소유자·추진주체",
+    "action": "처분 통지",
+    "output_documents": [
+     "통지"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "도시 및 주거환경정비법",
+      "article": "제20조(정비구역등의 해제)",
+      "text": "정비구역등의 해제"
+     }
+    ]
+   },
+   {
+    "id": "P13",
+    "name": "진단 부적합 시 종료",
+    "lane": "소유자·추진주체",
+    "stage": "G2 결과",
+    "type": "gateway",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "소유자·추진주체",
+    "action": "진단 부적합 시 종료",
+    "output_documents": [
+     "판단"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "도시 및 주거환경정비법",
+      "article": "제12조(재건축사업을 위한 재건축진단)",
+      "text": "시장ㆍ군수등은 정비계획 수립시기 도래 때부터 사업시행계획인가 전까지 재건축진단기관에 의뢰하여 주거환경 적합성ㆍ구조안전성 등에 관한 재건축진단을 실시하여야 하며, 진단기관은 결과보고서를 작성하여 제출한다."
+     }
+    ]
+   },
+   {
+    "id": "P14",
+    "name": "재진단 루프",
+    "lane": "안전진단기관",
+    "stage": "G1 진단",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "안전진단기관",
+    "action": "재진단 루프",
+    "output_documents": [
+     "재진단"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "도시 및 주거환경정비법",
+      "article": "제12조(재건축사업을 위한 재건축진단)",
+      "text": "시장ㆍ군수등은 정비계획 수립시기 도래 때부터 사업시행계획인가 전까지 재건축진단기관에 의뢰하여 주거환경 적합성ㆍ구조안전성 등에 관한 재건축진단을 실시하여야 하며, 진단기관은 결과보고서를 작성하여 제출한다."
+     }
+    ]
+   },
+   {
+    "id": "P15",
+    "name": "시장·군수 직권 검토",
+    "lane": "시장·군수",
+    "stage": "G0 요청",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "시장·군수",
+    "action": "시장·군수 직권 검토",
+    "output_documents": [
+     "직권"
+    ],
+    "confidence": 0.8,
+    "legal_basis": [
+     {
+      "law": "도시 및 주거환경정비법",
+      "article": "제13조의2(정비구역의 지정을 위한 정비계획의 입안 요청 등)",
+      "text": "정비구역의 지정을 위한 정비계획의 입안 요청 등"
+     }
+    ]
+   },
+   {
+    "id": "P16",
+    "name": "지정 결과 공개",
+    "lane": "주민",
+    "stage": "G4 구역",
+    "type": "notice",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "주민",
+    "action": "지정 결과 공개",
+    "output_documents": [
+     "공개"
+    ],
+    "confidence": 0.85,
+    "legal_basis": [
+     {
+      "law": "도시 및 주거환경정비법",
+      "article": "제16조(정비계획의 결정 및 정비구역의 지정ㆍ고시)",
+      "text": "정비계획의 결정 및 정비구역의 지정ㆍ고시"
+     }
+    ]
+   },
+   {
+    "id": "P17",
+    "name": "재건축진단 적정성 검토·시정요구",
+    "lane": "감독",
+    "stage": "G2 결과",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "시·도지사·국토안전관리원·국토교통부장관",
+    "action": "적정성 검토·시정요구",
+    "input_documents": [
+     "재건축진단 결과보고서"
+    ],
+    "output_documents": [
+     "적정성 검토결과·시정요구"
+    ],
+    "confidence": 0.85,
+    "legal_basis": [
+     {
+      "law": "도시 및 주거환경정비법",
+      "article": "제13조(재건축진단 결과의 적정성 검토)",
+      "text": "시장ㆍ군수등은 재건축진단 결과보고서를 시ㆍ도지사에게 제출하고, 시ㆍ도지사는 국토안전관리원 또는 한국건설기술연구원에 적정성 검토를 의뢰할 수 있으며 검토결과에 따라 시장ㆍ군수등에게 시정요구 등 조치를 요청할 수 있고, 시장ㆍ군수등은 특별한 사유가 없으면 그 요청에 따라야 한다."
+     },
+     {
+      "law": "도시 및 주거환경정비법",
+      "article": "제113조(감독)",
+      "text": "국토교통부장관ㆍ시ㆍ도지사ㆍ시장ㆍ군수ㆍ구청장은 보고ㆍ자료제출 명령, 현장조사, 시정요구 등 필요한 조치를 할 수 있다."
+     }
+    ]
+   }
+  ],
+  "edges": [
+   {
+    "id": "E01",
+    "source": "P01",
+    "target": "P15",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E02",
+    "source": "P15",
+    "target": "P02",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E03",
+    "source": "P02",
+    "target": "P03",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E04",
+    "source": "P03",
+    "target": "P04",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E05",
+    "source": "P04",
+    "target": "P13",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E06",
+    "source": "P13",
+    "target": "P07",
+    "type": "loop",
+    "label": "미흡"
+   },
+   {
+    "id": "E07",
+    "source": "P07",
+    "target": "P14",
+    "type": "loop",
+    "label": null
+   },
+   {
+    "id": "E08",
+    "source": "P14",
+    "target": "P03",
+    "type": "loop",
+    "label": null
+   },
+   {
+    "id": "E09",
+    "source": "P13",
+    "target": "P05",
+    "type": "sequence",
+    "label": "적합"
+   },
+   {
+    "id": "E10",
+    "source": "P05",
+    "target": "P06",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E11",
+    "source": "P06",
+    "target": "P08",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E12",
+    "source": "P08",
+    "target": "P09",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E13",
+    "source": "P09",
+    "target": "P16",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E14",
+    "source": "P09",
+    "target": "P10",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E15",
+    "source": "P10",
+    "target": "P11",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E16",
+    "source": "P11",
+    "target": "P12",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "M01",
+    "source": "P04",
+    "target": "P17",
+    "type": "message",
+    "label": "결과보고서 제출·적정성 검토"
+   },
+   {
+    "id": "E17",
+    "source": "P17",
+    "target": "P03",
+    "type": "loop",
+    "label": "시정요구 시 재진단"
+   }
+  ],
+  "warnings": [
+   "2026-07-12 부동산 패키지. MST 284065.",
+   "2026-07-13 L2 블라인드 재구성 대조 정정: (C) P01·P03·P04·P13·P14가 재건축 안전진단 근거로 주택법 제68조(증축형 리모델링 안전진단)를 오인용 → 재건축진단은 도시정비법 제12조(재건축사업을 위한 재건축진단, 2024.12.3 개정 명칭)로 교체하고 주택법 출처 제거. (D) P03 재건축진단 실시기한(정비계획 수립시기~사업시행계획인가 전, 제12조제1항) 추가. (backward-sequence E06) P13(진단 부적합)→P07(보완요청) '미흡' 회귀는 반려·보완 성격 → sequence를 loop로 변경. (E, empty-lane 감독) 제13조 적정성 검토·시정요구, 제113조 감독 근거로 비어있던 감독 lane에 P17 추가(P04→P17 message, P17→P03 시정요구 재진단 loop). 참조 MST: 법 284065, 시행령 287285, 시행규칙 283327. 법의 침묵: 재건축진단·적정성 검토 처리기한 명시 없음. 법의 침묵: 요청에 의한 재건축진단 거부 시 불복 절차 미규정."
+  ]
+ },
+ "verification": {
+  "status": "article-verified",
+  "verifiedAt": "2026-07-13",
+  "method": "국가법령정보센터 Open API (Korean Law MCP CLI) 출처·조문 대조",
+  "scope": "법적 근거 1건 중 공식 원문 1건을 연결했다. 캔버스와 절차 노드의 명시 조문 20건 가운데 20건의 조문 번호 존재를 확인했고, 0건은 불일치, 0건은 자동 검증 불가로 분류했다. 인용 문구의 해석·적용 타당성은 검증 범위에 포함하지 않는다.",
+  "notes": [
+   "도시 및 주거환경정비법 MST 284065"
+  ],
+  "sources": [
+   {
+    "law": "도시 및 주거환경정비법",
+    "kind": "법률",
+    "sourceType": "statute",
+    "officialName": "도시 및 주거환경정비법",
+    "lawId": "009410",
+    "mst": "284065",
+    "promulgatedOn": "2026-03-05",
+    "effectiveOn": "2026-07-01",
+    "officialUrl": "https://law.go.kr/법령/도시및주거환경정비법"
+   }
+  ],
+  "articleVerification": {
+   "checkedAt": "2026-07-13",
+   "method": "현행 법령 조문 일괄조회 및 행정규칙 전문조회",
+   "citationEntries": 21,
+   "explicitCitationEntries": 20,
+   "articleReferences": 20,
+   "verifiedReferences": 20,
+   "missingReferences": 0,
+   "uncheckableReferences": 0
+  }
+ }
+}

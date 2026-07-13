@@ -1,0 +1,706 @@
+{
+ "slug": "clean-hydrogen-cert",
+ "name": "청정수소 인증·의무",
+ "oneLiner": "청정수소 인증, 판매·사용 의무, 수소용품 제조허가·안전검사와 특화단지 연계 절차",
+ "type": "인허가형",
+ "priority": 152,
+ "whyFirst": "에너지 전환과 산업·발전 연료 전환의 수소 축이다.",
+ "asOfDate": "2026-07-12",
+ "status": "full",
+ "canvas": {
+  "purpose": "청정수소 기준·인증으로 시장을 조성하고 제조·공급 시설의 안전을 규율한다.",
+  "stakeholders": "수소 생산·판매자, 의무 사용 사업자, 기후에너지환경부, 인증기관, 안전전담기관.",
+  "legalBasis": [
+   {
+    "law": "수소경제 육성 및 수소 안전관리에 관한 법률",
+    "articles": "제25조의2~7(청정수소 인증·의무·구매), 제22조(특화단지), 제36·43·47·49조(제조허가·검사·취소), 제54조(청문)",
+    "kind": "법률"
+   }
+  ],
+  "authorities": [
+   {
+    "name": "기후에너지환경부",
+    "role": "인증·의무·허가"
+   },
+   {
+    "name": "인증·안전 전담기관",
+    "role": "인증·검사"
+   },
+   {
+    "name": "사업자",
+    "role": "생산·이행"
+   }
+  ],
+  "procedure": [
+   "청정수소 해당성·인증 신청",
+   "인증 심사·발급",
+   "판매·사용 의무 이행",
+   "용품 제조허가·검사",
+   "특화단지(해당)",
+   "취소·청문"
+  ],
+  "moneyFlow": "인증 수수료, 청정수소 프리미엄, 검사비, 과태료·취소 손실.",
+  "docsFlow": "생산 데이터 → 인증신청 → 인증서 → 의무 실적 → 허가·검사 → 처분.",
+  "bottlenecks": [
+   "인증 기준 해석",
+   "의무 대상 범위",
+   "충전·배관 인허가 중첩",
+   "수급 불안정"
+  ],
+  "reformPoints": [
+   "인증 처리 기한",
+   "의무 로드맵 공개",
+   "원스톱 안전·인허가"
+  ]
+ },
+ "related": [
+  "신재생 공급의무·REC",
+  "집단에너지사업 허가",
+  "발전사업 허가·전력계통 접속",
+  "유해화학물질 영업·취급 허가"
+ ],
+ "fieldVerification": [
+  "청정수소 인증 기준 고시",
+  "의무 대상 업종",
+  "인증기관 지정"
+ ],
+ "process": {
+  "institution_name": "청정수소 인증·의무",
+  "law_name": "수소경제 육성 및 수소 안전관리에 관한 법률",
+  "lanes": [
+   "수소사업자",
+   "기후에너지환경부",
+   "인증기관",
+   "의무 이행자",
+   "안전검사",
+   "감독·청문"
+  ],
+  "stages": [
+   "G0 해당성",
+   "G1 인증",
+   "G2 의무",
+   "G3 제조·안전",
+   "G4 특화",
+   "G5 사후"
+  ],
+  "nodes": [
+   {
+    "id": "P01",
+    "name": "청정수소 해당성 검토",
+    "lane": "수소사업자",
+    "stage": "G0 해당성",
+    "type": "task",
+    "status": "done",
+    "progress": 100,
+    "actor": "수소사업자",
+    "action": "청정수소 해당성 검토",
+    "output_documents": [
+     "해당성"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "수소경제 육성 및 수소 안전관리에 관한 법률",
+      "article": "제25조의2(청정수소의 인증 등)",
+      "text": "청정수소의 인증 등"
+     }
+    ]
+   },
+   {
+    "id": "P02",
+    "name": "인증 신청",
+    "lane": "수소사업자",
+    "stage": "G1 인증",
+    "type": "task",
+    "status": "current",
+    "progress": 40,
+    "actor": "수소사업자",
+    "action": "인증 신청",
+    "output_documents": [
+     "신청"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "수소경제 육성 및 수소 안전관리에 관한 법률",
+      "article": "제25조의2제1항",
+      "text": "기후에너지환경부장관은 대통령령으로 정하는 인증기준을 충족하는 수소 또는 수소화합물에 대하여 등급별 청정수소 인증을 할 수 있다."
+     },
+     {
+      "law": "수소경제 육성 및 수소 안전관리에 관한 법률 시행령",
+      "article": "제34조의3제1항",
+      "text": "청정수소 인증을 받으려는 자(신청인)는 인증신청서 및 첨부서류를 기후에너지환경부장관에게 제출해야 한다."
+     }
+    ]
+   },
+   {
+    "id": "P03",
+    "name": "인증 심사·발급",
+    "lane": "인증기관",
+    "stage": "G1 인증",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "인증기관",
+    "action": "인증 심사·발급",
+    "output_documents": [
+     "인증"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "수소경제 육성 및 수소 안전관리에 관한 법률 시행령",
+      "article": "제34조의3제2항·제3항",
+      "text": "기후에너지환경부장관은 인증기준 적합 여부를 심사한 후 적합하면 등급별 인증을 하고 인증서를 발급하며, 부적합하면 그 사실과 사유를 신청인에게 통지해야 한다."
+     },
+     {
+      "law": "수소경제 육성 및 수소 안전관리에 관한 법률",
+      "article": "제25조의4(청정수소인증기관의 지정 등)",
+      "text": "기후에너지환경부장관은 인증·점검 업무를 수행하기 위하여 청정수소인증기관을 지정할 수 있다."
+     }
+    ]
+   },
+   {
+    "id": "P04",
+    "name": "보완·재신청",
+    "lane": "수소사업자",
+    "stage": "G1 인증",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "수소사업자",
+    "action": "보완·재신청",
+    "output_documents": [
+     "보완"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "수소경제 육성 및 수소 안전관리에 관한 법률",
+      "article": "제25조의2(청정수소의 인증 등)",
+      "text": "청정수소의 인증 등"
+     }
+    ]
+   },
+   {
+    "id": "P05",
+    "name": "인증 결과 수령",
+    "lane": "수소사업자",
+    "stage": "G1 인증",
+    "type": "notice",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "수소사업자",
+    "action": "인증 결과 수령",
+    "output_documents": [
+     "인증서"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "수소경제 육성 및 수소 안전관리에 관한 법률",
+      "article": "제25조의2(청정수소의 인증 등)",
+      "text": "청정수소의 인증 등"
+     }
+    ]
+   },
+   {
+    "id": "P06",
+    "name": "판매·사용 의무 이행",
+    "lane": "의무 이행자",
+    "stage": "G2 의무",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "의무 이행자",
+    "action": "판매·사용 의무 이행·실적 보고",
+    "output_documents": [
+     "이행",
+     "판매·사용실적 보고서"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "수소경제 육성 및 수소 안전관리에 관한 법률",
+      "article": "제25조의5제1항",
+      "text": "기후에너지환경부장관은 수소연료공급시설 운영자 등에게 수소 판매량·사용량의 일정 비율 이상을 청정수소로 판매·사용하게 할 수 있다."
+     },
+     {
+      "law": "수소경제 육성 및 수소 안전관리에 관한 법률",
+      "article": "제25조의5제2항·제3항",
+      "text": "판매·사용의무자는 판매·사용실적을 기후에너지환경부장관에게 보고하고, 이행 확인을 위한 자료제출 요구에 따라야 한다."
+     }
+    ]
+   },
+   {
+    "id": "P07",
+    "name": "수소발전 구매·공급 연계",
+    "lane": "기후에너지환경부",
+    "stage": "G2 의무",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "기후에너지환경부",
+    "action": "수소발전 구매·공급 연계",
+    "output_documents": [
+     "구매"
+    ],
+    "confidence": 0.85,
+    "legal_basis": [
+     {
+      "law": "수소경제 육성 및 수소 안전관리에 관한 법률",
+      "article": "제25조의6(수소발전량 구매ㆍ공급 등)",
+      "text": "수소발전량 구매ㆍ공급 등"
+     }
+    ]
+   },
+   {
+    "id": "P08",
+    "name": "수소용품 제조사업 허가",
+    "lane": "수소사업자",
+    "stage": "G3 제조·안전",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "수소사업자",
+    "action": "수소용품 제조사업 허가",
+    "output_documents": [
+     "허가"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "수소경제 육성 및 수소 안전관리에 관한 법률",
+      "article": "제36조(수소용품 제조사업 허가)",
+      "text": "수소용품 제조사업 허가"
+     }
+    ]
+   },
+   {
+    "id": "P09",
+    "name": "완성·사용 검사",
+    "lane": "안전검사",
+    "stage": "G3 제조·안전",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "안전검사",
+    "action": "완성·사용 검사",
+    "output_documents": [
+     "검사"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "수소경제 육성 및 수소 안전관리에 관한 법률",
+      "article": "제43조(수소용품 제조시설의 완성검사)",
+      "text": "수소용품 제조시설의 완성검사"
+     },
+     {
+      "law": "수소경제 육성 및 수소 안전관리에 관한 법률",
+      "article": "제47조(수소연료사용시설의 검사)",
+      "text": "수소연료사용시설의 검사"
+     }
+    ]
+   },
+   {
+    "id": "P10",
+    "name": "특화단지 지정 검토",
+    "lane": "기후에너지환경부",
+    "stage": "G4 특화",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "기후에너지환경부",
+    "action": "특화단지 지정 검토",
+    "output_documents": [
+     "단지"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "수소경제 육성 및 수소 안전관리에 관한 법률",
+      "article": "제22조(수소특화단지의 지정 등)",
+      "text": "수소특화단지의 지정 등"
+     }
+    ]
+   },
+   {
+    "id": "P11",
+    "name": "허가·인증 취소",
+    "lane": "감독·청문",
+    "stage": "G5 사후",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "감독·청문",
+    "action": "허가·인증 취소",
+    "output_documents": [
+     "취소"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "수소경제 육성 및 수소 안전관리에 관한 법률",
+      "article": "제49조(허가 및 등록의 취소 등)",
+      "text": "허가 및 등록의 취소 등"
+     },
+     {
+      "law": "수소경제 육성 및 수소 안전관리에 관한 법률",
+      "article": "제12조(수소전문기업 확인의 취소)",
+      "text": "수소전문기업 확인의 취소"
+     }
+    ]
+   },
+   {
+    "id": "P12",
+    "name": "청문",
+    "lane": "감독·청문",
+    "stage": "G5 사후",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "감독·청문",
+    "action": "청문",
+    "output_documents": [
+     "청문"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "수소경제 육성 및 수소 안전관리에 관한 법률",
+      "article": "제54조(청문)",
+      "text": "청문"
+     }
+    ]
+   },
+   {
+    "id": "P13",
+    "name": "처분 통지 수령",
+    "lane": "수소사업자",
+    "stage": "G5 사후",
+    "type": "notice",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "수소사업자",
+    "action": "처분 통지 수령",
+    "output_documents": [
+     "통지"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "수소경제 육성 및 수소 안전관리에 관한 법률",
+      "article": "제49조(허가 및 등록의 취소 등)",
+      "text": "허가 및 등록의 취소 등"
+     }
+    ]
+   },
+   {
+    "id": "P14",
+    "name": "안전관리자·규정",
+    "lane": "수소사업자",
+    "stage": "G3 제조·안전",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "수소사업자",
+    "action": "안전관리자·규정",
+    "output_documents": [
+     "안전"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "수소경제 육성 및 수소 안전관리에 관한 법률",
+      "article": "제41조(안전관리규정)",
+      "text": "안전관리규정"
+     },
+     {
+      "law": "수소경제 육성 및 수소 안전관리에 관한 법률",
+      "article": "제42조(안전관리자)",
+      "text": "안전관리자"
+     }
+    ]
+   },
+   {
+    "id": "P15",
+    "name": "입찰시장 연계(해당)",
+    "lane": "기후에너지환경부",
+    "stage": "G2 의무",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "기후에너지환경부",
+    "action": "입찰시장 연계(해당)",
+    "output_documents": [
+     "입찰"
+    ],
+    "confidence": 0.8,
+    "legal_basis": [
+     {
+      "law": "수소경제 육성 및 수소 안전관리에 관한 법률",
+      "article": "제25조의7(입찰시장 관리기관의 지정 등)",
+      "text": "입찰시장 관리기관의 지정 등"
+     }
+    ]
+   },
+   {
+    "id": "P16",
+    "name": "허가 결과 수령",
+    "lane": "수소사업자",
+    "stage": "G3 제조·안전",
+    "type": "notice",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "수소사업자",
+    "action": "허가 결과 수령",
+    "output_documents": [
+     "허가서"
+    ],
+    "confidence": 0.9,
+    "legal_basis": [
+     {
+      "law": "수소경제 육성 및 수소 안전관리에 관한 법률",
+      "article": "제36조(수소용품 제조사업 허가)",
+      "text": "수소용품 제조사업 허가"
+     }
+    ]
+   },
+   {
+    "id": "P17",
+    "name": "생산·수입·판매 신고",
+    "lane": "수소사업자",
+    "stage": "G2 의무",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "수소사업자",
+    "receiver": "기후에너지환경부",
+    "action": "생산량·수입량·판매량·구매자 신고",
+    "output_documents": [
+     "청정수소 생산·수입·판매 신고서"
+    ],
+    "deadline": "분기별",
+    "confidence": 0.85,
+    "legal_basis": [
+     {
+      "law": "수소경제 육성 및 수소 안전관리에 관한 법률",
+      "article": "제25조의3(청정수소 생산량 등의 신고)",
+      "text": "청정수소를 생산·수입 또는 판매하는 자는 생산량·수입량·판매량과 구매자를 기후에너지환경부장관에게 신고하여야 한다."
+     },
+     {
+      "law": "수소경제 육성 및 수소 안전관리에 관한 법률 시행령",
+      "article": "제34조의7제1항",
+      "text": "청정수소를 생산·수입 또는 판매하는 자는 생산량·수입량·판매량과 구매자에 대하여 분기별로 기후에너지환경부장관에게 신고해야 한다."
+     }
+    ]
+   },
+   {
+    "id": "P18",
+    "name": "판매·사용의무 미이행 과징금",
+    "lane": "감독·청문",
+    "stage": "G5 사후",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "기후에너지환경부",
+    "receiver": "의무 이행자",
+    "action": "부족분 과징금 부과·징수",
+    "output_documents": [
+     "과징금 부과처분서"
+    ],
+    "deadline": "미이행 확인 후",
+    "blocker": "미납 시 가산금·독촉 후 국세강제징수의 예에 따라 징수",
+    "confidence": 0.85,
+    "legal_basis": [
+     {
+      "law": "수소경제 육성 및 수소 안전관리에 관한 법률",
+      "article": "제25조의8제1항",
+      "text": "판매·사용의무를 이행하지 아니한 경우 부족분에 대하여 최고등급 청정수소와 일반수소의 시장가격 차액에 100분의 150을 곱한 금액의 범위에서 과징금을 부과할 수 있다."
+     },
+     {
+      "law": "수소경제 육성 및 수소 안전관리에 관한 법률",
+      "article": "제25조의8제2항·제3항",
+      "text": "과징금 미납 시 가산금을 징수하고 독촉하며, 기간 내 미납 시 국세강제징수의 예에 따라 징수한다."
+     }
+    ]
+   }
+  ],
+  "edges": [
+   {
+    "id": "E01",
+    "source": "P01",
+    "target": "P02",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E02",
+    "source": "P02",
+    "target": "P03",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E03",
+    "source": "P03",
+    "target": "P04",
+    "type": "sequence",
+    "label": "보완"
+   },
+   {
+    "id": "E04",
+    "source": "P04",
+    "target": "P02",
+    "type": "loop",
+    "label": null
+   },
+   {
+    "id": "E05",
+    "source": "P03",
+    "target": "P05",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E06",
+    "source": "P05",
+    "target": "P06",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E07",
+    "source": "P06",
+    "target": "P07",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E08",
+    "source": "P07",
+    "target": "P15",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E09",
+    "source": "P05",
+    "target": "P08",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E10",
+    "source": "P08",
+    "target": "P14",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E11",
+    "source": "P14",
+    "target": "P09",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E12",
+    "source": "P09",
+    "target": "P16",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E13",
+    "source": "P16",
+    "target": "P10",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E14",
+    "source": "P09",
+    "target": "P11",
+    "type": "sequence",
+    "label": "위반"
+   },
+   {
+    "id": "E15",
+    "source": "P11",
+    "target": "P12",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E16",
+    "source": "P12",
+    "target": "P13",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "M01",
+    "source": "P06",
+    "target": "P17",
+    "type": "message",
+    "label": "생산·수입·판매 신고(분기별)"
+   },
+   {
+    "id": "M02",
+    "source": "P06",
+    "target": "P18",
+    "type": "message",
+    "label": "의무 미이행 시 과징금"
+   }
+  ],
+  "warnings": [
+   "MST 276545.",
+   "2026-07-13 L2 블라인드 재구성 대조 정정: (C) P02 인증신청 근거를 제25조의3(신고)→제25조의2제1항·시행령 제34조의3제1항으로 정정, P03 심사·발급 근거에 시행령 제34조의3제2항·제3항 추가(제25조의4는 기관지정 근거로 유지). (E) P06에 실적보고 의무(제25조의5제2항·제3항) 반영, P17 생산·수입·판매 신고(제25조의3·시행령 제34조의7, 분기별) 및 P18 판매·사용의무 미이행 과징금(제25조의8) 노드 신설. (D) 신고 분기별·점검 연1회 이상(시행령 제34조의6·제34조의7) 기한 반영. 대조 MST: 수소법 276545, 시행령 281197. 법의 침묵: 인증 심사기간(처리기한)은 법령 명시 없이 고시 위임(시행령 제34조의3제5항). 법의 침묵: 판매·사용 의무비율의 구체 수준·부과 요건이 대통령령·필요 인정에 광범위 위임. 법의 침묵: 인증 취소·명령 처분 불복(이의신청) 절차는 수소법에 별도 규정 없이 일반법(행정심판·행정소송)에 의존."
+  ]
+ },
+ "verification": {
+  "status": "article-verified",
+  "verifiedAt": "2026-07-13",
+  "method": "국가법령정보센터 Open API (Korean Law MCP CLI) 출처·조문 대조",
+  "scope": "법적 근거 1건 중 공식 원문 1건을 연결했다. 캔버스와 절차 노드의 명시 조문 29건 가운데 29건의 조문 번호 존재를 확인했고, 0건은 불일치, 0건은 자동 검증 불가로 분류했다. 인용 문구의 해석·적용 타당성은 검증 범위에 포함하지 않는다.",
+  "notes": [
+   "수소법 MST 276545, 시행령 MST 281197"
+  ],
+  "sources": [
+   {
+    "law": "수소경제 육성 및 수소 안전관리에 관한 법률",
+    "kind": "법률",
+    "sourceType": "statute",
+    "officialName": "수소경제 육성 및 수소 안전관리에 관한 법률",
+    "lawId": "013670",
+    "mst": "276545",
+    "promulgatedOn": "2025-10-01",
+    "effectiveOn": "2025-10-01",
+    "officialUrl": "https://law.go.kr/법령/수소경제육성및수소안전관리에관한법률"
+   },
+   {
+    "law": "수소경제 육성 및 수소 안전관리에 관한 법률 시행령",
+    "kind": "대통령령",
+    "sourceType": "statute",
+    "officialName": "수소경제 육성 및 수소 안전관리에 관한 법률 시행령",
+    "lawId": "014015",
+    "mst": "281197",
+    "promulgatedOn": "2025-12-30",
+    "effectiveOn": "2026-01-02",
+    "officialUrl": "https://law.go.kr/법령/수소경제육성및수소안전관리에관한법률시행령"
+   }
+  ],
+  "articleVerification": {
+   "checkedAt": "2026-07-13",
+   "method": "현행 법령 조문 일괄조회 및 행정규칙 전문조회",
+   "citationEntries": 27,
+   "explicitCitationEntries": 27,
+   "articleReferences": 29,
+   "verifiedReferences": 29,
+   "missingReferences": 0,
+   "uncheckableReferences": 0
+  }
+ }
+}

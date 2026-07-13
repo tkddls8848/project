@@ -1,0 +1,670 @@
+{
+ "slug": "mortgage-dsr-regulation",
+ "name": "LTV·DTI·DSR 대출규제",
+ "oneLiner": "주택담보대출 담보인정비율·총부채원리금상환비율 등 대출 한도 규제 적용 절차",
+ "type": "규제특례형",
+ "priority": 184,
+ "whyFirst": "주담대·전세대출 유동성 논쟁의 금융 규제 축이다.",
+ "asOfDate": "2026-07-12",
+ "status": "full",
+ "canvas": {
+  "purpose": "가계부채와 부동산 과열을 막기 위해 주택 관련 대출 한도를 규제한다.",
+  "stakeholders": "차주, 은행, 금융당국, 국토부.",
+  "legalBasis": [
+   {
+    "law": "주택법",
+    "articles": "제63·63의2조(규제지역 연계)",
+    "kind": "법률"
+   }
+  ],
+  "authorities": [
+   {
+    "name": "금융위·금감원",
+    "role": "규제"
+   },
+   {
+    "name": "금융회사",
+    "role": "심사"
+   }
+  ],
+  "procedure": [
+   "확인",
+   "신청",
+   "한도",
+   "실행"
+  ],
+  "moneyFlow": "대출원금·이자.",
+  "docsFlow": "신청 → 증빙 → 약정.",
+  "bottlenecks": [
+   "풍선효과",
+   "소득 증빙"
+  ],
+  "reformPoints": [
+   "규제 공개",
+   "서민 대출 분리"
+  ]
+ },
+ "related": [
+  "투기과열지구·조정대상지역",
+  "버팀목 전세자금대출",
+  "전세보증금 반환보증",
+  "주택담보·전세대출 보증"
+ ],
+ "fieldVerification": [
+  "LTV·DSR 비율 행정지도 현행",
+  "스트레스 DSR",
+  "전세대출 DSR 산입 여부"
+ ],
+ "process": {
+  "institution_name": "LTV·DTI·DSR 대출규제",
+  "law_name": "주택법",
+  "lanes": [
+   "차주",
+   "금융회사",
+   "금융위·금감원",
+   "국토부 연계",
+   "보증기관",
+   "감독"
+  ],
+  "stages": [
+   "G0 상품",
+   "G1 신청",
+   "G2 한도",
+   "G3 심사",
+   "G4 실행",
+   "G5 사후"
+  ],
+  "nodes": [
+   {
+    "id": "P01",
+    "name": "규제지역·상품 확인",
+    "lane": "차주",
+    "stage": "G0 상품",
+    "type": "task",
+    "status": "done",
+    "progress": 100,
+    "actor": "차주",
+    "action": "규제지역·상품 확인",
+    "output_documents": [
+     "확인"
+    ],
+    "confidence": 0.8,
+    "legal_basis": [
+     {
+      "law": "주택법",
+      "article": "제63조(투기과열지구의 지정 및 해제)",
+      "text": "투기과열지구의 지정 및 해제"
+     }
+    ]
+   },
+   {
+    "id": "P02",
+    "name": "대출 상담",
+    "lane": "금융회사",
+    "stage": "G0 상품",
+    "type": "task",
+    "status": "done",
+    "progress": 100,
+    "actor": "금융회사",
+    "action": "대출 상담",
+    "output_documents": [
+     "상담"
+    ],
+    "confidence": 0.75,
+    "legal_basis": [
+     {
+      "law": "금융소비자 보호에 관한 법률",
+      "article": "제19조(설명의무)",
+      "text": "금융상품 계약 체결 권유 시 중요사항을 설명하여야 한다."
+     }
+    ]
+   },
+   {
+    "id": "P03",
+    "name": "대출 신청",
+    "lane": "차주",
+    "stage": "G1 신청",
+    "type": "task",
+    "status": "current",
+    "progress": 40,
+    "actor": "차주",
+    "action": "대출 신청",
+    "output_documents": [
+     "신청"
+    ],
+    "confidence": 0.75,
+    "legal_basis": [
+     {
+      "law": "금융소비자 보호에 관한 법률",
+      "article": "제17조(적합성원칙)",
+      "text": "금융상품판매업자는 대출성 상품 계약 시 소비자의 재산상황·부채·소득 등을 파악하여 적합성을 확인하여야 한다."
+     }
+    ]
+   },
+   {
+    "id": "P04",
+    "name": "LTV·DTI·DSR 한도 산정",
+    "lane": "금융회사",
+    "stage": "G2 한도",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "금융회사",
+    "action": "LTV·DTI·DSR 한도 산정",
+    "output_documents": [
+     "한도"
+    ],
+    "confidence": 0.75,
+    "legal_basis": [
+     {
+      "law": "은행법",
+      "article": "제34조(건전경영의 지도)",
+      "text": "② 은행은 경영건전성 유지를 위하여 금융위원회가 정하는 경영지도기준을 지켜야 한다."
+     },
+     {
+      "law": "은행업감독규정",
+      "article": "제29조의2(주택관련 담보대출 등에 대한 리스크관리)",
+      "text": "은행은 은행법 제34조에 따라 별표 6의 담보인정비율(LTV)·총부채상환비율(DTI)·총부채원리금상환비율(DSR)과 주택담보대출 취급 제한을 준수해야 한다.(제29조의2제1항)"
+     }
+    ]
+   },
+   {
+    "id": "P05",
+    "name": "소득·부채 증빙",
+    "lane": "차주",
+    "stage": "G2 한도",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "차주",
+    "action": "소득·부채 증빙",
+    "output_documents": [
+     "증빙"
+    ],
+    "confidence": 0.75,
+    "legal_basis": [
+     {
+      "law": "금융소비자 보호에 관한 법률",
+      "article": "제18조(적정성원칙)",
+      "text": "대출성 상품 판매 시 소비자의 재산·소득·부채 정보를 파악하여 적정성을 판단하여야 한다."
+     }
+    ]
+   },
+   {
+    "id": "P06",
+    "name": "보완 제출",
+    "lane": "차주",
+    "stage": "G1 신청",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "차주",
+    "action": "보완 제출",
+    "output_documents": [
+     "보완"
+    ],
+    "confidence": 0.75,
+    "legal_basis": [
+     {
+      "law": "금융소비자 보호에 관한 법률",
+      "article": "제18조(적정성원칙)",
+      "text": "적정성 판단에 필요한 소득·부채 증빙 보완."
+     }
+    ]
+   },
+   {
+    "id": "P07",
+    "name": "여신 심사·승인",
+    "lane": "금융회사",
+    "stage": "G3 심사",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "금융회사",
+    "action": "여신 심사·승인",
+    "output_documents": [
+     "승인"
+    ],
+    "confidence": 0.75,
+    "legal_basis": [
+     {
+      "law": "은행법",
+      "article": "제34조(건전경영의 지도)",
+      "text": "② 금융위 경영지도기준(LTV·DTI·DSR)에 따라 여신 한도를 심사·승인한다."
+     }
+    ]
+   },
+   {
+    "id": "P08",
+    "name": "승인 결과 수령",
+    "lane": "차주",
+    "stage": "G3 심사",
+    "type": "notice",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "차주",
+    "action": "승인 결과 수령",
+    "output_documents": [
+     "통지"
+    ],
+    "confidence": 0.75,
+    "legal_basis": [
+     {
+      "law": "금융소비자 보호에 관한 법률",
+      "article": "제19조(설명의무)",
+      "text": "대출 조건·한도 등 중요사항을 차주에게 설명·통지한다."
+     }
+    ]
+   },
+   {
+    "id": "P09",
+    "name": "약정·실행",
+    "lane": "금융회사",
+    "stage": "G4 실행",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "금융회사",
+    "action": "약정·실행",
+    "output_documents": [
+     "실행"
+    ],
+    "confidence": 0.75,
+    "legal_basis": [
+     {
+      "law": "은행법",
+      "article": "제34조(건전경영의 지도)",
+      "text": "② 경영지도기준을 준수하여 대출을 약정·실행한다."
+     }
+    ]
+   },
+   {
+    "id": "P10",
+    "name": "보증 연계",
+    "lane": "보증기관",
+    "stage": "G4 실행",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "보증기관",
+    "action": "보증 연계",
+    "output_documents": [
+     "보증"
+    ],
+    "confidence": 0.7,
+    "legal_basis": [
+     {
+      "law": "주택도시기금법",
+      "article": "제26조(업무)",
+      "text": "주택도시보증공사는 분양보증·임대보증금보증·하자보수보증·전세보증금반환보증 등 보증업무를 수행한다.(제26조제1항제2호)"
+     }
+    ]
+   },
+   {
+    "id": "P11",
+    "name": "사후 관리",
+    "lane": "금융회사",
+    "stage": "G5 사후",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "금융회사",
+    "action": "사후 관리",
+    "output_documents": [
+     "관리"
+    ],
+    "confidence": 0.7,
+    "legal_basis": [
+     {
+      "law": "은행법",
+      "article": "제48조(검사)",
+      "text": "① 금융감독원장은 은행의 업무·재산 상황을 검사한다(여신 사후관리·건전성 점검)."
+     }
+    ]
+   },
+   {
+    "id": "P12",
+    "name": "규제 변경 안내",
+    "lane": "금융위·금감원",
+    "stage": "G0 상품",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "금융위·금감원",
+    "action": "규제 변경 안내",
+    "output_documents": [
+     "안내"
+    ],
+    "confidence": 0.7,
+    "legal_basis": [
+     {
+      "law": "은행법",
+      "article": "제34조(건전경영의 지도)",
+      "text": "② 금융위원회가 정하는 경영지도기준(LTV·DTI·DSR) 제·개정 안내."
+     }
+    ]
+   },
+   {
+    "id": "P13",
+    "name": "거절 통지",
+    "lane": "차주",
+    "stage": "G3 심사",
+    "type": "notice",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "차주",
+    "action": "거절 통지",
+    "output_documents": [
+     "거절"
+    ],
+    "confidence": 0.75,
+    "legal_basis": [
+     {
+      "law": "금융소비자 보호에 관한 법률",
+      "article": "제19조(설명의무)",
+      "text": "대출 거절 사유·근거를 차주에게 통지·설명한다."
+     }
+    ]
+   },
+   {
+    "id": "P14",
+    "name": "재신청",
+    "lane": "차주",
+    "stage": "G1 신청",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "차주",
+    "action": "재신청",
+    "output_documents": [
+     "재신청"
+    ],
+    "confidence": 0.75,
+    "legal_basis": [
+     {
+      "law": "금융소비자 보호에 관한 법률",
+      "article": "제17조(적합성원칙)",
+      "text": "보완 후 적합성 재확인을 거쳐 재신청한다."
+     }
+    ]
+   },
+   {
+    "id": "P15",
+    "name": "국토부 규제지역 연계",
+    "lane": "국토부 연계",
+    "stage": "G0 상품",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "국토부 연계",
+    "action": "국토부 규제지역 연계",
+    "output_documents": [
+     "연계"
+    ],
+    "confidence": 0.85,
+    "legal_basis": [
+     {
+      "law": "주택법",
+      "article": "제63조의2(조정대상지역의 지정 및 해제)",
+      "text": "조정대상지역의 지정 및 해제"
+     }
+    ]
+   },
+   {
+    "id": "P16",
+    "name": "상환",
+    "lane": "차주",
+    "stage": "G5 사후",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "차주",
+    "action": "상환",
+    "output_documents": [
+     "상환"
+    ],
+    "confidence": 0.75,
+    "legal_basis": [
+     {
+      "law": "은행법",
+      "article": "제34조(건전경영의 지도)",
+      "text": "② 경영지도기준에 따른 대출 상환·사후 건전성 관리."
+     }
+    ]
+   },
+   {
+    "id": "P17",
+    "name": "대출규제 감독·검사",
+    "lane": "감독",
+    "stage": "G5 사후",
+    "type": "task",
+    "status": "waiting",
+    "progress": 0,
+    "actor": "금융위원회·금융감독원",
+    "action": "경영지도기준(LTV·DTI·DSR) 제·개정 및 은행의 준수 여부 감독·검사, 위규 시 경영개선조치 요구",
+    "output_documents": [
+     "감독·검사"
+    ],
+    "confidence": 0.85,
+    "legal_basis": [
+     {
+      "law": "은행법",
+      "article": "제34조(건전경영의 지도)",
+      "text": "③④ 금융위는 국제결제은행 원칙을 반영하여 경영지도기준을 정하고, 미충족 시 경영개선조치를 요구할 수 있다."
+     },
+     {
+      "law": "은행법",
+      "article": "제44조(은행의 감독)",
+      "text": "금융감독원은 금융위원회의 규정·지시에 따라 은행의 준수 여부를 감독하여야 한다."
+     },
+     {
+      "law": "은행법",
+      "article": "제48조(검사)",
+      "text": "① 금융감독원장은 은행의 업무·재산 상황을 검사한다."
+     }
+    ]
+   }
+  ],
+  "edges": [
+   {
+    "id": "E01",
+    "source": "P12",
+    "target": "P15",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E02",
+    "source": "P15",
+    "target": "P01",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E03",
+    "source": "P01",
+    "target": "P02",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E04",
+    "source": "P02",
+    "target": "P03",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E05",
+    "source": "P03",
+    "target": "P04",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E06",
+    "source": "P04",
+    "target": "P05",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E07",
+    "source": "P05",
+    "target": "P06",
+    "type": "loop",
+    "label": "보완"
+   },
+   {
+    "id": "E08",
+    "source": "P06",
+    "target": "P14",
+    "type": "loop",
+    "label": null
+   },
+   {
+    "id": "E09",
+    "source": "P14",
+    "target": "P03",
+    "type": "loop",
+    "label": null
+   },
+   {
+    "id": "E10",
+    "source": "P05",
+    "target": "P07",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E11",
+    "source": "P07",
+    "target": "P08",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E12",
+    "source": "P07",
+    "target": "P13",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E13",
+    "source": "P08",
+    "target": "P09",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E14",
+    "source": "P09",
+    "target": "P10",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E15",
+    "source": "P09",
+    "target": "P11",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E16",
+    "source": "P11",
+    "target": "P16",
+    "type": "sequence",
+    "label": null
+   },
+   {
+    "id": "E17",
+    "source": "P11",
+    "target": "P17",
+    "type": "message",
+    "label": "감독·검사"
+   }
+  ],
+  "warnings": [
+   "2026-07-12 부동산.",
+   "2026-07-13 L2 블라인드 재구성 대조 정정: (C/F) 대출절차 노드 15개 근거 오인용 정정 — 주택법 제63·63의2조(규제지역 지정)는 LTV·DTI·DSR 대출한도의 근거가 아님. P02·P03·P05·P06·P08·P13·P14 금소법 제17·18·19조(적합성·적정성·설명의무), P04·P07·P09·P12·P16 은행법 제34조②(경영지도기준 위임), P11 은행법 제48조로 정정. P01 규제지역 확인·P15 국토부 연계는 주택법 제63·63의2 정당 유지. (F) P04 LTV·DTI·DSR 구체 비율·산식은 법률이 아니라 행정규칙(은행업감독규정)에 규정되므로 은행법 제34조② 위임근거+행정규칙 unverified 표기. P10 보증연계는 주택도시기금법(별도 제도) unverified. (E) 감독 lane 공백 해소: 은행법 제34③④·44·48조 감독·검사 P17 신설(E17). (backward-sequence) E07 P05(G2)→P06(G1)은 소득·부채 보완을 위한 회귀이므로 sequence→loop로 정정. 참조 MST 282001(은행법), 277247(금융소비자 보호에 관한 법률). 법의 침묵: LTV/DTI/DSR 구체 비율·지역차등은 법률에 없고 금융위 고시·감독규정에 위임. 법의 침묵: 스트레스 DSR 산정방식은 행정규칙·정부대책 근거."
+  ]
+ },
+ "verification": {
+  "status": "article-verified",
+  "verifiedAt": "2026-07-13",
+  "method": "국가법령정보센터 Open API (Korean Law MCP CLI) 출처·조문 대조",
+  "scope": "법적 근거 1건 중 공식 원문 1건을 연결했다. 캔버스와 절차 노드의 명시 조문 20건 가운데 20건의 조문 번호 존재를 확인했고, 0건은 불일치, 0건은 자동 검증 불가로 분류했다. 인용 문구의 해석·적용 타당성은 검증 범위에 포함하지 않는다.",
+  "notes": [
+   "주택법"
+  ],
+  "sources": [
+   {
+    "law": "주택법",
+    "kind": "법률",
+    "sourceType": "statute",
+    "officialName": "주택법",
+    "lawId": "001809",
+    "mst": "284095",
+    "promulgatedOn": "2026-03-05",
+    "effectiveOn": "2026-07-01",
+    "officialUrl": "https://law.go.kr/법령/주택법"
+   },
+   {
+    "law": "은행법",
+    "kind": "법률",
+    "sourceType": "statute",
+    "officialName": "은행법",
+    "lawId": "001549",
+    "mst": "282001",
+    "promulgatedOn": "2025-12-30",
+    "effectiveOn": "2026-07-01",
+    "officialUrl": "https://law.go.kr/법령/은행법"
+   },
+   {
+    "law": "금융소비자 보호에 관한 법률",
+    "kind": "법률",
+    "sourceType": "statute",
+    "officialName": "금융소비자 보호에 관한 법률",
+    "lawId": "013704",
+    "mst": "277247",
+    "promulgatedOn": "2025-10-01",
+    "effectiveOn": "2026-01-02",
+    "officialUrl": "https://law.go.kr/법령/금융소비자보호에관한법률"
+   },
+   {
+    "law": "은행업감독규정",
+    "kind": "고시·지침",
+    "sourceType": "admin-rule",
+    "officialName": "은행업감독규정",
+    "adminRuleId": "21829",
+    "adminRuleSerial": "2100000276094",
+    "promulgatedOn": "2026-03-18",
+    "effectiveOn": "2026-04-01",
+    "officialUrl": "https://law.go.kr/행정규칙/은행업감독규정"
+   },
+   {
+    "law": "주택도시기금법",
+    "kind": "법률",
+    "sourceType": "statute",
+    "officialName": "주택도시기금법",
+    "lawId": "012226",
+    "mst": "286599",
+    "promulgatedOn": "2026-06-02",
+    "effectiveOn": "2026-06-02",
+    "officialUrl": "https://law.go.kr/법령/주택도시기금법"
+   }
+  ],
+  "articleVerification": {
+   "checkedAt": "2026-07-13",
+   "method": "현행 법령 조문 일괄조회 및 행정규칙 전문조회",
+   "citationEntries": 21,
+   "explicitCitationEntries": 20,
+   "articleReferences": 20,
+   "verifiedReferences": 20,
+   "missingReferences": 0,
+   "uncheckableReferences": 0
+  }
+ }
+}
