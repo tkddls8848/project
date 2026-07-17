@@ -351,7 +351,7 @@ export function NodeProperties({ node, edges, onUpdateData }) {
           )}
         </Section>
 
-        {node.type === 'apiDoc' && <ApiDocProperties apiId={node.data?.apiId} />}
+        {node.type === 'apiDoc' && <ApiDocProperties apiId={node.data?.apiId} doc={node.data?.doc} />}
 
         <ExecutionProperties data={node.data} />
 
@@ -435,8 +435,8 @@ function PanelHeader() {
   );
 }
 
-function ApiDocProperties({ apiId }) {
-  const doc = apiDocMap[apiId];
+function ApiDocProperties({ apiId, doc: embeddedDoc }) {
+  const doc = embeddedDoc ?? apiDocMap[apiId];
   if (!doc) return <PropRow label="API ID" value={apiId} />;
 
   const cfg = CATEGORY.source;

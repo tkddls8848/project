@@ -1,0 +1,39 @@
+{
+  "api_id": "15000003",
+  "crawled_url": "https://www.data.go.kr/data/15000003/openapi.do",
+  "info": {
+    "목록명": "한국환경공단_에어코리아_측정소정보",
+    "제공기관": "한국환경공단",
+    "분류체계": "환경기상 - 대기",
+    "키워드": "측정소,대기질,관측",
+    "설명": "대기질 측정소 위치와 정보를 조회하는 서비스",
+    "수정일": "2026-01-01"
+  },
+  "endpoints": [
+    { "method": "GET", "path": "/getMsrstnList", "description": "측정소 목록 조회" }
+  ],
+  "swagger_json": {
+    "info": { "title": "측정소정보", "description": "측정소 정보 조회" },
+    "paths": {
+      "/getMsrstnList": {
+        "get": {
+          "summary": "측정소 목록 조회",
+          "parameters": [
+            { "name": "serviceKey", "in": "query", "required": true, "type": "string", "description": "인증키" },
+            { "name": "sidoName", "in": "query", "required": false, "type": "string", "description": "시도 이름" },
+            { "name": "stationName", "in": "query", "required": false, "type": "string", "description": "측정소 이름" }
+          ]
+        }
+      }
+    },
+    "definitions": {
+      "Item": {
+        "properties": {
+          "stationName": { "type": "string", "description": "측정소 이름" },
+          "addr": { "type": "string", "description": "측정소 주소" },
+          "sidoName": { "type": "string", "description": "시도 이름" }
+        }
+      }
+    }
+  }
+}

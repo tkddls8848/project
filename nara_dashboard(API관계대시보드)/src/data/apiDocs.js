@@ -1,62 +1,3 @@
-// Vite eager glob import — bundles all API JSON files at build time
-const modules = import.meta.glob('../../apidata/*.json', { eager: true });
-
-function extractFields(doc) {
-  const defs = doc.swagger_json?.definitions ?? {};
-  // Prefer 'items' (actual data record), then fall back to all defs
-  const targetDefs = defs.items ? [defs.items] : Object.values(defs);
-  const fields = [];
-  const seen = new Set();
-  const containerKeys = new Set([
-    'response',
-    'header',
-    'body',
-    'items',
-    'item',
-    'resultCode',
-    'resultMsg',
-    'totalCount',
-    'numOfRows',
-    'pageNo',
-  ]);
-
-  const collect = (schema, parentKey = '') => {
-    if (!schema || typeof schema !== 'object') return;
-    if (schema.properties && typeof schema.properties === 'object') {
-      for (const [key, val] of Object.entries(schema.properties)) {
-        if (containerKeys.has(key)) {
-          collect(val, key);
-          continue;
-        }
-
-        if (val?.properties || val?.items?.properties) {
-          collect(val.properties ? val : val.items, key);
-          continue;
-        }
-
-        if (seen.has(key)) continue;
-        seen.add(key);
-        fields.push({ key, desc: val?.description ?? (parentKey ? `${parentKey}.${key}` : key) });
-      }
-    }
-
-    if (schema.items) collect(schema.items, parentKey);
-  };
-
-  for (const def of targetDefs) {
-    collect(def);
-  }
-  return fields;
-}
-
-function extractEndpoints(doc) {
-  return (doc.endpoints ?? []).map(ep => ({
-    method: ep.method ?? 'GET',
-    path: ep.path ?? '',
-    description: ep.description ?? '',
-  }));
-}
-
 function topCategory(raw) {
   return (raw ?? '').split(' - ')[0].trim() || '기타';
 }
@@ -68,22 +9,57 @@ function parseKeywords(raw) {
     .filter(Boolean);
 }
 
-export const apiDocs = Object.values(modules).map(mod => {
-  const doc = mod.default ?? mod;
-  return {
-    apiId:       doc.api_id ?? '',
-    name:        doc.info?.목록명 ?? doc.api_id ?? '',
-    provider:    doc.info?.제공기관 ?? '',
-    topCategory: topCategory(doc.info?.분류체계),
-    category:    doc.info?.분류체계 ?? '',
-    keywords:    parseKeywords(doc.info?.키워드),
-    description: doc.info?.설명 ?? '',
-    fields:      extractFields(doc),
-    endpoints:   extractEndpoints(doc),
-  };
-}).sort((a, b) => a.topCategory.localeCompare(b.topCategory, 'ko'));
+// 카탈로그는 빌드 타임 번들이 아니라 nara_search 백엔드(GET /api/catalog)에서
+// 런타임에 로딩한다. apiDocs/apiDocMap은 같은 참조를 유지한 채 내용만 채워지므로
+// 기존 소비자(노드·팔레트·워크플로우 엔진)는 로딩 완료 후 그대로 동작한다.
+export const apiDocs = [];
+export const apiDocMap = {};
 
-export const apiDocMap = Object.fromEntries(apiDocs.map(d => [d.apiId, d]));
+let loadState = 'idle'; // idle | loading | ready | error
+let loadError = '';
+
+function toClientDoc(raw) {
+  return {
+    apiId: raw.api_id ?? '',
+    serviceId: raw.service_id ?? '',
+    name: raw.name ?? raw.api_id ?? '',
+    provider: raw.provider ?? '',
+    topCategory: topCategory(raw.category),
+    category: raw.category ?? '',
+    keywords: Array.isArray(raw.keywords) ? raw.keywords : parseKeywords(raw.keywords),
+    description: raw.description ?? '',
+    fields: raw.fields ?? [],
+    endpoints: raw.endpoints ?? [],
+  };
+}
+
+export async function loadCatalog({ force = false } = {}) {
+  if (!force && (loadState === 'ready' || loadState === 'loading')) {
+    return { state: loadState, error: loadError };
+  }
+  loadState = 'loading';
+  try {
+    const res = await fetch('/api/catalog');
+    if (!res.ok) throw new Error(`카탈로그 응답 오류 (HTTP ${res.status})`);
+    const payload = await res.json();
+    const docs = (payload.docs ?? [])
+      .map(toClientDoc)
+      .sort((a, b) => a.topCategory.localeCompare(b.topCategory, 'ko'));
+
+    apiDocs.length = 0;
+    apiDocs.push(...docs);
+    Object.keys(apiDocMap).forEach(key => delete apiDocMap[key]);
+    docs.forEach(doc => { apiDocMap[doc.apiId] = doc; });
+
+    loadState = 'ready';
+    loadError = '';
+  } catch (error) {
+    // 실패 시 이전에 로딩된 문서는 유지한다 (기능 저하 모드)
+    loadState = 'error';
+    loadError = error?.message || 'nara_search 백엔드에 연결할 수 없습니다.';
+  }
+  return { state: loadState, error: loadError };
+}
 
 function normalizeText(value) {
   return String(value ?? '').toLocaleLowerCase('ko');

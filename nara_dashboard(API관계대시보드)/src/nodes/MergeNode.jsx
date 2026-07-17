@@ -7,7 +7,7 @@ function resolveApiName(node, docs = []) {
   if (docs.length === 1) return docs[0].name;
   if (docs.length > 1) return `${docs.length}개 API 문서`;
   if (node.type === 'apiDoc') {
-    return apiDocMap[node.data?.apiId]?.name ?? node.data?.apiId ?? '?';
+    return node.data?.doc?.name ?? apiDocMap[node.data?.apiId]?.name ?? node.data?.apiId ?? '?';
   }
   return node.data?.label ?? node.type ?? '?';
 }
@@ -15,7 +15,7 @@ function resolveApiName(node, docs = []) {
 function docsFromNode(node) {
   if (!node) return [];
   if (node.type === 'apiDoc') {
-    const doc = apiDocMap[node.data?.apiId];
+    const doc = node.data?.doc ?? apiDocMap[node.data?.apiId];
     return doc ? [doc] : [];
   }
   return node.data?.output?.docs ?? node.data?.results ?? [];

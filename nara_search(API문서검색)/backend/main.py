@@ -8,9 +8,11 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from .catalog.detail_service import DetailUnavailableError, ServiceDetailProvider
+from .catalog.listing import CatalogListing
 from .core import config
 from .core.service_id import ServiceIdError, normalize_service_id, to_canonical
 from .indexing.index_builder import build_status, resolve_device, run_build
+from .relations.extractor import derive_relations, signature_from_detail
 from .search.faiss_retriever import FAISSRetriever
 from .search.fusion import reciprocal_rank_fusion
 from .search.lexical_retriever import LexicalRetriever
@@ -20,6 +22,7 @@ STATIC_DIR = config.BASE_DIR / "frontend"
 retriever = FAISSRetriever()
 lexical_retriever = LexicalRetriever()
 detail_provider = ServiceDetailProvider()
+catalog_listing = CatalogListing()
 
 CHANNEL_REASONS = {
     "vector": "vector similarity (ko-sroberta-multitask)",
@@ -171,6 +174,7 @@ def trigger_build(request: BuildRequest | None = None):
         retriever.reload()
         lexical_retriever.reload()
         detail_provider.reload()
+        catalog_listing.reload()
 
     thread = threading.Thread(
         target=run_build,
@@ -202,3 +206,43 @@ def service_detail(service_id: str):
     if detail is None:
         return _error_response(404, "NOT_FOUND", "service_id not found")
     return detail
+
+
+@app.get("/relations")
+def relations(ids: str = ""):
+    """요청된 service_id들 사이의 derived 관계를 즉석 계산해 반환한다.
+
+    같은 추출기를 relations.jsonl 프리컴퓨트(backend.relations.builder)와 공유하므로
+    엣지 스키마는 항상 동일하다.
+    """
+    raw_ids = [part.strip() for part in ids.split(",") if part.strip()]
+    if not 2 <= len(raw_ids) <= 20:
+        return _error_response(400, "INVALID_IDS", "ids는 쉼표로 구분한 2~20개의 service_id여야 합니다")
+
+    canonical_ids: list[str] = []
+    for raw in raw_ids:
+        try:
+            cid = normalize_service_id(raw)
+        except ServiceIdError as exc:
+            return _error_response(400, exc.error_code, exc.message)
+        if cid not in canonical_ids:
+            canonical_ids.append(cid)
+
+    signatures, missing = [], []
+    for cid in canonical_ids:
+        try:
+            detail = detail_provider.get_detail(cid)
+        except DetailUnavailableError as exc:
+            return _error_response(503, "SERVICE_UNAVAILABLE", exc.message)
+        if detail is None:
+            missing.append(cid)
+        else:
+            signatures.append(signature_from_detail(detail))
+
+    return {"ids": canonical_ids, "missing": missing, "relations": derive_relations(signatures)}
+
+
+@app.get("/catalog")
+def catalog():
+    docs = catalog_listing.list_docs()
+    return {"total": len(docs), "docs": docs}

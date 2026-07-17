@@ -25,17 +25,18 @@ nara_search/
   tests/                 ← pytest (fixture apidata 기반, 무거운 의존성 불필요)
   frontend/              ← 단독 사용용 vanilla JS UI (index.html, app.js, styles.css)
                           URL 마운트는 /static (변경 없음)
-  apidata/               ← OpenAPI JSON ({api_id}_{date}.json, 평면 3,526건)
   models/
     ko-sroberta-multitask/  ← 임베딩 모델 (없으면 자동 다운로드)
   storage/               ← (런타임 생성) faiss.index, metadata.jsonl
 ```
 
+데이터는 저장소 공통 루트 ../nara_storage/openapi_new/{api_id}.json 에서 읽는다 (NARA_SEARCH_APIDATA_DIR로 오버라이드).
+
 ## 사전 준비
 
 ### 데이터
 
-`apidata/*.json`. 스키마: `api_id`, `info`, `endpoints`, `swagger_json` (data.go.kr 크롤러 출력 포맷). React 소스의 `src/data` 같은 폴더와 혼동을 피하기 위해 `data/`가 아닌 `apidata/`로 둠.
+`../nara_storage/openapi_new/*.json` ({api_id}.json 평면 — nara_crawler 산출물). 스키마: api_id, info, endpoints, swagger_json.
 
 ### 모델
 
@@ -93,6 +94,14 @@ uvicorn backend.main:app --host 0.0.0.0 --port 8000
 ```
 
 `torch.cuda.is_available()`가 `True`면 브라우저에서 **빌드(GPU)** 버튼이 그대로 동작한다(백엔드 `resolve_device()`는 OS와 무관하게 CUDA 가용성만 확인). `faiss-cpu`는 그대로 두면 되며, GPU 가속되는 부분은 임베딩 단계다.
+
+## 관계·카탈로그 API
+
+- `GET /catalog` — 대시보드용 경량 카탈로그 (문서별 name/provider/category/fields/endpoints)
+- `GET /relations?ids=15000001,15000003` — 요청 ID 간 derived 관계
+  (same-agency / same-domain / param-overlap / io-chain, evidence·confidence 포함)
+- `python -m backend.relations.builder` — apidata 전량의 param-overlap·io-chain을
+  `storage/relations.jsonl`로 프리컴퓨트 (배치, 수 분 소요 가능)
 
 ## 엔드포인트
 
@@ -171,11 +180,11 @@ CORS: 전체 오리진 허용 (`allow_origins=["*"]`, GET/POST만).
 
 ## 환경 변수
 
-모든 경로는 기본값이 `BASE_DIR` 기준이며 다음 환경변수로 재지정할 수 있다.
+모든 경로는 기본값이 `BASE_DIR` 기준이며(단, 데이터는 저장소 공통 루트) 다음 환경변수로 재지정할 수 있다.
 
 | 변수 | 기본값 | 용도 |
 | --- | --- | --- |
-| `NARA_SEARCH_APIDATA_DIR` | `apidata/` | 평면 OpenAPI JSON |
+| `NARA_SEARCH_APIDATA_DIR` | `../nara_storage/openapi_new/` | 평면 OpenAPI JSON ({api_id}.json) |
 | `NARA_SEARCH_STORAGE_DIR` | `storage/` | faiss.index, metadata.jsonl |
 | `NARA_SEARCH_MODEL_DIR` | `models/ko-sroberta-multitask/` | 임베딩 모델 |
 | `NARA_SEARCH_DATA_DIR` | `data/` | 카탈로그 산출물 루트 (02_catalog/03_semantic/04_output/minimal) |

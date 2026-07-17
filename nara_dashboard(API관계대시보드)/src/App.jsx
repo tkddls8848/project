@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ReactFlow,
   Background,
@@ -13,13 +13,20 @@ import {
 
 import { nodeTypes } from './nodes/nodeTypes.jsx';
 import { initialNodes, initialEdges, NODE_DEFAULTS } from './data/initialFlow.js';
+import { loadCatalog } from './data/apiDocs.js';
 import { runWorkflowForOutput } from './data/workflowEngine.js';
 import { exportRows, toCsv, toExcelHtml, toJsonExport } from './data/exporters.js';
 import { FlowImportError, deserializeFlow, flowToJson, maxNodeIdSuffix } from './data/flowIO.js';
 import { NodePalette } from './components/NodePalette.jsx';
 import { NodeProperties } from './components/NodeProperties.jsx';
+import { RelationProperties } from './components/RelationProperties.jsx';
 import { Toolbar } from './components/Toolbar.jsx';
 import { OllamaChatModal } from './components/OllamaChatModal.jsx';
+import { QueryBar } from './components/QueryBar.jsx';
+import { ComposePanel } from './components/ComposePanel.jsx';
+import { fetchRelations, searchDocsWithDetails } from './data/searchClient.js';
+import { approveRelationEdge, placeSearchResults } from './data/relationEdges.js';
+import { apiDocMap } from './data/apiDocs.js';
 import { CATEGORY } from './nodes/BaseNode.jsx';
 
 let idCounter = 100;
@@ -75,9 +82,62 @@ export default function App() {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [selectedNode, setSelectedNode] = useState(null);
+  const [selectedEdgeId, setSelectedEdgeId] = useState(null);
   const [activeChatContext, setActiveChatContext] = useState(null);
   const { screenToFlowPosition } = useReactFlow();
   const reactFlowWrapper = useRef(null);
+  const [catalog, setCatalog] = useState({ state: 'loading', error: '' });
+
+  useEffect(() => {
+    loadCatalog().then(setCatalog);
+  }, []);
+
+  const retryCatalog = useCallback(() => {
+    setCatalog({ state: 'loading', error: '' });
+    loadCatalog({ force: true }).then(setCatalog);
+  }, []);
+
+  const [queryState, setQueryState] = useState({ busy: false, error: '' });
+  const [composeTargets, setComposeTargets] = useState(null);
+
+  const handleOpenCompose = useCallback(() => {
+    const targets = nodes
+      .filter(node => node.selected && node.type === 'apiDoc')
+      .map(node => {
+        const doc = node.data?.doc ?? apiDocMap[node.data?.apiId];
+        return doc ? { serviceId: doc.serviceId ?? doc.apiId, name: doc.name } : null;
+      })
+      .filter(Boolean)
+      .slice(0, 10); // combiner 계약: 1~10개
+    if (targets.length === 0) {
+      window.alert('조합할 API 문서 노드를 먼저 선택하세요 (Shift+클릭으로 복수 선택).');
+      return;
+    }
+    setComposeTargets(targets);
+  }, [nodes]);
+
+  const handleNaturalQuery = useCallback(async (query) => {
+    setQueryState({ busy: true, error: '' });
+    try {
+      const docs = await searchDocsWithDetails(query, 6);
+      if (docs.length === 0) {
+        setQueryState({ busy: false, error: '검색 결과가 없습니다.' });
+        return;
+      }
+      let relations = [];
+      try {
+        relations = await fetchRelations(docs.map(doc => doc.serviceId));
+      } catch {
+        // 관계 조회 실패는 기능 저하 모드: 노드만 배치한다
+      }
+      const placed = placeSearchResults(docs, relations, nextId);
+      setNodes(nds => nds.concat(placed.nodes));
+      setEdges(eds => eds.concat(placed.edges));
+      setQueryState({ busy: false, error: '' });
+    } catch (error) {
+      setQueryState({ busy: false, error: error.message });
+    }
+  }, [setNodes, setEdges]);
 
   const onConnect = useCallback(
     (connection) =>
@@ -87,16 +147,16 @@ export default function App() {
     [setEdges]
   );
 
-  const onSelectionChange = useCallback(
-    ({ nodes: selected }) => {
-      if (selected.length === 1) {
-        setSelectedNode(selected[0]);
-      } else {
-        setSelectedNode(null);
-      }
-    },
-    []
-  );
+  const onSelectionChange = useCallback(({ nodes: selected, edges: selectedEdges }) => {
+    setSelectedNode(selected.length === 1 ? selected[0] : null);
+    setSelectedEdgeId(
+      selected.length === 0 && selectedEdges.length === 1 ? selectedEdges[0].id : null
+    );
+  }, []);
+
+  const handleApproveRelation = useCallback((edgeId) => {
+    setEdges(eds => approveRelationEdge(eds, edgeId));
+  }, [setEdges]);
 
   const onDragOver = useCallback((e) => {
     e.preventDefault();
@@ -147,6 +207,7 @@ export default function App() {
           })
         );
         setSelectedNode(null);
+        setSelectedEdgeId(null);
       }
     },
     [nodes, setNodes, setEdges]
@@ -156,6 +217,7 @@ export default function App() {
     setNodes(initialNodes);
     setEdges(initialEdges);
     setSelectedNode(null);
+    setSelectedEdgeId(null);
     setActiveChatContext(null);
   };
 
@@ -163,6 +225,7 @@ export default function App() {
     setNodes([]);
     setEdges([]);
     setSelectedNode(null);
+    setSelectedEdgeId(null);
     setActiveChatContext(null);
   };
 
@@ -177,6 +240,7 @@ export default function App() {
       setNodes(flow.nodes);
       setEdges(flow.edges.map(edge => ({ ...edge, style: EDGE_STYLE })));
       setSelectedNode(null);
+      setSelectedEdgeId(null);
       setActiveChatContext(null);
     } catch (error) {
       const message = error instanceof FlowImportError
@@ -293,12 +357,28 @@ export default function App() {
         onReset={handleReset}
         onExportFlow={handleExportFlow}
         onImportFlow={handleImportFlow}
+        onCompose={handleOpenCompose}
       />
+
+      {catalog.state === 'error' && (
+        <div style={{
+          background: '#450a0a', borderBottom: '1px solid #7f1d1d', color: '#fca5a5',
+          padding: '6px 14px', fontSize: 12, display: 'flex', alignItems: 'center', gap: 10,
+        }}>
+          <span>nara_search 백엔드에 연결할 수 없습니다 — 카탈로그가 빈 상태로 동작합니다. ({catalog.error})</span>
+          <button onClick={retryCatalog} style={{
+            background: 'transparent', border: '1px solid #f8717144', borderRadius: 5,
+            color: '#f87171', fontSize: 11, padding: '2px 8px', cursor: 'pointer',
+          }}>다시 시도</button>
+        </div>
+      )}
+
+      <QueryBar onQuery={handleNaturalQuery} busy={queryState.busy} error={queryState.error} />
 
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         <NodePalette />
 
-        <div ref={reactFlowWrapper} style={{ flex: 1 }}>
+        <div ref={reactFlowWrapper} style={{ flex: 1, position: 'relative' }}>
           <ReactFlow
             nodes={flowNodes}
             edges={edges}
@@ -331,13 +411,24 @@ export default function App() {
               style={{ background: '#111623' }}
             />
           </ReactFlow>
+
+          {composeTargets && (
+            <ComposePanel
+              key={composeTargets.map(t => t.serviceId).join(',')}
+              targets={composeTargets}
+              onClose={() => setComposeTargets(null)}
+            />
+          )}
         </div>
 
-        <NodeProperties
-          node={liveSelectedNode}
-          edges={edges}
-          onUpdateData={handleUpdateNodeData}
-        />
+        {(() => {
+          const selectedEdge = selectedEdgeId ? edges.find(e => e.id === selectedEdgeId) : null;
+          return selectedEdge?.data?.relation ? (
+            <RelationProperties edge={selectedEdge} onApprove={handleApproveRelation} />
+          ) : (
+            <NodeProperties node={liveSelectedNode} edges={edges} onUpdateData={handleUpdateNodeData} />
+          );
+        })()}
       </div>
 
       <OllamaChatModal

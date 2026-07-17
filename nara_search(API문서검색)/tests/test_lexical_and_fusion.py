@@ -35,7 +35,7 @@ def _retriever(monkeypatch, fixture_apidata_dir, tmp_path):
 def test_lexical_search_ranks_by_relevance(monkeypatch, fixture_apidata_dir, tmp_path):
     retriever = _retriever(monkeypatch, fixture_apidata_dir, tmp_path)
     assert retriever.corpus_source() == "apidata_scan"
-    assert retriever.corpus_size() == 2
+    assert retriever.corpus_size() == 3
 
     results = retriever.search("미세먼지 대기오염", top_k=5)
     assert results

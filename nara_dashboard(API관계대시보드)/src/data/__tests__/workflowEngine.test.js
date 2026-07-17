@@ -246,4 +246,18 @@ describe('runWorkflowForOutput', () => {
     const result = runWorkflowForOutput(nodes, edges, 'merge');
     expect(dataOf(result, 'merge').results.map(doc => doc.apiId)).toEqual(['15000001']);
   });
+
+  it('apiDoc 노드는 data.doc이 있으면 카탈로그 없이 동작한다', () => {
+    const embedded = { apiId: 'X9', name: '내장 문서', provider: 'T', topCategory: '기타',
+      category: '기타', keywords: [], description: '', fields: [], endpoints: [] };
+    const nodes = [
+      { id: 'doc-1', type: 'apiDoc', data: { apiId: 'X9', doc: embedded } },
+      { id: 'out-1', type: 'exportNode', data: { format: 'JSON', filename: 'r' } },
+    ];
+    const edges = [{ id: 'e1', source: 'doc-1', target: 'out-1' }];
+    const result = runWorkflowForOutput(nodes, edges, 'out-1');
+    const outNode = result.find(n => n.id === 'out-1');
+    expect(outNode.data.status).toBe('success');
+    expect(outNode.data.output.docs[0].name).toBe('내장 문서');
+  });
 });

@@ -24,7 +24,7 @@ function domainColor(cat) {
 
 export function ApiDocNode({ data, selected }) {
   const cfg = CATEGORY.source;
-  const doc = apiDocMap[data.apiId];
+  const doc = data.doc ?? apiDocMap[data.apiId];
 
   if (!doc) {
     return (

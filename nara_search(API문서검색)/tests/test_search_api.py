@@ -130,5 +130,5 @@ def test_health_reports_diagnostics_without_index(app_client):
     assert diag["apidata_exists"] is True
     assert diag["index_exists"] is False
     assert diag["metadata_exists"] is False
-    assert body["lexical_corpus_total"] == 2
+    assert body["lexical_corpus_total"] == 3
     assert body["lexical_source"] == "apidata_scan"

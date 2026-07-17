@@ -25,16 +25,20 @@ npm run dev
 
 Vite dev 서버: `http://localhost:5173`
 
-## 데이터 모드 (local)
+## 데이터 모드 (backend)
 
-현재 대시보드는 **로컬 데이터 모드**로 동작한다. `src/data/apiDocs.js`가
-`apidata/*.json`을 빌드 타임에 eager glob으로 번들에 포함하며, 검색·필터·조인은
-모두 브라우저 안에서 이 로컬 카탈로그를 대상으로 실행된다. `nara_search`
-백엔드 연동은 별도 개발 슬라이스이며, 프록시(`/api/*`)는 검색 보강과 Ollama
-채팅에만 쓰인다.
+카탈로그는 `nara_search` 백엔드에서 런타임 로딩한다 (`GET /api/catalog`,
+vite 프록시 → 127.0.0.1:8000). 빌드 타임 eager 번들은 제거되었다.
 
-- `apidata/`가 비어 있으면 카탈로그가 빈 상태로 기동한다 (앱은 동작, 검색 결과 0건)
-- 번들 크기는 `apidata/` 문서 수에 비례한다 — 대형 청크 경고의 주원인
+- 백엔드 미기동: 상단에 연결 오류 배너 + 빈 카탈로그로 동작 (앱은 죽지 않음)
+- **자연어 질의 바**: `/api/search`(FAISS+BM25) → 결과를 apiDoc 노드로 자동 배치,
+  `/api/relations` → 노드 간 근거 점선 엣지 표시. 엣지 클릭 → 근거 확인·승인(실선 확정)
+- **⚡ 조합 제안**: apiDoc 노드를 선택하고 툴바 버튼 → `nara_combiner /compose`
+  제안을 우측 패널에 표시 (프록시 `/combiner` → 127.0.0.1:8003)
+- 전체 기동: 저장소 루트의 `..\start-all.ps1`
+
+알려진 한계: flow JSON 내보내기는 엣지의 관계 메타데이터(label/근거)를 직렬화하지
+않으므로, 가져온 관계 엣지는 일반 엣지가 된다.
 
 ## 워크플로우 저장·공유 (flow JSON)
 
@@ -72,8 +76,10 @@ Excel 호환 HTML 테이블(`.xls`)이다.
 | --- | --- | --- |
 | `/ollama/*` | `http://localhost:11434` | 로컬 Ollama |
 | `/api/*` | `http://127.0.0.1:8000` | `nara_search` 백엔드 (선행 기동 필요) |
+| `/combiner/*` | `http://127.0.0.1:8003` | `nara_combiner` 조합 제안 API (prefix 제거 rewrite) |
 
 프론트에서 `fetch('/api/search', ...)` 호출 시 nara_search의 `POST /search`로 라우팅됩니다.
+마찬가지로 `fetch('/combiner/compose', ...)` 호출은 nara_combiner의 `POST /compose`로 라우팅됩니다.
 
 ## 의존 서비스 기동 순서
 
@@ -89,6 +95,7 @@ Excel 호환 HTML 테이블(`.xls`)이다.
 
 ## 관련 프로젝트
 
-- `d:\project\nara_search\` — FAISS 벡터 검색 백엔드 (이전 `backend/`)
+- `d:\project\nara_search(API문서검색)\` — 검색·카탈로그·관계 API (FAISS+BM25, `:8000`)
+- `d:\project\nara_combiner(API문서조합기)\` — 조합 제안 API (`:8003`)
 - `d:\project\nara_crawler\` — 원본 데이터 수집기
-- `d:\project\nara_openclaw\` — API 조합 분석 PoC (별도 미니 프로젝트)
+- `d:\project\archive\` — 더 이상 유지되지 않는 서브프로젝트 보관 (`nara_openclaw`, `nara_gov24_link_resolver` 등)

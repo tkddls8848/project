@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 
-export function Toolbar({ nodeCount, edgeCount, onClear, onReset, onExportFlow, onImportFlow }) {
+export function Toolbar({ nodeCount, edgeCount, onClear, onReset, onExportFlow, onImportFlow, onCompose }) {
   const fileInputRef = useRef(null);
 
   const handleFileChange = (event) => {
@@ -77,6 +77,7 @@ export function Toolbar({ nodeCount, edgeCount, onClear, onReset, onExportFlow, 
       <div style={{ width: 1, height: 20, background: '#1e2d3d', margin: '0 2px' }} />
 
       {/* 액션 */}
+      <GhostBtn onClick={onCompose} color="#f59e0b">⚡ 조합 제안</GhostBtn>
       <GhostBtn onClick={() => fileInputRef.current?.click()} color="#22c55e">⬆ 가져오기</GhostBtn>
       <GhostBtn onClick={onExportFlow} color="#0ea5e9">⬇ 내보내기</GhostBtn>
       <GhostBtn onClick={onReset} color="#818cf8">↺ 초기화</GhostBtn>

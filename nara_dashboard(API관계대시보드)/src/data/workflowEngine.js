@@ -39,7 +39,7 @@ function outputDocsFor(node) {
   if (!node) return [];
 
   if (node.type === 'apiDoc') {
-    const doc = apiDocMap[node.data?.apiId];
+    const doc = node.data?.doc ?? apiDocMap[node.data?.apiId];
     return doc ? [toWorkflowDoc(doc)] : [];
   }
 
