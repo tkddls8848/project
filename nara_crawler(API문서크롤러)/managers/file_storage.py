@@ -28,7 +28,6 @@ class DataExporter:
 
         table_info = data.get('info', {})
         org_name = table_info.get('제공기관', 'unknown_org')
-        modified_date = table_info.get('수정일', 'unknown_date')
         
         # Determine subdirectory based on API type
         api_type = data.get('api_type', 'unknown')
@@ -49,7 +48,8 @@ class DataExporter:
             base_dir = data_dir
 
         doc_num = api_id if api_id and api_id != 'unknown' else 'unknown_doc'
-        file_prefix = f"{doc_num}_{modified_date}"
+        # 재크롤링 시 같은 파일을 덮어쓴다 — 전 타입 공통, 최신 1파일만 유지
+        file_prefix = doc_num
         
         try:
             os.makedirs(base_dir, exist_ok=True)

@@ -15,8 +15,9 @@ MAX_QUERY_LENGTH = 300
 # ── 활성 런타임 경로 ─────────────────────────────────────────────────────────
 # 검색 파이프라인(index_builder + faiss_retriever)이 실제로 사용하는 경로.
 
-# OpenAPI JSON 데이터 (평면, {api_id}_{date}.json — data.go.kr 크롤러 출력)
-APIDATA_DIR = _env_path("NARA_SEARCH_APIDATA_DIR", BASE_DIR / "apidata")
+# OpenAPI JSON 데이터 — 저장소 공통 루트 nara_storage의 openapi_new 폴더
+# ({api_id}.json 평면, nara_crawler가 생산). env로 오버라이드 가능.
+APIDATA_DIR = _env_path("NARA_SEARCH_APIDATA_DIR", BASE_DIR.parent / "nara_storage" / "openapi_new")
 
 # FAISS 인덱스 (POST /build 출력)
 STORAGE_DIR = _env_path("NARA_SEARCH_STORAGE_DIR", BASE_DIR / "storage")

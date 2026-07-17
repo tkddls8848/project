@@ -106,11 +106,12 @@ def get_csv_row_filter(data_type: str):
     return None
 
 
-def get_default_output_dir(data_type: str, crawl_run_id: str) -> str:
+def get_default_output_dir(data_type: str) -> str:
     run_manager = CrawlRunManager(BASE_DIR)
     if is_openapi_type(data_type):
-        return str(run_manager.get_run_dir(crawl_run_id))
-    return str(run_manager.get_raw_output_dir(crawl_run_id, storage_data_type(data_type)))
+        # openapi는 file_storage가 api_type(openapi_new/openapi_link) 하위 폴더를 붙인다
+        return str(run_manager.storage_dir)
+    return str(run_manager.get_raw_output_dir(storage_data_type(data_type)))
 
 
 def resolve_workers(data_type: str, workers: Optional[int]) -> int:
@@ -136,7 +137,7 @@ async def crawl_single_type(
     print(f"{'=' * 80}")
 
     run_manager = CrawlRunManager(BASE_DIR)
-    output_dir = output_dir or get_default_output_dir(data_type, crawl_run_id)
+    output_dir = output_dir or get_default_output_dir(data_type)
     config = CrawlerConfig(
         start_num=start,
         end_num=end,
@@ -188,9 +189,8 @@ async def crawl_single_type(
         end_doc=end,
     )
 
-    run_dir = run_manager.get_run_dir(crawl_run_id)
-    run_dir.mkdir(parents=True, exist_ok=True)
-    summary_path = run_dir / f"{data_type}_summary.json"
+    run_manager.manifests_dir.mkdir(parents=True, exist_ok=True)
+    summary_path = run_manager.manifests_dir / f"{crawl_run_id}_{data_type}_summary.json"
 
     with summary_path.open("w", encoding="utf-8") as f:
         json.dump(summary, f, ensure_ascii=False, indent=2)
@@ -200,7 +200,7 @@ async def crawl_single_type(
         "start_doc": start,
         "end_doc": end,
         "output_dir": str(output_dir),
-        "summary_path": str(summary_path.relative_to(BASE_DIR).as_posix()),
+        "summary_path": str(summary_path.relative_to(run_manager.storage_dir).as_posix()),
         "total_results": len(results),
         "total_success": summary["crawling_summary"]["total_success"],
         "total_failed": summary["crawling_summary"]["total_failed"],
@@ -311,7 +311,7 @@ async def main():
         run_manager.save_manifest(crawl_run_id, manifest)
         print("\n" + "=" * 80)
         print("FULL MODE COMPLETE: All types crawled successfully")
-        print(f"Manifest saved to {run_manager.get_run_dir(crawl_run_id) / 'manifest.json'}")
+        print(f"Manifest saved to {run_manager.manifests_dir / (crawl_run_id + '.json')}")
         print("=" * 80)
         return
 

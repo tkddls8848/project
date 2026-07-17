@@ -180,6 +180,10 @@ nara_gov24_link_resolver/data/
 
 # OpenAPI JSON 평면 저장소 (nara_dashboard, nara_search)
 # ※ src/data 같은 React 소스 폴더와 혼동을 피하려 별도 이름
+
+# 공유 API 문서 데이터 루트 (nara_crawler 산출물 — git 제외)
+nara_storage/
+
 **/apidata/
 # 테스트 fixture는 예외 (재현 가능한 계약 테스트용 소형 문서)
 !**/tests/fixtures/apidata/

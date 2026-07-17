@@ -85,7 +85,7 @@ SSE 스트리밍 응답을 반환한다.
 ## 환경 변수
 
 ```text
-NARA_DATA_DIR=.\apidata
+NARA_DATA_DIR=..\nara_storage\openapi_new   # 기본값 (미설정 시)
 OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_MODEL=gemma4:e4b
 ```
