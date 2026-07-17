@@ -1,15 +1,15 @@
 {
-  "등록일": "2026-06-05",
-  "수정일": "2026-06-05",
+  "등록일": "2026-07-10",
+  "수정일": "2026-07-10",
   "catalog_id": "15062804",
   "source_url": "https://www.data.go.kr/data/15062804/fileData.do",
-  "download_url": "https://www.data.go.kr/cmm/cmm/fileDownload.do?atchFileId=FILE_000000003651157&fileDetailSn=1&insertDataPrcus=N",
-  "bytes": 133938801,
+  "download_url": "https://www.data.go.kr/cmm/cmm/fileDownload.do?atchFileId=FILE_000000003673661&fileDetailSn=1&insertDataPrcus=N",
+  "bytes": 132850395,
   "row_counts": {
-    "API": 12056,
-    "FILE": 83547,
+    "API": 12061,
+    "FILE": 83695,
     "STD": 300,
     "_unknown": 0
   },
-  "downloaded_at": "2026-07-09T22:18:44"
+  "downloaded_at": "2026-07-17T21:36:58"
 }
