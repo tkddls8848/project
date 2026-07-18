@@ -108,7 +108,7 @@ export default function App() {
         return doc ? { serviceId: doc.serviceId ?? doc.apiId, name: doc.name } : null;
       })
       .filter(Boolean)
-      .slice(0, 10); // combiner 계약: 1~10개
+      .slice(0, 3); // combiner 계약: 1~3개
     if (targets.length === 0) {
       window.alert('조합할 API 문서 노드를 먼저 선택하세요 (Shift+클릭으로 복수 선택).');
       return;

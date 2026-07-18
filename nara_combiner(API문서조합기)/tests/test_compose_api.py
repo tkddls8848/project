@@ -95,8 +95,17 @@ def test_compose_empty_ids_is_422():
 
 
 def test_compose_too_many_ids_is_422():
-    ids = [f"1500{i:04d}" for i in range(11)]
+    ids = [f"1500{i:04d}" for i in range(4)]
     assert _client().post("/compose", json={"service_ids": ids}).status_code == 422
+
+
+def test_compose_accepts_three_ids(fake_llm):
+    response = _client().post(
+        "/compose",
+        json={"service_ids": ["15000827", "15000863", "15000881"]},
+    )
+    assert response.status_code == 200
+    assert response.json()["missing"] == []
 
 
 def test_compose_llm_failure_is_503(monkeypatch):

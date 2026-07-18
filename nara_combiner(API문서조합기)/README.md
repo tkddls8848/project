@@ -46,7 +46,7 @@ http://127.0.0.1:8003
 }
 ```
 
-- `service_ids`: 1~10개. 순수 api_id(`15000827`)와 Search 정식 ID(`openapi_new:15000827`)
+- `service_ids`: 1~3개. 순수 api_id(`15000827`)와 Search 정식 ID(`openapi_new:15000827`)
   모두 허용 (경계에서 내부 ID로 변환만 하고 재해석하지 않음)
 - `question`: 최대 500자
 
@@ -68,7 +68,7 @@ http://127.0.0.1:8003
 | --- | --- | --- |
 | 전체 ID 누락 | 404 | `NO_SERVICES_FOUND` |
 | Ollama 연결 실패·시간 초과·오류 응답 | 503 | `UPSTREAM_UNAVAILABLE` |
-| 빈 `service_ids`, 10개 초과, 질문 500자 초과 | 422 | (FastAPI validation) |
+| 빈 `service_ids`, 3개 초과, 질문 500자 초과 | 422 | (FastAPI validation) |
 
 오류 본문은 `{ok: false, error_code, message}` 형식이며 기존 UI 호환을 위해 `error` 키도 함께 담는다.
 
@@ -87,8 +87,17 @@ SSE 스트리밍 응답을 반환한다.
 ```text
 NARA_DATA_DIR=..\nara_storage\openapi_new   # 기본값 (미설정 시)
 OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=gemma4:e4b
+OLLAMA_MODEL=qwen3.5:4b
+OLLAMA_THINK=true
+OLLAMA_NUM_CTX=16384
+OLLAMA_NUM_PREDICT=4096
+OLLAMA_TIMEOUT_SECONDS=210
+OLLAMA_KEEP_ALIVE=10m
 ```
+
+`qwen3.5`는 기본 thinking과 큰 컨텍스트를 사용하면 로컬 조합 요청이 오래 걸릴 수
+있다. 조합기는 기본적으로 thinking을 끄고 16K 컨텍스트와 최대 1,200 생성 토큰을
+사용한다. 생성 제한시간은 180초이며 환경변수로 조정할 수 있다.
 
 ## 테스트
 

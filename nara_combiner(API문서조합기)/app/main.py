@@ -14,7 +14,15 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from .config import MAX_SUGGESTION_CHARS, NARA_DATA_DIR, OLLAMA_MODEL
+from .config import (
+    MAX_SUGGESTION_CHARS,
+    NARA_DATA_DIR,
+    OLLAMA_MODEL,
+    OLLAMA_NUM_CTX,
+    OLLAMA_NUM_PREDICT,
+    OLLAMA_THINK,
+    OLLAMA_TIMEOUT_SECONDS,
+)
 from .loader import get_services, load_all
 from .llm import generate, generate_stream
 from .prompts import build_prompt, detect_warning
@@ -43,7 +51,18 @@ async def startup() -> None:
 @app.get("/health")
 async def health():
     docs = load_all()
-    return {"ok": True, "service": "nara-combiner", "docs_loaded": len(docs), "model": OLLAMA_MODEL}
+    return {
+        "ok": True,
+        "service": "nara-combiner",
+        "docs_loaded": len(docs),
+        "model": OLLAMA_MODEL,
+        "generation": {
+            "think": OLLAMA_THINK,
+            "num_ctx": OLLAMA_NUM_CTX,
+            "num_predict": OLLAMA_NUM_PREDICT,
+            "timeout_seconds": OLLAMA_TIMEOUT_SECONDS,
+        },
+    }
 
 
 @app.get("/")

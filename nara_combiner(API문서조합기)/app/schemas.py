@@ -14,7 +14,7 @@ class Service(BaseModel):
 
 
 class ComposeRequest(BaseModel):
-    service_ids: list[str] = Field(..., min_length=1, max_length=10)
+    service_ids: list[str] = Field(..., min_length=1, max_length=3)
     question: str = Field(default=DEFAULT_QUESTION, min_length=1, max_length=500)
 
 
