@@ -1,0 +1,33 @@
+[
+  {
+    "id": "housing-employment-01",
+    "query": "청년 주거와 취업 지원 서비스를 함께 설계해줘",
+    "expected_domains": ["주거", "고용"],
+    "notes": "서로 다른 행정 영역을 연결할 때 관계 근거가 있는지 확인"
+  },
+  {
+    "id": "welfare-mobility-01",
+    "query": "교통약자를 위한 복지와 이동 지원 API를 찾아줘",
+    "expected_domains": ["복지", "교통"],
+    "notes": "하이브리드 검색과 lexical-only 재검색 결과 비교"
+  },
+  {
+    "id": "environment-01",
+    "query": "미세먼지 정보를 활용한 시민 알림 서비스를 설계해줘",
+    "expected_domains": ["환경"],
+    "notes": "단일 도메인 계획과 관계 단계 생략 확인"
+  },
+  {
+    "id": "no-fabrication-01",
+    "query": "검색된 문서에 존재하는 입력 필드만 사용해서 계획을 작성해줘",
+    "expected_domains": [],
+    "notes": "존재하지 않는 API와 입력 필드 생성 여부 점검"
+  },
+  {
+    "id": "vector-drift-01",
+    "query": "출산 후 받을 수 있는 양육 지원과 보육 정보를 찾아줘",
+    "expected_domains": ["복지", "보육"],
+    "notes": "벡터 결과가 동떨어질 때 lexical-only 재검색 여부 확인"
+  }
+]
+

@@ -100,14 +100,15 @@ def index():
 
 @app.get("/health")
 def health():
-    count = retriever.collection_count()
+    chunk_count = retriever.collection_count()
+    service_count = retriever.service_count()
     return {
-        "ok":                    count is not None,
-        "services_total":        count or 0,
-        "chunks_total":          count or 0,
-        "index_collection_total": count,
+        "ok":                    chunk_count is not None,
+        "services_total":        service_count or 0,
+        "chunks_total":          chunk_count or 0,
+        "index_collection_total": chunk_count,
         "data_path":             retriever._openapi_dir,
-        "index_error":           retriever.last_error() if count is None else "",
+        "index_error":           retriever.last_error() if chunk_count is None else "",
         "build_state":           build_status.state,
         "diagnostics":           retriever.diagnostics(),
         "lexical_corpus_total":  lexical_retriever.corpus_size(),
@@ -132,7 +133,12 @@ def search(request: SearchRequest):
 
     if vector_raw and lexical_raw:
         fused = reciprocal_rank_fusion(
-            {"vector": vector_raw, "lexical": lexical_raw}, top_k=request.top_k
+            {"vector": vector_raw, "lexical": lexical_raw},
+            top_k=request.top_k,
+            weights={
+                "vector": config.VECTOR_RRF_WEIGHT,
+                "lexical": config.LEXICAL_RRF_WEIGHT,
+            },
         )
         fusion = "rrf"
     elif vector_raw or lexical_raw:
@@ -151,6 +157,9 @@ def search(request: SearchRequest):
             "vector_enabled":     request.use_vector,
             "vector_candidates":  len(vector_raw),
             "vector_error":       retriever.last_error() if not vector_raw else "",
+            "vector_search":      retriever.search_diagnostics() if request.use_vector else {},
+            "vector_rrf_weight":  config.VECTOR_RRF_WEIGHT,
+            "lexical_rrf_weight": config.LEXICAL_RRF_WEIGHT,
             "lexical_candidates": len(lexical_raw),
             "lexical_source":     lexical_retriever.corpus_source(),
             "fusion":             fusion,

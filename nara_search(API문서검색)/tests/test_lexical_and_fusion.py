@@ -103,3 +103,15 @@ def test_rrf_respects_top_k_and_skips_missing_ids():
         top_k=2,
     )
     assert [r["api_id"] for r in fused] == ["A", "B"]
+
+
+def test_weighted_rrf_prefers_lexical_exact_rank_over_vector_only_rank():
+    fused = reciprocal_rank_fusion(
+        {
+            "vector": [_rec("V1"), _rec("V2")],
+            "lexical": [_rec("L1"), _rec("L2")],
+        },
+        top_k=4,
+        weights={"vector": 0.9, "lexical": 1.1},
+    )
+    assert [row["api_id"] for row in fused] == ["L1", "L2", "V1", "V2"]

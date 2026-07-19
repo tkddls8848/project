@@ -11,8 +11,11 @@ const state = {
   details: new Map(),
   relations: [],
   health: null,
+  searchRequest: 0,
   relationRequest: 0,
   composeRequest: 0,
+  searchBusy: false,
+  relationBusy: false,
   composeBusy: false,
   analysisStartedAt: 0,
   analysisTimer: null,
@@ -115,18 +118,57 @@ function updateSummary() {
   $("#heroRelationCount").textContent = String(state.relations.length);
   $("#selectedCount").textContent = `${state.selected.length} / ${MAX_COMPOSE_SERVICES}`;
 
-  $("#stepSearch").classList.toggle("is-complete", state.results.length > 0);
-  $("#stepSearch").classList.toggle("is-active", state.results.length === 0);
-  $("#stepRelation").classList.toggle("is-complete", state.relations.length > 0);
-  $("#stepRelation").classList.toggle(
-    "is-active",
-    state.selected.length > 0 && !state.planText,
-  );
-  $("#stepCompose").classList.toggle(
-    "is-active",
-    state.composeBusy || Boolean(state.planText),
-  );
-  $("#stepCompose").classList.toggle("is-complete", Boolean(state.planText));
+  const hasSelection = state.selected.length > 0;
+  const hasPlan = Boolean(state.planText);
+  const isComposing = state.composeBusy || hasPlan;
+  const activeStage = isComposing ? 3 : hasSelection ? 2 : 1;
+  const steps = [
+    { node: $("#stepSearch"), index: 1 },
+    { node: $("#stepRelation"), index: 2 },
+    { node: $("#stepCompose"), index: 3 },
+  ];
+
+  steps.forEach(({ node, index }) => {
+    const status = hasPlan
+      ? "complete"
+      : index < activeStage
+        ? "complete"
+        : index === activeStage
+          ? "active"
+          : "pending";
+    node.dataset.state = status;
+    node.classList.toggle("is-active", status === "active");
+    node.classList.toggle("is-complete", status === "complete");
+    if (status === "active") {
+      node.setAttribute("aria-current", "step");
+    } else {
+      node.removeAttribute("aria-current");
+    }
+  });
+
+  $("#stepSearch").classList.toggle("is-updating", state.searchBusy);
+  $("#stepRelation").classList.toggle("is-updating", state.relationBusy);
+  $("#stepCompose").classList.toggle("is-updating", state.composeBusy);
+
+  $("#stepSearch small").textContent = state.searchBusy
+    ? "문서 색인을 검색하고 있습니다"
+    : hasSelection
+      ? `${state.selected.length}개 문서 선택 완료`
+      : state.results.length
+        ? `검색 결과 ${state.resultTotal.toLocaleString("ko-KR")}건 · 문서를 선택하세요`
+        : "자연어·키워드 검색";
+  $("#stepRelation small").textContent = state.relationBusy
+    ? "선택 문서의 연결 근거 분석 중"
+    : state.selected.length === 0
+      ? "기관·분야·입출력 근거"
+      : state.selected.length < 2
+        ? "문서를 하나 더 선택하세요"
+        : `관계 ${state.relations.length}개 확인 · 조합 가능`;
+  $("#stepCompose small").textContent = state.composeBusy
+    ? "서비스 계획 생성 중"
+    : hasPlan
+      ? "검토용 계획 초안 생성 완료"
+      : "LLM 기반 계획 초안";
 }
 
 function renderLoadingResults() {
@@ -284,8 +326,12 @@ function renderDiagnostics() {
 }
 
 async function searchDocuments(query) {
+  const requestId = ++state.searchRequest;
+  state.searchBusy = true;
+  updateSummary();
   renderLoadingResults();
   $("#searchButton").disabled = true;
+  $("#catalogButton").disabled = true;
   $("#searchButton span").textContent = "검색 중…";
   try {
     const payload = await fetchJson("/api/search/search", {
@@ -297,6 +343,7 @@ async function searchDocuments(query) {
         use_vector: $("#vectorToggle").checked,
       }),
     });
+    if (requestId !== state.searchRequest) return;
     state.results = payload.results || [];
     state.resultTotal = state.results.length;
     state.resultMode = "search";
@@ -307,6 +354,7 @@ async function searchDocuments(query) {
     renderResults();
     if (!state.results.length) toast("검색 결과가 없습니다. 검색어를 바꿔 보세요.");
   } catch (error) {
+    if (requestId !== state.searchRequest) return;
     state.results = [];
     state.resultTotal = 0;
     renderResults();
@@ -316,17 +364,28 @@ async function searchDocuments(query) {
     $("#resultsSummary").textContent = "검색 서비스를 확인해 주세요.";
     toast(error.message, "error");
   } finally {
-    $("#searchButton").disabled = false;
-    $("#searchButton span").textContent = "API 찾기";
+    if (requestId === state.searchRequest) {
+      state.searchBusy = false;
+      $("#searchButton").disabled = false;
+      $("#catalogButton").disabled = false;
+      $("#searchButton span").textContent = "API 찾기";
+      $("#catalogButton").textContent = "전체 문서 보기";
+      updateSummary();
+    }
   }
 }
 
 async function browseCatalog() {
+  const requestId = ++state.searchRequest;
+  state.searchBusy = true;
+  updateSummary();
   renderLoadingResults();
+  $("#searchButton").disabled = true;
   $("#catalogButton").disabled = true;
   $("#catalogButton").textContent = "불러오는 중…";
   try {
     const payload = await fetchJson("/api/search/catalog");
+    if (requestId !== state.searchRequest) return;
     state.results = (payload.docs || []).map(normalizeCatalogDoc);
     state.resultTotal = payload.total ?? state.results.length;
     state.resultMode = "catalog";
@@ -336,6 +395,7 @@ async function browseCatalog() {
     renderDiagnostics();
     renderResults();
   } catch (error) {
+    if (requestId !== state.searchRequest) return;
     state.results = [];
     state.resultTotal = 0;
     renderResults();
@@ -344,8 +404,14 @@ async function browseCatalog() {
     );
     toast(error.message, "error");
   } finally {
-    $("#catalogButton").disabled = false;
-    $("#catalogButton").textContent = "전체 문서 보기";
+    if (requestId === state.searchRequest) {
+      state.searchBusy = false;
+      $("#searchButton").disabled = false;
+      $("#catalogButton").disabled = false;
+      $("#searchButton span").textContent = "API 찾기";
+      $("#catalogButton").textContent = "전체 문서 보기";
+      updateSummary();
+    }
   }
 }
 
@@ -375,6 +441,11 @@ async function toggleSelection(serviceId) {
       toast(`${apiName(serviceId)} 상세조회 실패: ${error.message}`, "error");
     });
   }
+  state.planText = "";
+  state.relations = [];
+  state.relationBusy = false;
+  $("#composeResult").hidden = true;
+  $("#composePlaceholder").hidden = false;
   renderResults();
   renderSelected();
   renderGraph();
@@ -418,12 +489,15 @@ function renderSelected() {
 async function refreshRelations() {
   const requestId = ++state.relationRequest;
   if (state.selected.length < 2) {
+    state.relationBusy = false;
     state.relations = [];
     renderGraph();
     renderEvidence();
     return;
   }
 
+  state.relationBusy = true;
+  updateSummary();
   $("#relationSummary").textContent = "선택 문서의 관계 근거를 계산하고 있습니다.";
   try {
     const params = new URLSearchParams({ ids: state.selected.join(",") });
@@ -438,6 +512,7 @@ async function refreshRelations() {
     state.relations = [];
     toast(`관계 분석 실패: ${error.message}`, "error");
   }
+  state.relationBusy = false;
   renderGraph();
   renderEvidence();
 }
@@ -485,15 +560,15 @@ function renderGraph() {
   graph.replaceChildren();
 
   if (!state.selected.length) {
-    graph.hidden = true;
-    empty.hidden = false;
+    graph.setAttribute("hidden", "");
+    empty.removeAttribute("hidden");
     $("#relationSummary").textContent = "문서를 2개 이상 선택하면 연결 근거를 분석합니다.";
     updateSummary();
     return;
   }
 
-  graph.hidden = false;
-  empty.hidden = true;
+  graph.removeAttribute("hidden");
+  empty.setAttribute("hidden", "");
   const positions = graphPositions(width, height, state.selected.length);
   const byId = new Map(state.selected.map((id, index) => [id, positions[index]]));
 
@@ -538,8 +613,8 @@ function renderGraph() {
     graph.append(path);
   });
 
-  const nodeWidth = 138;
-  const nodeHeight = 58;
+  const nodeWidth = 160;
+  const nodeHeight = 62;
   state.selected.forEach((serviceId, index) => {
     const position = positions[index];
     const group = svgElement("g", {
@@ -571,7 +646,7 @@ function renderGraph() {
       x: "12",
       y: "33",
     });
-    titleText.textContent = shortText(apiName(serviceId), 19);
+    titleText.textContent = shortText(apiName(serviceId), 11);
     group.append(titleText);
 
     const providerText = svgElement("text", {
@@ -579,7 +654,7 @@ function renderGraph() {
       x: "12",
       y: "48",
     });
-    providerText.textContent = shortText(apiProvider(serviceId), 22);
+    providerText.textContent = shortText(apiProvider(serviceId), 13);
     group.append(providerText);
 
     const open = () => showDetail(serviceId);
@@ -787,6 +862,7 @@ function updateAnalysisStatus() {
   $("#analysisElapsed").textContent = formatElapsed(seconds);
   $("#analysisStatusTitle").textContent = title;
   $("#analysisStatusDetail").textContent = detail;
+  $("#stepCompose small").textContent = title;
 }
 
 function beginAnalysisStatus() {
@@ -958,6 +1034,9 @@ function resetWorkspace() {
   state.category = "";
   state.selected = [];
   state.relations = [];
+  state.searchBusy = false;
+  state.relationBusy = false;
+  state.searchRequest += 1;
   state.relationRequest += 1;
   state.composeRequest += 1;
   state.planText = "";

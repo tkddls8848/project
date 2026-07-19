@@ -26,6 +26,7 @@ def app_client(monkeypatch, tmp_path, fixture_apidata_dir):
     monkeypatch.setattr(config, "STORAGE_DIR", tmp_path / "storage")
     monkeypatch.setattr(config, "FAISS_INDEX_PATH", tmp_path / "storage" / "faiss.index")
     monkeypatch.setattr(config, "STORAGE_META_PATH", tmp_path / "storage" / "metadata.jsonl")
+    monkeypatch.setattr(config, "VECTOR_META_PATH", tmp_path / "storage" / "vector_metadata.jsonl")
     monkeypatch.setattr(config, "CATALOG_DIR", tmp_path / "no_catalog")
     monkeypatch.setattr(config, "SEMANTIC_DIR", tmp_path / "no_semantic")
     monkeypatch.setattr(config, "SERVING_DIR", tmp_path / "no_serving")

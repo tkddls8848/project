@@ -69,7 +69,33 @@ def _extract_field_descriptions(swagger_json):
     return out
 
 
-def _build_search_text(doc):
+def _group_text_items(items, max_chars=None):
+    """긴 엔드포인트·필드 목록을 임베딩 가능한 크기의 묶음으로 나눈다."""
+    limit = max_chars or config.VECTOR_CHUNK_MAX_CHARS
+    groups, current, current_len = [], [], 0
+    for raw_item in items:
+        item = str(raw_item or "").strip()
+        if not item:
+            continue
+        pieces = [item[i : i + limit] for i in range(0, len(item), limit)]
+        for piece in pieces:
+            projected = current_len + len(piece) + (1 if current else 0)
+            if current and projected > limit:
+                groups.append(current)
+                current, current_len = [], 0
+            current.append(piece)
+            current_len += len(piece) + (1 if current_len else 0)
+    if current:
+        groups.append(current)
+    return groups
+
+
+def _build_search_chunks(doc):
+    """서비스 문서를 개요·엔드포인트·응답필드 검색 청크로 구성한다.
+
+    모든 청크에 제목·기관·분류·키워드를 반복해 긴 설명 때문에 API 인터페이스
+    정보가 모델 입력 뒤쪽에서 잘리는 문제를 피한다.
+    """
     info = doc.get("info") or {}
     swagger = doc.get("swagger_json") or {}
     swagger_info = swagger.get("info") or {}
@@ -80,12 +106,11 @@ def _build_search_text(doc):
     keywords    = _safe_get(info, "키워드")
     description = _safe_get(info, "설명") or _safe_get(swagger_info, "description")
 
-    parts = []
-    if title:       parts.append(f"[제목] {title}")
-    if provider:    parts.append(f"[기관] {provider}")
-    if category:    parts.append(f"[분류] {category}")
-    if keywords:    parts.append(f"[키워드] {keywords}")
-    if description: parts.append(f"[설명] {description}")
+    identity = []
+    if title:    identity.append(f"[제목] {title}")
+    if provider: identity.append(f"[기관] {provider}")
+    if category: identity.append(f"[분류] {category}")
+    if keywords: identity.append(f"[키워드] {keywords}")
 
     endpoint_lines = []
     for ep in (doc.get("endpoints") or []):
@@ -93,14 +118,36 @@ def _build_search_text(doc):
         if ep.get("description"):
             line += f" : {ep['description']}"
         endpoint_lines.append(line)
-    if endpoint_lines:
-        parts.append("[엔드포인트]\n" + "\n".join(endpoint_lines))
-
     field_descs = _extract_field_descriptions(swagger)
-    if field_descs:
-        parts.append("[응답필드] " + ", ".join(field_descs))
 
-    return "\n".join(parts)
+    description_groups = _group_text_items([description]) if description else [[]]
+    endpoint_groups = _group_text_items(endpoint_lines)
+    field_groups = _group_text_items(field_descs)
+
+    chunks = []
+    for index in range(
+        max(len(description_groups), len(endpoint_groups), len(field_groups))
+    ):
+        if index < len(description_groups):
+            overview = [*identity]
+            if description_groups[index]:
+                overview.extend(["[설명]", *description_groups[index]])
+            if overview:
+                chunks.append(("overview", "\n".join(overview)))
+        if index < len(endpoint_groups):
+            chunks.append(
+                ("endpoints", "\n".join([*identity, "[엔드포인트]", *endpoint_groups[index]]))
+            )
+        if index < len(field_groups):
+            chunks.append(
+                ("response_fields", "\n".join([*identity, "[응답필드]", *field_groups[index]]))
+            )
+    return chunks[: config.VECTOR_MAX_CHUNKS_PER_DOCUMENT]
+
+
+def _build_search_text(doc):
+    """이전 호출부 호환용 단일 텍스트 표현."""
+    return "\n".join(text for _, text in _build_search_chunks(doc))
 
 
 def _extract_metadata(doc, source_path):
@@ -192,29 +239,44 @@ def run_build(on_complete=None, device="cpu"):
 
         # 2단계: JSON 파싱
         s.update(step=2, step_name="JSON 파싱", progress=0)
-        texts, metadata_list, skipped = [], [], 0
+        texts, vector_metadata, service_metadata, skipped = [], [], [], 0
         for i, fp in enumerate(json_files):
             try:
                 with open(fp, "r", encoding="utf-8") as f:
                     doc = json.load(f)
-                text = _build_search_text(doc)
-                if not text.strip():
+                chunks = _build_search_chunks(doc)
+                if not chunks:
                     skipped += 1
                 else:
-                    texts.append(text)
-                    metadata_list.append(_extract_metadata(doc, fp))
+                    metadata = _extract_metadata(doc, fp)
+                    service_metadata.append(metadata)
+                    for chunk_index, (chunk_type, text) in enumerate(chunks):
+                        texts.append(text)
+                        vector_metadata.append(
+                            {
+                                **metadata,
+                                "chunk_type": chunk_type,
+                                "chunk_index": chunk_index,
+                            }
+                        )
             except Exception:
                 skipped += 1
             s.update(progress=i + 1,
                      message=f"파싱 중 {i+1}/{len(json_files)} (스킵 {skipped})")
 
-        s.update(message=f"파싱 완료: {len(texts)}건 / 스킵 {skipped}건")
+        s.update(
+            message=(
+                f"파싱 완료: 서비스 {len(service_metadata)}건 / "
+                f"벡터 청크 {len(texts)}건 / 스킵 {skipped}건"
+            )
+        )
 
         # 3단계: 임베딩
         s.update(step=3, step_name=f"임베딩 생성 ({resolved_device})",
                  progress=0, total=len(texts))
         model_path = config.ensure_local_model()
         model = SentenceTransformer(model_path, device=resolved_device)
+        model.max_seq_length = config.MODEL_MAX_SEQ_LENGTH
 
         batch_size = 64
         import numpy as np
@@ -243,13 +305,19 @@ def run_build(on_complete=None, device="cpu"):
         # 한글 경로에 직접 쓰면 faiss가 EILSEQ로 실패하므로 헬퍼로 저장한다.
         faiss_io.write_index(index, out_dir / "faiss.index")
         with open(out_dir / "metadata.jsonl", "w", encoding="utf-8") as f:
-            for m in metadata_list:
+            for m in service_metadata:
+                f.write(json.dumps(m, ensure_ascii=False) + "\n")
+        with open(out_dir / "vector_metadata.jsonl", "w", encoding="utf-8") as f:
+            for m in vector_metadata:
                 f.write(json.dumps(m, ensure_ascii=False) + "\n")
 
         s.update(
             state="done", step=4, progress=1,
             finished_at=time.time(),
-            message=f"완료: {index.ntotal}개 문서 인덱싱 (스킵 {skipped}개)",
+            message=(
+                f"완료: 서비스 {len(service_metadata)}건 / "
+                f"벡터 청크 {index.ntotal}건 (스킵 {skipped}개)"
+            ),
         )
         if on_complete:
             on_complete()

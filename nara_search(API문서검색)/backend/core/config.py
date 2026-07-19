@@ -11,6 +11,15 @@ def _env_path(name: str, default: Path) -> Path:
 
 DEFAULT_TOP_K = 5
 MAX_QUERY_LENGTH = 300
+MODEL_MAX_SEQ_LENGTH = int(os.environ.get("NARA_SEARCH_MODEL_MAX_SEQ_LENGTH", "256"))
+VECTOR_MIN_SCORE = float(os.environ.get("NARA_SEARCH_VECTOR_MIN_SCORE", "0.42"))
+VECTOR_OVERSAMPLE = int(os.environ.get("NARA_SEARCH_VECTOR_OVERSAMPLE", "12"))
+VECTOR_CHUNK_MAX_CHARS = int(os.environ.get("NARA_SEARCH_VECTOR_CHUNK_MAX_CHARS", "650"))
+VECTOR_MAX_CHUNKS_PER_DOCUMENT = int(
+    os.environ.get("NARA_SEARCH_VECTOR_MAX_CHUNKS_PER_DOCUMENT", "12")
+)
+VECTOR_RRF_WEIGHT = float(os.environ.get("NARA_SEARCH_VECTOR_RRF_WEIGHT", "0.9"))
+LEXICAL_RRF_WEIGHT = float(os.environ.get("NARA_SEARCH_LEXICAL_RRF_WEIGHT", "1.1"))
 
 # ── 활성 런타임 경로 ─────────────────────────────────────────────────────────
 # 검색 파이프라인(index_builder + faiss_retriever)이 실제로 사용하는 경로.
@@ -23,6 +32,7 @@ APIDATA_DIR = _env_path("NARA_SEARCH_APIDATA_DIR", BASE_DIR.parent / "nara_stora
 STORAGE_DIR = _env_path("NARA_SEARCH_STORAGE_DIR", BASE_DIR / "storage")
 FAISS_INDEX_PATH = STORAGE_DIR / "faiss.index"
 STORAGE_META_PATH = STORAGE_DIR / "metadata.jsonl"
+VECTOR_META_PATH = STORAGE_DIR / "vector_metadata.jsonl"
 
 # 로컬 임베딩 모델
 LOCAL_MODEL_PATH = str(_env_path("NARA_SEARCH_MODEL_DIR", BASE_DIR / "models" / "ko-sroberta-multitask"))

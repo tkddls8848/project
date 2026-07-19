@@ -13,6 +13,7 @@ def reciprocal_rank_fusion(
     result_lists: dict[str, list[dict[str, Any]]],
     top_k: int,
     id_key: str = "api_id",
+    weights: dict[str, float] | None = None,
 ) -> list[dict[str, Any]]:
     """이름 있는 순위 목록들을 RRF로 융합한다.
 
@@ -24,12 +25,14 @@ def reciprocal_rank_fusion(
     records: dict[str, dict[str, Any]] = {}
     channels: dict[str, list[str]] = {}
 
+    channel_weights = weights or {}
     for list_name, results in result_lists.items():
+        weight = max(0.0, float(channel_weights.get(list_name, 1.0)))
         for rank, record in enumerate(results, start=1):
             doc_id = str(record.get(id_key, "") or "")
             if not doc_id:
                 continue
-            scores[doc_id] = scores.get(doc_id, 0.0) + 1.0 / (RRF_K + rank)
+            scores[doc_id] = scores.get(doc_id, 0.0) + weight / (RRF_K + rank)
             channels.setdefault(doc_id, []).append(list_name)
             records.setdefault(doc_id, record)
 

@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="공공 API 문서를 검색하고 관계를 검토해 행정 서비스 계획을 만드는 Hermes 연동 PoC">
+  <title>Nara Hermes Lab</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Nara Hermes Lab 홈">
+      <span class="brand-mark">NH</span>
+      <span>
+        <strong>Nara Hermes Lab</strong>
+        <small>공공 API 에이전트 실험실</small>
+      </span>
+    </a>
+    <nav aria-label="도움말 링크">
+      <a href="/docs" target="_blank" rel="noreferrer">API 문서</a>
+      <a href="#about">PoC 소개</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">HERMES AGENT × NARA API</p>
+        <h1>필요한 행정 서비스를<br><span>API 근거와 함께 설계합니다.</span></h1>
+        <p class="hero-description">
+          자연어 요구를 입력하면 공공 API 문서를 찾고, 상세와 관계를 검토한 뒤
+          실행이 아닌 서비스 계획 초안을 만듭니다.
+        </p>
+      </div>
+      <div class="safety-card">
+        <span class="safety-icon">✓</span>
+        <div>
+          <strong>안전한 읽기·계획 전용 PoC</strong>
+          <p>실제 행정 처리나 외부 API 실행은 하지 않습니다.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="status-panel" aria-labelledby="status-title">
+      <div>
+        <p class="section-kicker">SYSTEM STATUS</p>
+        <h2 id="status-title">서비스 연결 상태</h2>
+      </div>
+      <div class="status-items">
+        <div class="status-item" id="search-status">
+          <span class="status-dot"></span>
+          <div><strong>Nara Search</strong><small>확인 중 · :8000</small></div>
+        </div>
+        <div class="status-item" id="combiner-status">
+          <span class="status-dot"></span>
+          <div><strong>Nara Combiner</strong><small>확인 중 · :8003</small></div>
+        </div>
+        <button class="button button-quiet" id="refresh-health" type="button">다시 확인</button>
+      </div>
+    </section>
+
+    <section class="workspace">
+      <div class="workspace-heading">
+        <div>
+          <p class="section-kicker">DESIGN WORKSPACE</p>
+          <h2>서비스 설계 요청</h2>
+        </div>
+        <ol class="flow" aria-label="처리 단계">
+          <li data-flow="search"><span>1</span>문서 검색</li>
+          <li data-flow="detail"><span>2</span>근거 검토</li>
+          <li data-flow="compose"><span>3</span>계획 생성</li>
+        </ol>
+      </div>
+
+      <form id="design-form">
+        <label class="field field-query">
+          <span>어떤 행정 서비스를 만들고 싶나요?</span>
+          <textarea
+            id="query"
+            name="query"
+            rows="3"
+            minlength="2"
+            maxlength="500"
+            required
+            placeholder="예: 청년 주거와 취업 지원을 한 번에 안내하는 서비스를 설계해줘"
+          ></textarea>
+        </label>
+
+        <div class="examples" aria-label="예시 질문">
+          <span>예시</span>
+          <button type="button" data-example="청년 주거와 취업 지원 서비스를 함께 설계해줘">청년 주거·취업</button>
+          <button type="button" data-example="교통약자를 위한 복지와 이동 지원 API를 찾아줘">교통약자 지원</button>
+          <button type="button" data-example="미세먼지 정보를 활용한 시민 알림 서비스를 설계해줘">미세먼지 알림</button>
+        </div>
+
+        <details class="advanced">
+          <summary>검색 및 문서 선택 옵션</summary>
+          <div class="advanced-grid">
+            <label class="field">
+              <span>검색 결과 수</span>
+              <select id="top-k" name="top_k">
+                <option value="3">3개</option>
+                <option value="5" selected>5개</option>
+                <option value="10">10개</option>
+                <option value="20">20개</option>
+              </select>
+            </label>
+            <label class="switch-field">
+              <span>
+                <strong>벡터 검색 사용</strong>
+                <small>끄면 키워드 검색만 사용합니다.</small>
+              </span>
+              <input id="use-vector" type="checkbox" checked>
+            </label>
+            <label class="switch-field">
+              <span>
+                <strong>계획 초안 생성</strong>
+                <small>끄면 문서와 관계만 확인합니다.</small>
+              </span>
+              <input id="compose" type="checkbox" checked>
+            </label>
+            <label class="field field-wide">
+              <span>직접 선택한 service_id <small>선택 사항 · 최대 3개</small></span>
+              <input
+                id="service-ids"
+                type="text"
+                placeholder="openapi_new:15000827, openapi_new:15000863"
+              >
+            </label>
+          </div>
+        </details>
+
+        <div class="form-actions">
+          <p>검색 결과를 자동 선택하므로 먼저 빠르게 흐름을 시험할 수 있습니다.</p>
+          <button class="button button-primary" id="submit-button" type="submit">
+            <span>서비스 계획 만들기</span>
+            <span aria-hidden="true">→</span>
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <section class="result-shell hidden" id="results" aria-live="polite">
+      <div class="result-heading">
+        <div>
+          <p class="section-kicker">AGENT RESULT</p>
+          <h2>설계 결과</h2>
+        </div>
+        <button class="button button-quiet" id="reset-button" type="button">새 요청</button>
+      </div>
+
+      <div class="stage-strip" id="stage-strip"></div>
+      <div class="alert hidden" id="warnings"></div>
+
+      <div class="result-grid">
+        <section class="result-card result-card-wide">
+          <div class="card-title">
+            <span class="card-number">01</span>
+            <div><h3>검색된 API 문서</h3><p id="search-summary"></p></div>
+          </div>
+          <div class="document-list" id="document-list"></div>
+        </section>
+
+        <section class="result-card">
+          <div class="card-title">
+            <span class="card-number">02</span>
+            <div><h3>관계 근거</h3><p>선택 문서 사이의 연결 가능성</p></div>
+          </div>
+          <div class="empty-state" id="relation-result">분석 결과가 여기에 표시됩니다.</div>
+        </section>
+
+        <section class="result-card">
+          <div class="card-title">
+            <span class="card-number">03</span>
+            <div><h3>서비스 계획 초안</h3><p>실행 전 검토가 필요한 제안</p></div>
+          </div>
+          <div class="plan-result" id="plan-result">계획 결과가 여기에 표시됩니다.</div>
+        </section>
+      </div>
+    </section>
+
+    <section class="about" id="about">
+      <div>
+        <p class="section-kicker">ABOUT THIS POC</p>
+        <h2>이 화면은 무엇을 검증하나요?</h2>
+      </div>
+      <div class="about-grid">
+        <article><strong>01</strong><h3>검색 품질</h3><p>하이브리드 검색이 행정 요구와 관련된 문서를 찾는지 확인합니다.</p></article>
+        <article><strong>02</strong><h3>근거 연결</h3><p>문서 이름이 아니라 상세 정보와 파생 관계를 기반으로 조합합니다.</p></article>
+        <article><strong>03</strong><h3>에이전트 안전성</h3><p>Hermes에 실행 권한을 주기 전에 읽기·계획 흐름부터 검증합니다.</p></article>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <strong>Nara Hermes Lab</strong>
+    <p>기존 Nara Workbench와 분리된 실험 프로젝트 · 실제 행정 처리를 수행하지 않음</p>
+  </footer>
+
+  <script src="/static/app.js" defer></script>
+</body>
+</html>

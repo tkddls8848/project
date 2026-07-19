@@ -126,9 +126,15 @@ CORS: 전체 오리진 허용 (`allow_origins=["*"]`, GET/POST만).
 | vector | SentenceTransformer + FAISS | 인덱스·모델 (POST /build) |
 | lexical | BM25 + CJK 문자 bigram | 없음 (metadata.jsonl 또는 apidata 스캔) |
 
-- 두 채널 모두 결과가 있으면 **RRF**(Reciprocal Rank Fusion, k=60)로 순위를
-  융합한다. 점수 스케일이 다른 두 채널을 순위 기반으로 합치는 표준 기법이다
-  (Azure AI Search, Weaviate 등과 동일 방식). 이때 `score`는 RRF 점수다.
+- 두 채널 모두 결과가 있으면 **가중 RRF**(Reciprocal Rank Fusion, k=60)로
+  순위를 융합한다. 기본 가중치는 lexical 1.1, vector 0.9로 정확한 키워드
+  일치를 우선한다. 이때 `score`는 가중 RRF 점수다.
+- vector 채널은 기본 코사인 유사도 0.42 미만을 제외한다. 복합 질의는 원문과
+  `와/과/및/또는`으로 나눈 하위 의도를 함께 검색한 뒤 서비스별 최고 점수로
+  합친다.
+- 문서는 개요·엔드포인트·응답필드 청크로 나눠 임베딩하고 모든 청크에
+  제목·기관·분류·키워드를 반복한다. 모델 입력 한도는 질의와 문서 모두
+  256토큰이다.
 - 한 채널만 가용하면 그 채널의 원 점수를 그대로 반환한다.
 - **인덱스·모델이 없어도 lexical 채널로 검색이 동작한다.** 한국어는
   Elasticsearch `cjk` analyzer와 같은 문자 bigram 방식으로 형태소 분석기
@@ -185,9 +191,16 @@ CORS: 전체 오리진 허용 (`allow_origins=["*"]`, GET/POST만).
 | 변수 | 기본값 | 용도 |
 | --- | --- | --- |
 | `NARA_SEARCH_APIDATA_DIR` | `../nara_storage/openapi_new/` | 평면 OpenAPI JSON ({api_id}.json) |
-| `NARA_SEARCH_STORAGE_DIR` | `storage/` | faiss.index, metadata.jsonl |
+| `NARA_SEARCH_STORAGE_DIR` | `storage/` | faiss.index, metadata.jsonl, vector_metadata.jsonl |
 | `NARA_SEARCH_MODEL_DIR` | `models/ko-sroberta-multitask/` | 임베딩 모델 |
 | `NARA_SEARCH_DATA_DIR` | `data/` | 카탈로그 산출물 루트 (02_catalog/03_semantic/04_output/minimal) |
+| `NARA_SEARCH_MODEL_MAX_SEQ_LENGTH` | `256` | 질의·문서 임베딩 최대 토큰 |
+| `NARA_SEARCH_VECTOR_MIN_SCORE` | `0.42` | 벡터 후보 최소 코사인 유사도 |
+| `NARA_SEARCH_VECTOR_RRF_WEIGHT` | `0.9` | 벡터 RRF 가중치 |
+| `NARA_SEARCH_LEXICAL_RRF_WEIGHT` | `1.1` | lexical RRF 가중치 |
+| `NARA_SEARCH_VECTOR_OVERSAMPLE` | `12` | 청크 검색 후 서비스 집계를 위한 후보 배수 |
+| `NARA_SEARCH_VECTOR_CHUNK_MAX_CHARS` | `650` | 원시 청크 묶음의 목표 문자 수 |
+| `NARA_SEARCH_VECTOR_MAX_CHUNKS_PER_DOCUMENT` | `12` | 서비스당 최대 벡터 청크 |
 
 ## 테스트
 
