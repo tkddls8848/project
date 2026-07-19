@@ -1,221 +1,187 @@
-const form = document.querySelector("#design-form");
-const queryInput = document.querySelector("#query");
-const submitButton = document.querySelector("#submit-button");
-const resultsSection = document.querySelector("#results");
-const searchStatus = document.querySelector("#search-status");
-const combinerStatus = document.querySelector("#combiner-status");
-const flowItems = [...document.querySelectorAll("[data-flow]")];
+const $ = (selector) => document.querySelector(selector);
 
-const stageLabels = {
-  search: "문서 검색",
-  detail: "상세 검토",
+const form = $("#design-form");
+const queryInput = $("#query");
+const submitButton = $("#submit-button");
+const stopButton = $("#stop-button");
+const runBadge = $("#run-mode");
+const progress = $("#agent-progress");
+let currentRunId = null;
+let source = null;
+let eventRows = new Map();
+
+const labels = {
+  queued: "실행 준비",
+  agent: "Hermes MCP",
+  search: "문서 탐색",
+  detail: "상세 확인",
   relations: "관계 분석",
   compose: "계획 생성",
+  completed: "실행 완료",
+  failed: "실행 실패",
+  cancelled: "실행 중단",
 };
 
-function setServiceStatus(element, online, detail) {
-  element.classList.toggle("online", online);
-  element.classList.toggle("offline", !online);
-  element.querySelector("small").textContent = detail;
-}
-
-async function checkHealth() {
-  setServiceStatus(searchStatus, false, "확인 중 · :8000");
-  setServiceStatus(combinerStatus, false, "확인 중 · :8003");
-  try {
-    const response = await fetch("/health");
-    const body = await response.json();
-    if (!response.ok) throw new Error(body.message || "연결 실패");
-    const search = body.upstreams?.search || {};
-    const combiner = body.upstreams?.combiner || {};
-    const searchOnline = Boolean(search.ok || search.lexical_corpus_total);
-    setServiceStatus(
-      searchStatus,
-      searchOnline,
-      searchOnline ? `연결됨 · 문서 ${search.services_total || search.lexical_corpus_total || 0}개` : "인덱스 확인 필요 · :8000",
-    );
-    setServiceStatus(
-      combinerStatus,
-      Boolean(combiner.ok),
-      combiner.ok ? `연결됨 · ${combiner.model || "모델 준비"}` : "응답 이상 · :8003",
-    );
-  } catch (error) {
-    setServiceStatus(searchStatus, false, "연결 안 됨 · :8000");
-    setServiceStatus(combinerStatus, false, "연결 안 됨 · :8003");
-  }
-}
-
-function parseServiceIds() {
-  return document.querySelector("#service-ids").value
-    .split(/[,\n]/)
-    .map((value) => value.trim())
-    .filter(Boolean)
-    .slice(0, 3);
-}
-
-function setBusy(isBusy) {
-  submitButton.disabled = isBusy;
-  submitButton.firstElementChild.textContent = isBusy ? "에이전트가 분석 중입니다" : "서비스 계획 만들기";
-  if (isBusy) {
-    flowItems.forEach((item, index) => item.classList.toggle("active", index === 0));
-  }
-}
-
-function clearElement(element) {
-  while (element.firstChild) element.firstChild.remove();
-}
-
-function element(tag, className, text) {
+function element(tag, options = {}, children = []) {
   const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text !== undefined) node.textContent = text;
+  if (options.className) node.className = options.className;
+  if (options.text !== undefined) node.textContent = options.text;
+  Object.entries(options.attrs || {}).forEach(([key, value]) => node.setAttribute(key, value));
+  (Array.isArray(children) ? children : [children]).filter(Boolean).forEach((child) => node.append(child));
   return node;
 }
 
-function renderStages(stages = []) {
-  const container = document.querySelector("#stage-strip");
-  clearElement(container);
-  stages.forEach((stage) => {
-    const card = element("div", `stage ${stage.status}`);
-    card.append(
-      element("strong", "", `${stage.status === "completed" ? "✓ " : ""}${stageLabels[stage.name] || stage.name}`),
-      element("small", "", stage.message),
-    );
-    container.append(card);
-  });
-
-  const completed = new Set(stages.filter((stage) => stage.status === "completed").map((stage) => stage.name));
-  flowItems.forEach((item) => {
-    const name = item.dataset.flow;
-    const active = name === "detail"
-      ? completed.has("detail") || completed.has("relations")
-      : completed.has(name);
-    item.classList.toggle("active", active);
-  });
+async function fetchJson(url, options) {
+  const response = await fetch(url, options);
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.message || body.detail || `요청 실패 (HTTP ${response.status})`);
+  return body;
 }
 
-function renderWarnings(warnings = []) {
-  const box = document.querySelector("#warnings");
-  if (!warnings.length) {
-    box.classList.add("hidden");
-    box.textContent = "";
-    return;
+function setRunState(status, label = status) {
+  runBadge.textContent = label;
+  runBadge.className = `run-badge ${status}`;
+  submitButton.disabled = status === "running" || status === "queued";
+  stopButton.disabled = status !== "running" && status !== "queued";
+}
+
+async function refreshHealth() {
+  const button = $("#refresh-health");
+  const text = $("#system-state");
+  button.classList.remove("online", "offline");
+  text.textContent = "상태 확인 중";
+  try {
+    const [health, agent] = await Promise.all([fetchJson("/health"), fetchJson("/agent/health")]);
+    const available = Boolean(health.upstreams?.search) && Boolean(health.upstreams?.combiner) && agent.ok;
+    button.classList.add(available ? "online" : "offline");
+    text.textContent = available ? `Nara · Hermes ${agent.profile}` : "일부 서비스 확인 필요";
+  } catch {
+    button.classList.add("offline");
+    text.textContent = "서비스 연결 확인 필요";
   }
-  box.textContent = `검토 필요: ${warnings.join(" · ")}`;
-  box.classList.remove("hidden");
+}
+
+function parseIds() {
+  return $("#service-ids").value.split(/[,\n]/).map((item) => item.trim()).filter(Boolean).slice(0, 3);
+}
+
+function renderEvent(event) {
+  let row = eventRows.get(event.name);
+  if (!row) {
+    row = element("div", { className: "progress-item" }, [element("i"), element("div", {}, [element("strong", { text: labels[event.name] || event.name }), element("small", { text: event.message })]), element("time", { text: "" })]);
+    eventRows.set(event.name, row);
+    progress.append(row);
+  }
+  row.className = `progress-item ${event.status}`;
+  row.querySelector("small").textContent = event.message;
+  row.querySelector("time").textContent = `#${event.sequence}`;
+  updateWorkflow(event);
+}
+
+function updateWorkflow(event) {
+  const stage = event.name === "agent" ? "search" : event.name;
+  if (!["search", "detail", "relations", "compose"].includes(stage)) return;
+  const target = document.querySelector(`[data-step="${stage}"]`);
+  if (!target) return;
+  target.classList.remove("active", "completed", "failed");
+  target.classList.add(event.status === "running" ? "active" : event.status === "failed" ? "failed" : event.status === "completed" || event.status === "skipped" ? "completed" : "active");
+}
+
+function resetWorkflow() {
+  document.querySelectorAll(".workflow-step").forEach((node, index) => node.className = `workflow-step${index === 0 ? " active" : ""}`);
 }
 
 function renderDocuments(search, selectedIds) {
-  const list = document.querySelector("#document-list");
-  const summary = document.querySelector("#search-summary");
-  const documents = search?.results || [];
-  const diagnostics = search?.diagnostics || {};
-  clearElement(list);
-  summary.textContent = `${documents.length}개 발견 · ${diagnostics.fusion || "검색"} 방식`;
-
-  if (!documents.length) {
-    list.append(element("div", "empty-state", "관련 문서를 찾지 못했습니다. 검색어를 더 구체적으로 작성하거나 벡터 검색을 꺼보세요."));
+  const list = $("#document-list");
+  const docs = search?.results || [];
+  list.replaceChildren();
+  $("#search-summary").textContent = `${docs.length}개 문서 · ${search?.diagnostics?.fusion || "검색"}`;
+  if (!docs.length) {
+    list.append(element("div", { className: "empty-state", text: "관련 API 문서를 찾지 못했습니다." }));
     return;
   }
-
-  documents.forEach((doc) => {
-    const card = element("article", `document ${selectedIds.includes(doc.service_id) ? "selected" : ""}`);
-    const title = element("h4", "", doc.name || "이름 없는 API 문서");
-    const description = element("p", "", doc.description || "문서 설명이 없습니다.");
-    const meta = element("div", "document-meta");
-    meta.append(
-      element("span", "", selectedIds.includes(doc.service_id) ? "선택됨" : "후보"),
-      element("span", "", doc.service_id || ""),
-    );
-    card.append(title, description, meta);
+  docs.forEach((doc) => {
+    const card = element("article", { className: `document ${selectedIds.includes(doc.service_id) ? "selected" : ""}` });
+    card.append(element("h4", { text: doc.name || doc.service_id }), element("p", { text: doc.description || "설명이 없습니다." }), element("div", { className: "document-meta" }, [element("span", { text: selectedIds.includes(doc.service_id) ? "선택됨" : "후보" }), element("span", { text: doc.service_id || "" })]));
     list.append(card);
   });
 }
 
-function renderRelations(relations) {
-  const target = document.querySelector("#relation-result");
-  if (!relations) {
-    target.textContent = "선택 문서가 한 개이거나 관계 분석을 생략했습니다.";
-    return;
-  }
-  const items = relations.relations || [];
-  if (!items.length) {
-    target.textContent = "선택 문서 사이에서 파생 관계를 찾지 못했습니다. 독립 단계로 검토하세요.";
-    return;
-  }
-  target.textContent = JSON.stringify(items, null, 2);
+function renderSelected(ids, details) {
+  const list = $("#selected-list");
+  list.replaceChildren();
+  $("#selected-count").textContent = `${ids.length} / 3`;
+  if (!ids.length) { list.textContent = "선택된 API가 없습니다."; return; }
+  ids.forEach((id, index) => list.append(element("span", { className: "selected-chip", text: details[index]?.name || id })));
 }
 
-function renderPlan(plan) {
-  const target = document.querySelector("#plan-result");
-  if (!plan) {
-    target.textContent = "계획 생성을 생략했거나 선택된 문서가 없습니다.";
-    return;
-  }
-  target.textContent = plan.suggestion || JSON.stringify(plan, null, 2);
+function renderResult(result, hermes) {
+  if (!result) return;
+  renderDocuments(result.search, result.selected_service_ids || []);
+  renderSelected(result.selected_service_ids || [], result.details || []);
+  const relations = result.relations?.relations || [];
+  $("#relation-result").textContent = relations.length ? JSON.stringify(relations, null, 2) : "관계 근거가 없거나 문서가 한 개여서 관계 분석을 생략했습니다.";
+  $("#plan-result").textContent = result.plan?.suggestion || "계획 생성을 생략했거나 생성하지 못했습니다.";
+  const warnings = [...(result.warnings || [])];
+  if (hermes?.status && hermes.status !== "called") warnings.unshift(`Hermes MCP 상태: ${hermes.status}`);
+  const box = $("#warnings");
+  box.textContent = warnings.join(" · ");
+  box.classList.toggle("hidden", !warnings.length);
 }
 
-function renderError(error) {
-  resultsSection.classList.remove("hidden");
-  renderStages([{ name: "search", status: "failed", message: error.message }]);
-  renderWarnings([error.message]);
-  document.querySelector("#search-summary").textContent = "요청 처리 실패";
-  document.querySelector("#document-list").replaceChildren(
-    element("div", "empty-state", "상단의 서비스 연결 상태를 확인한 뒤 다시 시도하세요."),
-  );
-  document.querySelector("#relation-result").textContent = "분석되지 않았습니다.";
-  document.querySelector("#plan-result").textContent = "생성되지 않았습니다.";
+async function finishRun() {
+  if (!currentRunId) return;
+  try {
+    const run = await fetchJson(`/agent/design-runs/${currentRunId}`);
+    setRunState(run.status, run.status === "completed" ? "완료" : run.status === "failed" ? "실패" : "중단됨");
+    renderResult(run.result, run.hermes);
+    $("#agent-summary").textContent = run.hermes?.status === "called" ? "Hermes MCP 검색 호출을 확인하고 구조화된 결과를 완성했습니다." : "구조화된 읽기 전용 결과를 완성했습니다.";
+  } catch (error) {
+    setRunState("failed", "실패");
+    $("#agent-summary").textContent = error.message;
+  }
+}
+
+function connectEvents(runId) {
+  if (source) source.close();
+  source = new EventSource(`/agent/design-runs/${runId}/events`);
+  source.addEventListener("progress", async (message) => {
+    const event = JSON.parse(message.data);
+    renderEvent(event);
+    if (["completed", "failed", "cancelled"].includes(event.name)) {
+      source.close();
+      await finishRun();
+    }
+  });
+  source.onerror = async () => {
+    source.close();
+    await finishRun();
+  };
 }
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
-  setBusy(true);
-  resultsSection.classList.add("hidden");
-
-  const payload = {
-    query: queryInput.value.trim(),
-    top_k: Number(document.querySelector("#top-k").value),
-    use_vector: document.querySelector("#use-vector").checked,
-    selected_service_ids: parseServiceIds(),
-    compose: document.querySelector("#compose").checked,
-  };
-
+  const query = queryInput.value.trim();
+  if (query.length < 2) { queryInput.focus(); return; }
+  eventRows = new Map(); progress.replaceChildren(); resetWorkflow();
+  $("#warnings").classList.add("hidden");
+  $("#agent-summary").textContent = "에이전트 실행을 생성하고 있습니다.";
+  setRunState("queued", "준비 중");
   try {
-    const response = await fetch("/design", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const body = await response.json();
-    if (!response.ok) throw new Error(body.message || body.detail || "요청 처리에 실패했습니다.");
-
-    renderStages(body.stages);
-    renderWarnings(body.warnings);
-    renderDocuments(body.search, body.selected_service_ids);
-    renderRelations(body.relations);
-    renderPlan(body.plan);
-    resultsSection.classList.remove("hidden");
-    resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+    const run = await fetchJson("/agent/design-runs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ query, top_k: Number($("#top-k").value), use_vector: $("#use-vector").checked, compose: $("#compose").checked, selected_service_ids: parseIds() }) });
+    currentRunId = run.run_id;
+    run.events.forEach(renderEvent);
+    setRunState("running", "실행 중");
+    connectEvents(run.run_id);
   } catch (error) {
-    renderError(error);
-    resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
-  } finally {
-    setBusy(false);
+    setRunState("failed", "실패");
+    progress.replaceChildren(element("div", { className: "empty-state", text: error.message }));
   }
 });
 
-document.querySelectorAll("[data-example]").forEach((button) => {
-  button.addEventListener("click", () => {
-    queryInput.value = button.dataset.example;
-    queryInput.focus();
-  });
-});
-
-document.querySelector("#refresh-health").addEventListener("click", checkHealth);
-document.querySelector("#reset-button").addEventListener("click", () => {
-  resultsSection.classList.add("hidden");
-  queryInput.focus();
-  window.scrollTo({ top: document.querySelector(".workspace").offsetTop - 20, behavior: "smooth" });
-});
-
-checkHealth();
+stopButton.addEventListener("click", async () => { if (currentRunId) await fetchJson(`/agent/design-runs/${currentRunId}/stop`, { method: "POST" }); });
+$("#reset-button").addEventListener("click", () => { if (source) source.close(); currentRunId = null; eventRows = new Map(); progress.replaceChildren(element("div", { className: "empty-state", text: "에이전트 실행 시 MCP 호출과 각 처리 단계가 실시간으로 표시됩니다." })); $("#document-list").replaceChildren(element("div", { className: "empty-state", text: "검색 결과가 여기에 표시됩니다." })); $("#relation-result").textContent = "선택된 문서가 두 개 이상이면 관계 분석 결과가 표시됩니다."; $("#plan-result").textContent = "계획 초안이 여기에 표시됩니다."; $("#selected-list").textContent = "선택된 API가 없습니다."; $("#selected-count").textContent = "0 / 3"; $("#search-summary").textContent = "요청을 입력하면 검색된 문서가 표시됩니다."; $("#agent-summary").textContent = "아직 실행된 도구 호출이 없습니다."; setRunState("idle", "대기"); resetWorkflow(); });
+document.querySelectorAll("[data-example]").forEach((button) => button.addEventListener("click", () => { queryInput.value = button.dataset.example; queryInput.focus(); }));
+$("#refresh-health").addEventListener("click", refreshHealth);
+setRunState("idle", "대기");
+refreshHealth();

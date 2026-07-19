@@ -17,7 +17,7 @@ class DesignRequest(BaseModel):
 
 class StageRecord(BaseModel):
     name: Literal["search", "detail", "relations", "compose"]
-    status: Literal["completed", "skipped", "failed"]
+    status: Literal["running", "completed", "skipped", "failed"]
     message: str
 
 
@@ -31,3 +31,23 @@ class DesignResponse(BaseModel):
     stages: list[StageRecord]
     warnings: list[str] = Field(default_factory=list)
 
+
+class AgentRunRequest(DesignRequest):
+    """A bounded, read-only Hermes run request."""
+
+
+class AgentEvent(BaseModel):
+    sequence: int
+    name: Literal["queued", "agent", "search", "detail", "relations", "compose", "completed", "failed", "cancelled"]
+    status: Literal["queued", "running", "completed", "skipped", "failed", "cancelled"]
+    message: str
+
+
+class AgentRunResponse(BaseModel):
+    run_id: str
+    status: Literal["queued", "running", "completed", "failed", "cancelled"]
+    query: str
+    events: list[AgentEvent] = Field(default_factory=list)
+    result: DesignResponse | None = None
+    hermes: dict[str, Any] = Field(default_factory=dict)
+    error: str | None = None

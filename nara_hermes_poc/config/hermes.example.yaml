@@ -2,23 +2,25 @@
 # command는 실제 가상환경 Python의 절대 경로로 변경한다.
 mcp_servers:
   nara:
-    command: "C:\\project\\nara_hermes_poc\\.venv\\Scripts\\python.exe"
+    command: "C:\\project\\nara_hermes_poc\\venv\\Scripts\\python.exe"
     args:
       - "-m"
       - "mcp_server.server"
-    cwd: "C:\\project\\nara_hermes_poc"
     env:
+      PYTHONPATH: "C:\\project\\nara_hermes_poc"
+      PYTHONUTF8: "1"
       NARA_SEARCH_URL: "http://127.0.0.1:8000"
       NARA_COMBINER_URL: "http://127.0.0.1:8003"
       NARA_COMPOSE_TIMEOUT: "240"
-    # 초기 PoC는 동시에 상태를 변경하는 도구가 없지만 관찰 편의를 위해 직렬 실행한다.
     supports_parallel_tool_calls: false
-    # 실제 Hermes 버전에서 제공하는 도구 필터 키에 맞춰 다음 네 도구만 허용한다.
-    # enabled_tools:
-    #   - search_api_docs
-    #   - get_api_detail
-    #   - derive_relations
-    #   - compose_service_plan
+    tools:
+      include:
+        - search_api_docs
+        - get_api_detail
+        - derive_relations
+        - compose_service_plan
+      resources: false
+      prompts: false
 
 approvals:
   mode: smart

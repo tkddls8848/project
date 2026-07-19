@@ -43,14 +43,14 @@ PowerShell:
 
 ```powershell
 cd C:\project\nara_hermes_poc
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+python -m venv venv
+.\venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
 ## 테스트
 
 ```powershell
-.\.venv\Scripts\python.exe -m pytest
+.\venv\Scripts\python.exe -m pytest
 ```
 
 ## PoC API 실행
@@ -64,7 +64,29 @@ python .\app\main.py
 또는 Uvicorn으로 직접 실행한다.
 
 ```powershell
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8020
+.\venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8020
+```
+
+### 한 번에 실행
+
+PoC 루트에서 다음을 실행하면 Nara Search(`:8000`), Nara Combiner(`:8003`),
+PoC UI(`:8020`)를 함께 시작한다. 기존 Workbench UI(`:8010`)는 시작하거나
+변경하지 않는다.
+
+```powershell
+python .\run.py
+```
+
+Hermes Gateway까지 함께 시작하려면 다음을 사용한다.
+
+```powershell
+python .\run.py --with-hermes
+```
+
+이미 Search·Combiner를 별도로 실행 중이면 PoC만 시작할 수 있다.
+
+```powershell
+python .\run.py --no-upstreams
 ```
 
 설계 요청 예시:
@@ -102,7 +124,7 @@ Invoke-RestMethod `
 Hermes 설치 후 stdio MCP 서버를 직접 확인할 수 있다.
 
 ```powershell
-.\.venv\Scripts\python.exe -m mcp_server.server
+.\venv\Scripts\python.exe -m mcp_server.server
 ```
 
 노출되는 도구:

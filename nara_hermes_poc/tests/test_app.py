@@ -9,7 +9,7 @@ def test_root_serves_poc_front_page():
 
     assert response.status_code == 200
     assert "Nara Hermes Lab" in response.text
-    assert "서비스 설계 요청" in response.text
+    assert "Hermes가 Nara MCP" in response.text
 
 
 def test_static_assets_are_served():
