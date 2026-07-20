@@ -210,7 +210,9 @@ archive의 gov24 link resolver는 "상황(생활 사건) → 정부24/기관 링
 
 1. **후보 A (계획 검증)** — 신규 백엔드 없음. `nara-critic` 프로필 + verdict
    계약 + UI 배지. 단계 5 평가의 자동 필터가 된다.
+   → 구현 계획: [`plan_critic_agent_plan.md`](plan_critic_agent_plan.md)
 2. **후보 D (flow 내보내기)** — PoC 엔드포인트 하나. 사람 검토 루프 완성.
+   → 구현 계획: [`flow_export_plan.md`](flow_export_plan.md)
 3. **후보 C (신선도 검사)** — manifest 읽기 도구 하나. 경고 계약 확장.
 4. **후보 B (법령 근거)** — law MVP를 사이드카로 실행, MCP 도구 3개 추가.
    결과 계약에 `legal_basis[]` 필드 추가.
