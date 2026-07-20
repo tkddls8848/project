@@ -11,6 +11,8 @@ import socket
 import subprocess
 import sys
 import time
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -72,6 +74,19 @@ def service_definitions(poc_port: int) -> tuple[Service, ...]:
     )
 
 
+def configure_stdio() -> None:
+    """Emit UTF-8 from the launcher itself, matching child_environment().
+
+    A Windows console already handles Korean through the console API, but a
+    redirected stream falls back to the locale encoding (cp949). Children are
+    forced to UTF-8, so without this a piped log mixes both encodings.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            reconfigure(encoding="utf-8", errors="replace")
+
+
 def child_environment() -> dict[str, str]:
     load_project_env()
     environment = os.environ.copy()
@@ -103,6 +118,39 @@ def start_uvicorn(service: Service) -> subprocess.Popen:
     if os.name == "nt":
         kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
     return subprocess.Popen(command, **kwargs)
+
+
+def health_ready(port: int) -> bool:
+    try:
+        with urllib.request.urlopen(
+            f"http://127.0.0.1:{port}/health", timeout=2
+        ) as response:
+            return response.status == 200
+    except (urllib.error.URLError, OSError):
+        return False
+
+
+def wait_until_healthy(
+    service: Service, child: subprocess.Popen | None, timeout: float
+) -> None:
+    """Block until the service answers /health.
+
+    Nara Search binds its port long before the embedding model finishes
+    loading, so a port check alone would report readiness too early.
+    """
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if child is not None and child.poll() is not None:
+            raise RuntimeError(
+                f"{service.name}가 준비되기 전에 코드 {child.returncode}로 종료되었습니다."
+            )
+        if health_ready(service.port):
+            print(f"[준비] {service.name}: /health 응답 확인 (:{service.port})")
+            return
+        time.sleep(0.5)
+    raise RuntimeError(
+        f"{service.name}가 {timeout:.0f}초 안에 준비되지 않았습니다 (:{service.port})."
+    )
 
 
 def hermes_executable() -> Path:
@@ -150,6 +198,7 @@ def terminate(children: list[subprocess.Popen]) -> None:
 
 
 def main() -> int:
+    configure_stdio()
     load_project_env()
     parser = argparse.ArgumentParser(description="Nara Hermes PoC 통합 실행기")
     parser.add_argument("--poc-port", type=int, default=8020, help="PoC UI 포트")
@@ -157,6 +206,12 @@ def main() -> int:
         "--no-upstreams",
         action="store_true",
         help="Search·Combiner를 시작하지 않고 PoC만 실행",
+    )
+    parser.add_argument(
+        "--upstream-timeout",
+        type=float,
+        default=300.0,
+        help="Search·Combiner가 /health에 응답할 때까지 기다릴 최대 초",
     )
     parser.add_argument(
         "--with-hermes",
@@ -181,11 +236,17 @@ def main() -> int:
     children: list[subprocess.Popen] = []
     try:
         for service in services:
+            child: subprocess.Popen | None = None
             if port_open(service.port):
                 print(f"[연결] {service.name}: 기존 서비스 사용 (:{service.port})")
-                continue
-            print(f"[시작] {service.name}: http://127.0.0.1:{service.port}")
-            children.append(start_uvicorn(service))
+            else:
+                print(f"[시작] {service.name}: http://127.0.0.1:{service.port}")
+                child = start_uvicorn(service)
+                children.append(child)
+            if service.port != args.poc_port:
+                # PoC의 /health가 Search·Combiner를 그대로 호출하므로
+                # 업스트림이 준비된 뒤에 PoC를 띄운다.
+                wait_until_healthy(service, child, args.upstream_timeout)
 
         if args.with_hermes:
             print(f"[시작] Hermes Gateway: profile={args.hermes_profile}")
