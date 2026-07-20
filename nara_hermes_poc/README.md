@@ -138,6 +138,18 @@ Hermes 설정 예시는 `config/hermes.example.yaml`에 있다. Python 경로는
 가상환경의 절대 경로로 맞춰야 한다. 초기 검증에서는 Hermes의 터미널·파일 쓰기·
 브라우저 도구를 켜지 않는다.
 
+## 계획 검증과 대시보드 내보내기
+
+에이전트 run이 완료되면 두 가지 후처리가 제공된다.
+
+- **계획 검증 (Plan Critic)**: 결과의 근거 계약을 읽기 전용으로 재검증해
+  `critic.verdict`(`pass`/`evidence_gap`/`contradiction`)와 findings를
+  응답에 첨부한다. 검증 실패는 run을 실패시키지 않는다.
+  계획: [`docs/plan_critic_agent_plan.md`](docs/plan_critic_agent_plan.md)
+- **대시보드 내보내기**: `GET /agent/design-runs/{run_id}/flow`가 선택 API와
+  관계를 nara_dashboard 가져오기용 flow JSON으로 변환한다.
+  계획: [`docs/flow_export_plan.md`](docs/flow_export_plan.md)
+
 ## 환경 변수
 
 | 이름 | 기본값 | 설명 |
@@ -146,3 +158,6 @@ Hermes 설정 예시는 `config/hermes.example.yaml`에 있다. Python 경로는
 | `NARA_COMBINER_URL` | `http://127.0.0.1:8003` | 조합 백엔드 |
 | `NARA_REQUEST_TIMEOUT` | `30` | HTTP 요청 제한 시간(초) |
 | `NARA_COMPOSE_TIMEOUT` | `240` | 로컬 모델 계획 생성 제한 시간(초) |
+| `NARA_CRITIC_MODE` | `deterministic` | 계획 검증 단계 (`disabled`/`deterministic`/`full`) |
+| `NARA_CRITIC_TIMEOUT` | `60` | 계획 검증 제한 시간(초) |
+| `NARA_HERMES_CRITIC_PROFILE` | `nara-critic` | `full` 모드 검증 프로브용 Hermes 프로필 |

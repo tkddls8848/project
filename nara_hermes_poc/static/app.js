@@ -17,9 +17,18 @@ const labels = {
   detail: "상세 확인",
   relations: "관계 분석",
   compose: "계획 생성",
+  critic: "근거 검증",
   completed: "실행 완료",
   failed: "실행 실패",
   cancelled: "실행 중단",
+};
+
+const criticLabels = {
+  pass: "근거 검증 통과",
+  evidence_gap: "근거 부족",
+  contradiction: "근거 모순",
+  failed: "검증 실패 (결과는 유효)",
+  skipped: "검증 생략",
 };
 
 function element(tag, options = {}, children = []) {
@@ -129,12 +138,29 @@ function renderResult(result, hermes) {
   box.classList.toggle("hidden", !warnings.length);
 }
 
+function renderCritic(critic) {
+  const box = $("#critic-report");
+  box.replaceChildren();
+  if (!critic) { box.classList.add("hidden"); return; }
+  const issues = (critic.findings || []).filter((finding) => finding.severity !== "info");
+  const label = criticLabels[critic.verdict] || critic.verdict;
+  box.append(element("span", { className: `critic-badge ${critic.verdict}`, text: issues.length ? `${label} ${issues.length}건` : label }));
+  if (issues.length) {
+    const list = element("ul", { className: "critic-findings" });
+    issues.forEach((finding) => list.append(element("li", {}, [element("strong", { text: `${finding.check} · ${finding.target}` }), element("small", { text: finding.message })])));
+    box.append(list);
+  }
+  box.classList.remove("hidden");
+}
+
 async function finishRun() {
   if (!currentRunId) return;
   try {
     const run = await fetchJson(`/agent/design-runs/${currentRunId}`);
     setRunState(run.status, run.status === "completed" ? "완료" : run.status === "failed" ? "실패" : "중단됨");
     renderResult(run.result, run.hermes);
+    renderCritic(run.critic);
+    $("#export-flow").classList.toggle("hidden", run.status !== "completed" || !run.result);
     $("#agent-summary").textContent = run.hermes?.status === "called" ? "Hermes MCP 검색 호출을 확인하고 구조화된 결과를 완성했습니다." : "구조화된 읽기 전용 결과를 완성했습니다.";
   } catch (error) {
     setRunState("failed", "실패");
@@ -165,6 +191,8 @@ form.addEventListener("submit", async (event) => {
   if (query.length < 2) { queryInput.focus(); return; }
   eventRows = new Map(); progress.replaceChildren(); resetWorkflow();
   $("#warnings").classList.add("hidden");
+  $("#critic-report").classList.add("hidden");
+  $("#export-flow").classList.add("hidden");
   $("#agent-summary").textContent = "에이전트 실행을 생성하고 있습니다.";
   setRunState("queued", "준비 중");
   try {
@@ -180,7 +208,8 @@ form.addEventListener("submit", async (event) => {
 });
 
 stopButton.addEventListener("click", async () => { if (currentRunId) await fetchJson(`/agent/design-runs/${currentRunId}/stop`, { method: "POST" }); });
-$("#reset-button").addEventListener("click", () => { if (source) source.close(); currentRunId = null; eventRows = new Map(); progress.replaceChildren(element("div", { className: "empty-state", text: "에이전트 실행 시 MCP 호출과 각 처리 단계가 실시간으로 표시됩니다." })); $("#document-list").replaceChildren(element("div", { className: "empty-state", text: "검색 결과가 여기에 표시됩니다." })); $("#relation-result").textContent = "선택된 문서가 두 개 이상이면 관계 분석 결과가 표시됩니다."; $("#plan-result").textContent = "계획 초안이 여기에 표시됩니다."; $("#selected-list").textContent = "선택된 API가 없습니다."; $("#selected-count").textContent = "0 / 3"; $("#search-summary").textContent = "요청을 입력하면 검색된 문서가 표시됩니다."; $("#agent-summary").textContent = "아직 실행된 도구 호출이 없습니다."; setRunState("idle", "대기"); resetWorkflow(); });
+$("#export-flow").addEventListener("click", () => { if (currentRunId) window.open(`/agent/design-runs/${currentRunId}/flow`, "_blank"); });
+$("#reset-button").addEventListener("click", () => { if (source) source.close(); currentRunId = null; eventRows = new Map(); progress.replaceChildren(element("div", { className: "empty-state", text: "에이전트 실행 시 MCP 호출과 각 처리 단계가 실시간으로 표시됩니다." })); $("#document-list").replaceChildren(element("div", { className: "empty-state", text: "검색 결과가 여기에 표시됩니다." })); $("#relation-result").textContent = "선택된 문서가 두 개 이상이면 관계 분석 결과가 표시됩니다."; $("#plan-result").textContent = "계획 초안이 여기에 표시됩니다."; $("#selected-list").textContent = "선택된 API가 없습니다."; $("#selected-count").textContent = "0 / 3"; $("#search-summary").textContent = "요청을 입력하면 검색된 문서가 표시됩니다."; $("#agent-summary").textContent = "아직 실행된 도구 호출이 없습니다."; $("#critic-report").classList.add("hidden"); $("#export-flow").classList.add("hidden"); setRunState("idle", "대기"); resetWorkflow(); });
 document.querySelectorAll("[data-example]").forEach((button) => button.addEventListener("click", () => { queryInput.value = button.dataset.example; queryInput.focus(); }));
 $("#refresh-health").addEventListener("click", refreshHealth);
 setRunState("idle", "대기");

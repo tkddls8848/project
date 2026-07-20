@@ -13,11 +13,13 @@ from fastapi.staticfiles import StaticFiles
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
     from app.agent import AgentRunManager
+    from app.flow_export import design_to_flow
     from app.nara_client import NaraClient, NaraServiceError
     from app.orchestrator import run_design
     from app.schemas import AgentRunRequest, AgentRunResponse, DesignRequest, DesignResponse
 else:
     from .agent import AgentRunManager
+    from .flow_export import design_to_flow
     from .nara_client import NaraClient, NaraServiceError
     from .orchestrator import run_design
     from .schemas import AgentRunRequest, AgentRunResponse, DesignRequest, DesignResponse
@@ -100,6 +102,21 @@ async def stop_agent_design_run(run_id: str) -> AgentRunResponse:
         return await agent_runs.stop(run_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="Agent run not found") from exc
+
+
+@app.get("/agent/design-runs/{run_id}/flow")
+async def export_agent_design_flow(run_id: str) -> JSONResponse:
+    try:
+        run = agent_runs.snapshot(run_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Agent run not found") from exc
+    if run.status != "completed" or run.result is None:
+        raise HTTPException(status_code=409, detail="완료된 실행만 대시보드로 내보낼 수 있습니다.")
+    filename = f"nara-agent-{run_id[:8]}.flow.json"
+    return JSONResponse(
+        content=design_to_flow(run.result),
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @app.get("/agent/design-runs/{run_id}/events")

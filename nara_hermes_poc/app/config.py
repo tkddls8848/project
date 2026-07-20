@@ -18,6 +18,13 @@ HERMES_ENV_DEFAULTS = {
     "NARA_HERMES_PROBE": "1",
 }
 
+# Plan Critic (post-run verification) options. See docs/plan_critic_agent_plan.md.
+CRITIC_ENV_DEFAULTS = {
+    "NARA_CRITIC_MODE": "deterministic",  # disabled | deterministic | full
+    "NARA_CRITIC_TIMEOUT": "60",
+    "NARA_HERMES_CRITIC_PROFILE": "nara-critic",
+}
+
 
 def load_project_env() -> None:
     """Load a local .env without overriding explicitly supplied process variables."""
@@ -32,7 +39,7 @@ def load_project_env() -> None:
             value = value.strip().strip('"').strip("'")
             if key:
                 os.environ.setdefault(key, value)
-    for key, value in HERMES_ENV_DEFAULTS.items():
+    for key, value in {**HERMES_ENV_DEFAULTS, **CRITIC_ENV_DEFAULTS}.items():
         os.environ.setdefault(key, value)
 
 
@@ -66,6 +73,13 @@ class Settings:
     hermes_model: str = field(default_factory=lambda: _hermes_env("NARA_HERMES_MODEL"))
     hermes_timeout: float = field(default_factory=_hermes_timeout)
     hermes_probe_enabled: bool = field(default_factory=_hermes_probe_enabled)
+    critic_mode: str = field(default_factory=lambda: _hermes_env("NARA_CRITIC_MODE"))
+    critic_timeout: float = field(
+        default_factory=lambda: float(_hermes_env("NARA_CRITIC_TIMEOUT"))
+    )
+    hermes_critic_profile: str = field(
+        default_factory=lambda: _hermes_env("NARA_HERMES_CRITIC_PROFILE")
+    )
 
 
 def get_settings() -> Settings:
