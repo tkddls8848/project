@@ -1,6 +1,6 @@
 # 계획 검증 에이전트 (Plan Critic) 구현 계획
 
-- 문서 상태: 구현 승인 전 계획
+- 문서 상태: 구현 반영됨 (단계 1·2, 2026-07-20) — 단계 3의 평가 연동은 미착수
 - 작성 기준일: 2026-07-20
 - 선행 문서: [`agent_expansion_exploration.md`](agent_expansion_exploration.md) 후보 A,
   [`hermes_tool_loop_plan.md`](hermes_tool_loop_plan.md)

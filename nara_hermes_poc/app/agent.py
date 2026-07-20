@@ -13,8 +13,16 @@ from pathlib import Path
 from typing import Any
 
 from .config import Settings, get_settings
+from .critic import run_critic
 from .nara_client import NaraClient, NaraServiceError
-from .schemas import AgentEvent, AgentRunRequest, AgentRunResponse, DesignResponse, StageRecord
+from .schemas import (
+    AgentEvent,
+    AgentRunRequest,
+    AgentRunResponse,
+    CriticReport,
+    DesignResponse,
+    StageRecord,
+)
 
 NARA_TOOLS = {"search_api_docs", "get_api_detail", "derive_relations", "compose_service_plan"}
 
@@ -27,7 +35,9 @@ def _hermes_executable() -> str | None:
     return str(candidate) if candidate.is_file() else shutil.which("hermes")
 
 
-async def run_hermes_tool_probe(tool_name: str, instruction: str, settings: Settings) -> dict[str, Any]:
+async def run_hermes_tool_probe(
+    tool_name: str, instruction: str, settings: Settings, profile: str | None = None
+) -> dict[str, Any]:
     """Ask Hermes to invoke one specific Nara MCP tool exactly once."""
     if tool_name not in NARA_TOOLS:
         raise ValueError(f"Unsupported Nara tool: {tool_name}")
@@ -47,7 +57,7 @@ async def run_hermes_tool_probe(tool_name: str, instruction: str, settings: Sett
     process: asyncio.subprocess.Process | None = None
     try:
         process = await asyncio.create_subprocess_exec(
-            executable, "-p", settings.hermes_profile, "-m", settings.hermes_model, "chat", "-q", prompt,
+            executable, "-p", profile or settings.hermes_profile, "-m", settings.hermes_model, "chat", "-q", prompt,
             stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT, env=environment,
         )
         output, _ = await asyncio.wait_for(process.communicate(), timeout=settings.hermes_timeout)
@@ -90,6 +100,7 @@ class _Run:
     events: list[AgentEvent] = field(default_factory=list)
     result: DesignResponse | None = None
     hermes: dict[str, Any] = field(default_factory=dict)
+    critic: CriticReport | None = None
     error: str | None = None
     done: asyncio.Event = field(default_factory=asyncio.Event)
     changed: asyncio.Event = field(default_factory=asyncio.Event)
@@ -115,7 +126,7 @@ class AgentRunManager:
         if not run:
             raise KeyError(run_id)
         return AgentRunResponse(run_id=run.run_id, status=run.status, query=run.request.query, events=run.events,
-                                result=run.result, hermes=run.hermes, error=run.error)
+                                result=run.result, hermes=run.hermes, critic=run.critic, error=run.error)
 
     async def stop(self, run_id: str) -> AgentRunResponse:
         run = self._runs.get(run_id)
@@ -150,6 +161,7 @@ class AgentRunManager:
             failed = [call["tool"] for call in calls if call["status"] != "called"]
             if failed:
                 run.result.warnings.append("Hermes 호출을 확인하지 못한 도구: " + ", ".join(failed))
+            await self._run_critic(run)
             run.status = "completed"
             self._emit(run, "completed", "completed", "구조화된 서비스 계획 결과를 준비했습니다.")
         except asyncio.CancelledError:
@@ -211,6 +223,30 @@ class AgentRunManager:
                 self._stage(run, stages, "compose", "skipped", "요청에 따라 계획 생성을 생략했습니다.")
             return DesignResponse(query=request.query, selected_service_ids=selected, search=search, details=details,
                                   relations=relations, plan=plan, stages=stages, warnings=warnings)
+
+    async def _run_critic(self, run: _Run) -> None:
+        """Verify the finished result read-only; never fail the run (fail-soft)."""
+        if self.settings.critic_mode == "disabled" or run.result is None:
+            return
+        self._emit(run, "critic", "running", "결과의 근거 계약을 재검증하고 있습니다.")
+        run.critic = await run_critic(
+            run.result, run.request.selected_service_ids, self.settings,
+            client_factory=lambda: NaraClient(self.settings),
+            probe=run_hermes_tool_probe,
+        )
+        issues = sum(1 for f in run.critic.findings if f.severity != "info")
+        messages = {
+            "pass": "근거 검증을 통과했습니다.",
+            "evidence_gap": f"근거 부족 {issues}건을 확인했습니다.",
+            "contradiction": f"근거 모순 {issues}건을 확인했습니다.",
+            "failed": "검증을 완료하지 못했습니다 (결과는 유효합니다).",
+        }
+        status = "failed" if run.critic.verdict == "failed" else "completed"
+        message = messages.get(run.critic.verdict, run.critic.verdict)
+        if run.critic.verdict == "failed":
+            run.result.warnings.append("계획 검증을 완료하지 못했습니다 (결과는 유효합니다).")
+        run.result.stages.append(StageRecord(name="critic", status=status, message=message))
+        self._emit(run, "critic", status, message)
 
     async def _call_hermes(self, run: _Run, stage: str, tool_name: str, instruction: str) -> None:
         call = await run_hermes_tool_probe(tool_name, instruction, self.settings)

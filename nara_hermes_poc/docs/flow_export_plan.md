@@ -1,6 +1,6 @@
 # 워크플로우 내보내기 (Flow Export) 구현 계획
 
-- 문서 상태: 구현 승인 전 계획
+- 문서 상태: 구현 반영됨 (2026-07-20) — §4.2 기준선 지원과 §7 후속 논의는 범위 밖 유지
 - 작성 기준일: 2026-07-20
 - 선행 문서: [`agent_expansion_exploration.md`](agent_expansion_exploration.md) 후보 D
 - 소비처 계약: `nara_dashboard(API관계대시보드)/src/data/flowIO.js`

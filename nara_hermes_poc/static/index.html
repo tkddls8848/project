@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Hermes MCP로 공공 API 문서를 탐색하고 읽기 전용 서비스 계획을 만드는 PoC">
   <title>Nara Hermes Lab</title>
-  <link rel="stylesheet" href="/static/styles.css?v=agent-runs-1">
+  <link rel="stylesheet" href="/static/styles.css?v=agent-runs-2">
 </head>
 <body>
   <header class="site-header">
@@ -32,15 +32,15 @@
     <section class="workflow-band" aria-label="에이전트 진행 단계"><div class="workflow-band__inner"><div class="workflow-step active" data-step="search"><span>01</span><div><strong>문서 탐색</strong><small>Hermes MCP 검색 호출</small></div></div><i></i><div class="workflow-step" data-step="detail"><span>02</span><div><strong>근거 분석</strong><small>상세 문서와 관계 확인</small></div></div><i></i><div class="workflow-step" data-step="compose"><span>03</span><div><strong>계획 생성</strong><small>읽기 전용 초안 생성</small></div></div></div></section>
 
     <section class="workbench" id="workspace">
-      <header class="workbench-header"><div><p>WORKSPACE</p><h2>실행 결과와 도구 호출 상태</h2></div><div><span class="run-badge" id="run-mode">대기</span><button class="text-button" id="stop-button" type="button" disabled>실행 중단</button><button class="text-button" id="reset-button" type="button">초기화</button></div></header>
+      <header class="workbench-header"><div><p>WORKSPACE</p><h2>실행 결과와 도구 호출 상태</h2></div><div><span class="run-badge" id="run-mode">대기</span><button class="text-button" id="stop-button" type="button" disabled>실행 중단</button><button class="text-button hidden" id="export-flow" type="button">대시보드로 내보내기</button><button class="text-button" id="reset-button" type="button">초기화</button></div></header>
       <div class="workspace-grid">
         <section class="panel results-panel"><header class="panel-header"><span>01</span><div><h3>API 문서</h3><p id="search-summary">요청을 입력하면 검색된 문서가 표시됩니다.</p></div></header><div class="panel-body results-list" id="document-list"><div class="empty-state">검색 결과가 여기에 표시됩니다.</div></div></section>
         <section class="panel agent-panel"><header class="panel-header"><span>02</span><div><h3>Hermes 실행 흐름</h3><p id="agent-summary">아직 실행된 도구 호출이 없습니다.</p></div></header><div class="agent-progress" id="agent-progress"><div class="empty-state">에이전트 실행 시 MCP 호출과 각 처리 단계가 실시간으로 표시됩니다.</div></div><div class="relation-block"><strong>관계 근거</strong><pre id="relation-result">선택된 문서가 두 개 이상이면 관계 분석 결과가 표시됩니다.</pre></div></section>
-        <section class="panel compose-panel"><header class="panel-header"><span>03</span><div><h3>서비스 계획 초안</h3><p>실제 행정 처리를 실행하지 않는 검토용 결과입니다.</p></div></header><div class="selection-row"><strong>선택 API</strong><span id="selected-count">0 / 3</span></div><div class="selected-list" id="selected-list">선택된 API가 없습니다.</div><div class="plan-result" id="plan-result">계획 초안이 여기에 표시됩니다.</div><div class="warnings hidden" id="warnings"></div></section>
+        <section class="panel compose-panel"><header class="panel-header"><span>03</span><div><h3>서비스 계획 초안</h3><p>실제 행정 처리를 실행하지 않는 검토용 결과입니다.</p></div></header><div class="selection-row"><strong>선택 API</strong><span id="selected-count">0 / 3</span></div><div class="selected-list" id="selected-list">선택된 API가 없습니다.</div><div class="plan-result" id="plan-result">계획 초안이 여기에 표시됩니다.</div><div class="critic-report hidden" id="critic-report"></div><div class="warnings hidden" id="warnings"></div></section>
       </div>
     </section>
   </main>
   <footer class="site-footer"><strong>Nara Hermes Lab</strong><p>기존 Workbench와 분리된 읽기·분석·계획 전용 PoC입니다.</p></footer>
-  <script src="/static/app.js?v=agent-runs-1" defer></script>
+  <script src="/static/app.js?v=agent-runs-2" defer></script>
 </body>
 </html>

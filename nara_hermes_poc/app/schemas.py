@@ -16,7 +16,7 @@ class DesignRequest(BaseModel):
 
 
 class StageRecord(BaseModel):
-    name: Literal["search", "detail", "relations", "compose"]
+    name: Literal["search", "detail", "relations", "compose", "critic"]
     status: Literal["running", "completed", "skipped", "failed"]
     message: str
 
@@ -38,9 +38,24 @@ class AgentRunRequest(DesignRequest):
 
 class AgentEvent(BaseModel):
     sequence: int
-    name: Literal["queued", "agent", "search", "detail", "relations", "compose", "completed", "failed", "cancelled"]
+    name: Literal["queued", "agent", "search", "detail", "relations", "compose", "critic", "completed", "failed", "cancelled"]
     status: Literal["queued", "running", "completed", "skipped", "failed", "cancelled"]
     message: str
+
+
+class CriticFinding(BaseModel):
+    check: str
+    severity: Literal["info", "unverified", "violation"]
+    target: str
+    message: str
+    evidence: list[str] = Field(default_factory=list)
+
+
+class CriticReport(BaseModel):
+    verdict: Literal["pass", "evidence_gap", "contradiction", "skipped", "failed"]
+    findings: list[CriticFinding] = Field(default_factory=list)
+    deterministic: bool
+    hermes: dict[str, Any] = Field(default_factory=dict)
 
 
 class AgentRunResponse(BaseModel):
@@ -50,4 +65,5 @@ class AgentRunResponse(BaseModel):
     events: list[AgentEvent] = Field(default_factory=list)
     result: DesignResponse | None = None
     hermes: dict[str, Any] = Field(default_factory=dict)
+    critic: CriticReport | None = None
     error: str | None = None
