@@ -12,6 +12,10 @@ mcp_servers:
       NARA_SEARCH_URL: "http://127.0.0.1:8000"
       NARA_COMBINER_URL: "http://127.0.0.1:8003"
       NARA_COMPOSE_TIMEOUT: "240"
+      # check_doc_freshness는 매니페스트를 읽기만 한다. 인덱스 빌드 시각이
+      # 비어 있으면 fresh/stale을 주장하지 않고 unverified로 보고한다.
+      NARA_STORAGE_DIR: "C:\\project\\nara_storage"
+      NARA_INDEX_BUILT_AT: ""
     supports_parallel_tool_calls: false
     tools:
       include:
@@ -19,6 +23,7 @@ mcp_servers:
         - get_api_detail
         - derive_relations
         - compose_service_plan
+        - check_doc_freshness
       resources: false
       prompts: false
 

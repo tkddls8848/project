@@ -1,6 +1,6 @@
 # Hermes 에이전트 확장 서비스 탐구
 
-- 문서 상태: 탐구 결과 — 후보 A·D는 구현 완료, 나머지는 승인 전
+- 문서 상태: 탐구 결과 — 후보 A·C·D는 구현 완료, 나머지는 승인 전
 - 작성 기준일: 2026-07-20 / 현행화 기준일: 2026-07-22
 - 선행 문서: [`hermes_tool_loop_plan.md`](hermes_tool_loop_plan.md)
 - 탐구 범위: 저장소 내 전체 하위 프로젝트와 archive, korea100 자산
@@ -213,9 +213,12 @@ archive의 gov24 link resolver는 "상황(생활 사건) → 정부24/기관 링
    → 구현 계획: [`plan_critic_agent_plan.md`](plan_critic_agent_plan.md)
 2. **후보 D (flow 내보내기)** — 구현됨(2026-07-20). `GET /agent/design-runs/{id}/flow`.
    → 구현 계획: [`flow_export_plan.md`](flow_export_plan.md)
-3. **후보 C (신선도 검사)** — 다음 차례. manifest 읽기 도구 하나, 경고 계약 확장.
-4. **후보 B (법령 근거)** — law MVP를 사이드카로 실행, MCP 도구 3개 추가.
-   결과 계약에 `legal_basis[]` 필드 추가.
+3. **후보 C (신선도 검사)** — 구현됨(2026-07-22). `check_doc_freshness` MCP 도구와
+   run의 freshness 단계. 다만 `NARA_INDEX_BUILT_AT`가 비어 있으면 판정이 항상
+   `unverified`이므로, 실제 인덱스 빌드 시각 공급이 남았다.
+   → 구현 반영: [`hermes_tool_loop_plan.md`](hermes_tool_loop_plan.md) §10.2
+4. **후보 B (법령 근거)** — 다음 차례. law MVP를 사이드카로 실행, MCP 도구 3개
+   추가. 결과 계약에 `legal_basis[]` 필드 추가.
 5. 이후 후보 E → G → F 순으로 재평가.
 
 공통 원칙은 tool loop plan을 그대로 상속한다: 새 도구는 모두
