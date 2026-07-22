@@ -1,6 +1,7 @@
 # 계획 검증 에이전트 (Plan Critic) 구현 계획
 
-- 문서 상태: 구현 반영됨 (단계 1·2, 2026-07-20) — 단계 3의 평가 연동은 미착수
+- 문서 상태: 구현 반영됨 (단계 1·2와 단계 3의 UI 배지, 2026-07-20) —
+  단계 3의 shadow 평가 연동은 미착수
 - 작성 기준일: 2026-07-20
 - 선행 문서: [`agent_expansion_exploration.md`](agent_expansion_exploration.md) 후보 A,
   [`hermes_tool_loop_plan.md`](hermes_tool_loop_plan.md)
@@ -27,7 +28,7 @@
 ### 2.1 결정형 검증기 (`app/critic.py`)
 
 현재 `DesignResponse` 계약(`app/schemas.py`) 기준. 향후
-`hermes_tool_loop_plan.md` §7.2 계약이 도입되면 같은 검사를 그 계약으로
+`hermes_tool_loop_plan.md` §8.2 목표 계약이 도입되면 같은 검사를 그 계약으로
 확장한다.
 
 | 검사 ID | 내용 | 위반 시 verdict 기여 |
@@ -59,10 +60,10 @@
 
 - 계획 본문이 상세 문서에 없는 입력·출력 필드를 언급하는가
 - 계획 본문이 실제 실행·제출을 완료했다고 주장하는가
-- (§7.2 계약 도입 후) `rejected_apis`의 제외 이유가 상세 문서와 모순되는가
+- (§8.2 목표 계약 도입 후) `rejected_apis`의 제외 이유가 상세 문서와 모순되는가
 
 프로브 출력은 아래 `CriticReport` JSON으로 강제하고, 파싱 실패 시 원문을
-보존하되 `format_error` finding으로 기록한다 (tool loop plan §7.2와 동일한
+보존하되 `format_error` finding으로 기록한다 (tool loop plan §8.2와 동일한
 fail-soft 규칙).
 
 ## 3. 결과 계약
