@@ -45,7 +45,6 @@ def create_server():
         async with NaraClient() as client:
             return await client.compose(service_ids, question)
 
-
     @mcp.tool()
     async def check_doc_freshness(service_ids: list[str]) -> list[dict[str, Any]]:
         """선택 API 문서의 크롤러 매니페스트 최신성을 한 번에 읽기 전용으로 확인한다."""
@@ -55,6 +54,7 @@ def create_server():
         return [item.model_dump() for item in check_document_freshness(
             service_ids, settings.storage_dir, settings.index_built_at
         )]
+
     return mcp
 
 

@@ -248,6 +248,7 @@ class AgentRunManager:
         except Exception as exc:
             run.result.warnings.append(f"문서 최신성 검증을 완료하지 못했습니다: {exc}")
             self._emit(run, "freshness", "failed", "문서 최신성 검증에 실패했지만 결과는 유지합니다.")
+
     async def _run_critic(self, run: _Run) -> None:
         """Verify the finished result read-only; never fail the run (fail-soft)."""
         if self.settings.critic_mode == "disabled" or run.result is None:

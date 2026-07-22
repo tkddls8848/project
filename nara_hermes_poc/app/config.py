@@ -10,6 +10,8 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_STORAGE_DIR = BASE_DIR.parent / "nara_storage"
 
+# Hermes runtime options have one source of truth: NARA_HERMES_*.
+# Keep fallback values here only so a fresh clone can start before a .env exists.
 HERMES_ENV_DEFAULTS = {
     "NARA_HERMES_PROFILE": "nara-openai",
     "NARA_HERMES_MODEL": "gpt-5.4-mini",
@@ -17,6 +19,7 @@ HERMES_ENV_DEFAULTS = {
     "NARA_HERMES_PROBE": "1",
 }
 
+# Plan Critic (post-run verification) options. See docs/plan_critic_agent_plan.md.
 CRITIC_ENV_DEFAULTS = {
     "NARA_CRITIC_MODE": "deterministic",  # disabled | deterministic | full
     "NARA_CRITIC_TIMEOUT": "60",
@@ -54,6 +57,7 @@ def load_project_env() -> None:
 
 
 def _hermes_env(key: str) -> str:
+    """Read a Hermes setting from its process-wide NARA_HERMES_* variable."""
     return os.environ[key].strip()
 
 
@@ -66,9 +70,12 @@ def _hermes_probe_enabled() -> bool:
 
 
 def _freshness_env(key: str) -> str:
+    """Read a freshness setting from its process-wide NARA_* variable."""
     return os.environ[key].strip()
 
 
+# This guarantees Settings() itself, not just get_settings(), follows .env/process
+# values. Load it before dataclass default factories can be invoked.
 load_project_env()
 
 
