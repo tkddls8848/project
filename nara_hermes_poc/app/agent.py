@@ -14,6 +14,7 @@ from typing import Any
 
 from .config import Settings, get_settings
 from .critic import run_critic
+from .freshness import check_document_freshness
 from .nara_client import NaraClient, NaraServiceError
 from .schemas import (
     AgentEvent,
@@ -21,6 +22,7 @@ from .schemas import (
     AgentRunResponse,
     CriticReport,
     DesignResponse,
+    DocumentFreshness,
     StageRecord,
 )
 
@@ -101,6 +103,7 @@ class _Run:
     result: DesignResponse | None = None
     hermes: dict[str, Any] = field(default_factory=dict)
     critic: CriticReport | None = None
+    freshness: list[DocumentFreshness] = field(default_factory=list)
     error: str | None = None
     done: asyncio.Event = field(default_factory=asyncio.Event)
     changed: asyncio.Event = field(default_factory=asyncio.Event)
@@ -126,7 +129,7 @@ class AgentRunManager:
         if not run:
             raise KeyError(run_id)
         return AgentRunResponse(run_id=run.run_id, status=run.status, query=run.request.query, events=run.events,
-                                result=run.result, hermes=run.hermes, critic=run.critic, error=run.error)
+                                result=run.result, hermes=run.hermes, critic=run.critic, freshness=run.freshness, error=run.error)
 
     async def stop(self, run_id: str) -> AgentRunResponse:
         run = self._runs.get(run_id)
@@ -161,6 +164,7 @@ class AgentRunManager:
             failed = [call["tool"] for call in calls if call["status"] != "called"]
             if failed:
                 run.result.warnings.append("Hermes 호출을 확인하지 못한 도구: " + ", ".join(failed))
+            await self._run_freshness(run)
             await self._run_critic(run)
             run.status = "completed"
             self._emit(run, "completed", "completed", "구조화된 서비스 계획 결과를 준비했습니다.")
@@ -224,6 +228,26 @@ class AgentRunManager:
             return DesignResponse(query=request.query, selected_service_ids=selected, search=search, details=details,
                                   relations=relations, plan=plan, stages=stages, warnings=warnings)
 
+    async def _run_freshness(self, run: _Run) -> None:
+        """Compare selected documents with crawler manifests without refreshing data."""
+        if self.settings.freshness_mode == "disabled" or run.result is None:
+            return
+        self._emit(run, "freshness", "running", "문서 최신성 근거를 확인하고 있습니다.")
+        try:
+            run.freshness = await asyncio.to_thread(
+                check_document_freshness,
+                run.result.selected_service_ids,
+                self.settings.storage_dir,
+                self.settings.index_built_at,
+            )
+            issues = [item for item in run.freshness if item.status != "fresh"]
+            for item in issues:
+                run.result.warnings.append(f"문서 최신성({item.service_id}): {item.message}")
+            message = "선택 문서의 최신성 근거를 확인했습니다." if not issues else f"문서 최신성 확인 불가 또는 변경 감지 {len(issues)}건이 있습니다."
+            self._emit(run, "freshness", "completed", message)
+        except Exception as exc:
+            run.result.warnings.append(f"문서 최신성 검증을 완료하지 못했습니다: {exc}")
+            self._emit(run, "freshness", "failed", "문서 최신성 검증에 실패했지만 결과는 유지합니다.")
     async def _run_critic(self, run: _Run) -> None:
         """Verify the finished result read-only; never fail the run (fail-soft)."""
         if self.settings.critic_mode == "disabled" or run.result is None:

@@ -112,3 +112,22 @@ def test_critic_failure_keeps_the_run_completed(monkeypatch):
         assert any("계획 검증을 완료하지 못했습니다" in warning for warning in completed.result.warnings)
 
     asyncio.run(scenario())
+
+
+def test_freshness_metadata_gap_is_reported_without_failing_run(monkeypatch):
+    async def scenario():
+        completed = await run_manager(
+            monkeypatch,
+            Settings(
+                hermes_probe_enabled=False,
+                critic_mode="disabled",
+                freshness_mode="deterministic",
+                index_built_at="",
+            ),
+        )
+        assert completed.status == "completed"
+        assert [item.status for item in completed.freshness] == ["unverified", "unverified"]
+        assert any(event.name == "freshness" and event.status == "completed" for event in completed.events)
+        assert any("문서 최신성" in warning for warning in completed.result.warnings)
+
+    asyncio.run(scenario())

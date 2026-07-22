@@ -38,7 +38,7 @@ class AgentRunRequest(DesignRequest):
 
 class AgentEvent(BaseModel):
     sequence: int
-    name: Literal["queued", "agent", "search", "detail", "relations", "compose", "critic", "completed", "failed", "cancelled"]
+    name: Literal["queued", "agent", "search", "detail", "relations", "compose", "freshness", "critic", "completed", "failed", "cancelled"]
     status: Literal["queued", "running", "completed", "skipped", "failed", "cancelled"]
     message: str
 
@@ -58,6 +58,17 @@ class CriticReport(BaseModel):
     hermes: dict[str, Any] = Field(default_factory=dict)
 
 
+class DocumentFreshness(BaseModel):
+    """Read-only comparison of crawler manifests with the active index."""
+
+    service_id: str
+    status: Literal["fresh", "stale", "unverified"]
+    message: str
+    index_built_at: str | None = None
+    latest_crawl_at: str | None = None
+    checksum: str | None = None
+
+
 class AgentRunResponse(BaseModel):
     run_id: str
     status: Literal["queued", "running", "completed", "failed", "cancelled"]
@@ -66,4 +77,5 @@ class AgentRunResponse(BaseModel):
     result: DesignResponse | None = None
     hermes: dict[str, Any] = Field(default_factory=dict)
     critic: CriticReport | None = None
+    freshness: list[DocumentFreshness] = Field(default_factory=list)
     error: str | None = None

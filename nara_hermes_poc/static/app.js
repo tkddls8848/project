@@ -17,6 +17,7 @@ const labels = {
   detail: "상세 확인",
   relations: "관계 분석",
   compose: "계획 생성",
+  freshness: "문서 최신성",
   critic: "근거 검증",
   completed: "실행 완료",
   failed: "실행 실패",

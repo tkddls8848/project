@@ -2,6 +2,8 @@
 
 from typing import Any
 
+from app.config import get_settings
+from app.freshness import check_document_freshness
 from app.nara_client import NaraClient
 
 
@@ -43,6 +45,16 @@ def create_server():
         async with NaraClient() as client:
             return await client.compose(service_ids, question)
 
+
+    @mcp.tool()
+    async def check_doc_freshness(service_ids: list[str]) -> list[dict[str, Any]]:
+        """선택 API 문서의 크롤러 매니페스트 최신성을 한 번에 읽기 전용으로 확인한다."""
+        if not 1 <= len(service_ids) <= 3:
+            raise ValueError("문서 최신성 확인에는 1~3개의 service_id가 필요합니다.")
+        settings = get_settings()
+        return [item.model_dump() for item in check_document_freshness(
+            service_ids, settings.storage_dir, settings.index_built_at
+        )]
     return mcp
 
 

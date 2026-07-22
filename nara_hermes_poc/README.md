@@ -133,6 +133,7 @@ Hermes 설치 후 stdio MCP 서버를 직접 확인할 수 있다.
 - `get_api_detail`
 - `derive_relations`
 - `compose_service_plan`
+- check_doc_freshness (크롤러 매니페스트 기반 읽기 전용 최신성 확인)
 
 Hermes 설정 예시는 `config/hermes.example.yaml`에 있다. Python 경로는 실제 PoC
 가상환경의 절대 경로로 맞춰야 한다. 초기 검증에서는 Hermes의 터미널·파일 쓰기·
@@ -161,3 +162,6 @@ Hermes 설정 예시는 `config/hermes.example.yaml`에 있다. Python 경로는
 | `NARA_CRITIC_MODE` | `deterministic` | 계획 검증 단계 (`disabled`/`deterministic`/`full`) |
 | `NARA_CRITIC_TIMEOUT` | `60` | 계획 검증 제한 시간(초) |
 | `NARA_HERMES_CRITIC_PROFILE` | `nara-critic` | `full` 모드 검증 프로브용 Hermes 프로필 |
+| NARA_DOC_FRESHNESS_MODE | deterministic | 문서 최신성 확인 (disabled/deterministic) |
+| NARA_STORAGE_DIR | ../nara_storage | 크롤러 매니페스트 저장소 |
+| NARA_INDEX_BUILT_AT | 빈 값 | 활성 검색 인덱스 빌드 시각(ISO 8601). 없으면 unverified로 보고 |
