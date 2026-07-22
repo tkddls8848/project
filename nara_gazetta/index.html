@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="대한민국 관보를 사람이 읽고 기계가 찾기 쉬운 형태로 탐색하는 리더" />
+    <title>나라 관보 | 읽을 수 있는 공공 기록</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">본문으로 건너뛰기</a>
+    <div class="notice"><span class="notice-dot"></span> DEMO ARCHIVE <span>·</span> 실제 관보 데이터 연결 전의 예시 화면입니다.</div>
+    <header class="site-header">
+      <a href="#home" class="brand" aria-label="나라 관보 홈">
+        <span class="brand-mark">ㄴ</span><span>나라 관보</span><small>NARA GAZETTA</small>
+      </a>
+      <nav aria-label="주 메뉴">
+        <a href="#explore">둘러보기</a>
+        <a href="#purpose">무엇을 할 수 있나</a>
+        <a href="#about">이용 안내</a>
+      </nav>
+      <div class="header-actions">
+        <button class="saved-button" id="savedButton" title="저장한 기록" aria-label="저장한 기록"><span>저장</span><b id="savedCount">0</b></button>
+        <button class="icon-button" id="helpButton" title="단축키 (?)" aria-label="단축키 안내">?</button>
+        <button class="icon-button" id="themeButton" title="테마 전환" aria-label="다크 모드 전환"><span aria-hidden="true">◐</span></button>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero" id="home">
+        <div class="eyebrow">PUBLIC RECORDS, MADE LEGIBLE</div>
+        <h1>공개된 기록을<br /><em>읽을 수 있게.</em></h1>
+        <p>나라 관보는 공공 기록을 찾고, 읽고, 연결하기 위한 작은 독서실입니다. 원문은 보존하고, 읽기 쉬운 레이어를 그 위에 더합니다.</p>
+        <a class="button button-primary" href="#explore">기록 둘러보기 <span>↓</span></a>
+        <div class="hero-stats" id="heroStats"></div>
+      </section>
+
+      <section class="purpose section-shell" id="purpose" aria-labelledby="purposeTitle">
+        <div class="section-heading">
+          <div><span class="eyebrow">FROM NOTICE TO EVIDENCE</span><h2 id="purposeTitle">이 앱은 무엇을 돕나요?</h2></div>
+          <p>관보를 ‘찾기 어려운 고지문’에서<br />변화의 근거를 확인하는 자료로 바꿉니다.</p>
+        </div>
+        <div class="journey-grid">
+          <article class="journey-card"><span>01 · TRACK</span><h3>무엇이<br />바뀌었나</h3><p>특정 기관과 기간을 좁혀, 새 고시·공고와 제도 변화를 빠르게 확인합니다.</p><button data-journey="latest">최신 기록 살펴보기 →</button></article>
+          <article class="journey-card"><span>02 · INVESTIGATE</span><h3>왜, 어디에<br />근거가 있나</h3><p>검색 결과에서 원문과 가공된 읽기 화면을 오가며 제목·발행일·기관을 함께 확인합니다.</p><button data-journey="environment">환경 정책 찾아보기 →</button></article>
+          <article class="journey-card"><span>03 · KEEP WATCH</span><h3>나중에 다시<br />비교하기</h3><p>중요한 기록을 저장해 두고, 나중에 같은 주제의 흐름을 비교합니다.</p><button data-journey="saved">저장함 열기 →</button></article>
+        </div>
+      </section>
+
+      <section class="timeline section-shell" aria-labelledby="timelineTitle">
+        <div class="section-heading">
+          <div><span class="eyebrow">ARCHIVE RHYTHM</span><h2 id="timelineTitle">기록의 시간</h2></div>
+          <p>발행량이 많은 달일수록 짙어집니다.<br />막대를 누르면 해당 기간을 살펴볼 수 있습니다.</p>
+        </div>
+        <div class="month-chart" id="monthChart" aria-label="월별 문서 수"></div>
+        <div class="chart-labels"><span>2024. 01</span><span>2024. 06</span><span>2024. 12</span></div>
+      </section>
+
+      <section class="explorer section-shell" id="explore" aria-labelledby="explorerTitle">
+        <div class="section-heading compact">
+          <div><span class="eyebrow">FIND A RECORD</span><h2 id="explorerTitle">기록 찾기</h2></div>
+          <span class="record-count" id="recordCount"></span>
+        </div>
+        <div class="search-panel">
+          <label class="search-field">
+            <span class="sr-only">기록 검색</span>
+            <span class="search-symbol">⌕</span>
+            <input id="searchInput" type="search" placeholder="제목, 기관, 내용으로 검색" autocomplete="off" />
+            <kbd>/</kbd>
+          </label>
+          <div class="filters">
+            <label><span>기간</span><select id="dateFilter"><option value="">전체 기간</option></select></label>
+            <label><span>발행 기관</span><select id="agencyFilter"><option value="">전체 기관</option></select></label>
+            <button class="filter-reset" id="resetButton">초기화</button>
+          </div>
+        </div>
+        <div class="explore-insight" id="exploreInsight"></div>
+        <div class="explorer-layout">
+          <aside class="agency-panel" aria-label="기관별 필터">
+            <div class="panel-title">기관 <span id="agencyTotal"></span></div>
+            <div id="agencyList"></div>
+          </aside>
+          <div class="record-panel">
+            <div class="result-toolbar"><span id="resultSummary"></span><button id="sortButton">최신순 ↓</button></div>
+            <div class="record-list" id="recordList" aria-live="polite"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="about section-shell" id="about">
+        <div><span class="eyebrow">ABOUT THE LAYER</span><h2>원문 위에<br />읽기 쉬운 층을.</h2></div>
+        <div class="about-copy">
+          <p>공공 기록은 공개되어 있어도 PDF와 스캔 이미지 안에 머물면 찾고 비교하기 어렵습니다. 나라 관보는 원문 링크를 항상 함께 두고, 검색 가능한 텍스트·일관된 메타데이터·읽기 좋은 문서 화면을 제공하는 것을 목표로 합니다.</p>
+          <dl><div><dt>01</dt><dd>원문을 지우거나 바꾸지 않습니다.</dd></div><div><dt>02</dt><dd>출처와 가공 정보를 함께 기록합니다.</dd></div><div><dt>03</dt><dd>누구나 다시 활용할 수 있게 엽니다.</dd></div></dl>
+        </div>
+      </section>
+    </main>
+
+    <dialog id="readerDialog" class="reader-dialog">
+      <article class="reader">
+        <header class="reader-header"><button class="back-button" id="closeReader">← 목록으로</button><div class="reader-actions"><button id="copyLink">링크 복사</button><a id="sourceLink" href="#" target="_blank" rel="noreferrer">원문 보기 ↗</a></div></header>
+        <div class="reader-content"><div class="document-meta" id="documentMeta"></div><h1 id="documentTitle"></h1><div class="document-body" id="documentBody"></div></div>
+        <footer class="reader-footer"><button id="previousDoc">← 이전 기록 <kbd>k</kbd></button><button id="nextDoc">다음 기록 <kbd>j</kbd> →</button></footer>
+      </article>
+    </dialog>
+    <dialog id="helpDialog" class="help-dialog"><button class="dialog-close" data-close-help aria-label="닫기">×</button><span class="eyebrow">KEYBOARD SHORTCUTS</span><h2>빠르게 탐색하기</h2><dl><div><dt>/</dt><dd>검색창으로 이동</dd></div><div><dt>j / ↓</dt><dd>다음 기록</dd></div><div><dt>k / ↑</dt><dd>이전 기록</dd></div><div><dt>Esc</dt><dd>창 닫기·검색 초기화</dd></div><div><dt>?</dt><dd>이 안내 열기</dd></div></dl></dialog>
+    <dialog id="savedDialog" class="saved-dialog"><button class="dialog-close" data-close-saved aria-label="닫기">×</button><span class="eyebrow">PERSONAL READING LIST</span><h2>저장한 기록</h2><p class="saved-intro">관심 있는 고시·공고를 모아 두고, 나중에 같은 주제의 변화를 비교하세요.</p><div id="savedList"></div></dialog>
+    <footer class="site-footer"><span>나라 관보</span><span>Public records, made legible.</span><span>Prototype · 2026</span></footer>
+    <script src="app.js"></script>
+  </body>
+</html>
