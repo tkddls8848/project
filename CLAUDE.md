@@ -1,8 +1,8 @@
 # 프로젝트 전체 지도 (SSoT)
 
 이 저장소는 한국 공공데이터(나라장터/data.go.kr) API 문서를 수집·검색·조합하는
-파이프라인형 모듈 모음과, 별개 제품인 korea100으로 구성된다. 새 세션은 이 문서로
-모듈 관계와 활성/폐기 상태를 파악한 뒤 각 모듈의 README를 읽는다.
+파이프라인형 모듈 모음이다. 새 세션은 이 문서로 모듈 관계와 활성/폐기 상태를
+파악한 뒤 각 모듈의 README를 읽는다.
 
 ## 모듈 지도
 
@@ -34,7 +34,6 @@ data.go.kr ──크롤링──> services/crawler ──JSON──> nara_storag
 | `apps/workbench` (API통합워크벤치) | search+dashboard+combiner를 한 화면·한 진입점으로 통합 | 포트 8010, 기존 코드 복사 없이 HTTP 게이트웨이 방식 |
 | `apps/hermes_poc` | Hermes 에이전트/MCP 연동 검증용 독립 PoC | 포트 8020, search·combiner를 HTTP 소비자로만 사용 |
 | `apps/gazetta` | 관보 정적 리더 프로토타입 | 나라 파이프라인 비의존, 빌드·서버 없는 정적 HTML |
-| `korea100` | 대한민국 제도 187개 분석 공개 웹서비스 (별개 제품) | 나라 파이프라인과 무관, GitHub Pages 배포 |
 | `docs/superpowers` | 통합·리팩터링 계획/설계 문서 (의사결정 기록) | 날짜 접두 파일명 |
 
 > 2026-07-29 이전 문서·커밋에는 `nara_search(API문서검색)`처럼 `nara_` 접두사와 한글
@@ -46,6 +45,9 @@ data.go.kr ──크롤링──> services/crawler ──JSON──> nara_storag
 - **활성**: 위 표의 모든 모듈. 현재 무게중심은 `apps/workbench`(통합 UI)와
   `apps/hermes_poc`(에이전트 루프 확장)이다.
 - **보류(archive/)**: 건드리지 말 것. 부활시키려면 사유 확인 먼저.
+  - `korea100` — 대한민국 제도 187개 분석 공개 웹서비스(별개 제품, GitHub Pages 배포).
+    나라 파이프라인과 무관하며 2026-07-29 보류로 전환됐다. 법령 인용 검증 원칙은
+    아래 "코드만으로 알 수 없는 것들"에 남겨둔다 — 재개 시 반드시 읽을 것.
   - `nara_gov24_link_resolver(정부24서비스링크매핑)` — 정부24 링크 매핑 시도, 보류.
   - `nara_openclaw(행정서비스실행기)` — 실행기 프로젝트. combiner가 "계획 초안까지만"으로
     범위를 좁히면서 실행 기능 전체가 여기로 보류됨. 실제 행정 API 실행·자동 제출은
@@ -95,11 +97,11 @@ data.go.kr ──크롤링──> services/crawler ──JSON──> nara_storag
 - **LLM은 로컬 Ollama**: combiner 등은 `OLLAMA_BASE_URL`(기본
   `http://localhost:11434`), `OLLAMA_MODEL`(기본 `qwen3.5:4b`)에 의존한다.
   Ollama 미기동 환경에서는 LLM 경로가 실패하므로 비-LLM 경로로 테스트할 것.
-- **임베딩 모델**: `nara_search/models/ko-sroberta-multitask/`가 없으면 최초 실행 시
+- **임베딩 모델**: `services/search/models/ko-sroberta-multitask/`가 없으면 최초 실행 시
   자동 다운로드된다(네트워크 필요). 테스트는 fixture 기반이라 모델 없이 돈다.
-- **korea100의 법령 인용 원칙**: 원문 확인 못 한 인용은 추정하지 않고 `unverified`로
-  표기한다. 콘텐츠 수정 시 이 검증 원칙(README 참조)을 깨지 말 것.
-  `korea100/web/`에는 자체 CLAUDE.md(→AGENTS.md)가 있다.
+- **korea100의 법령 인용 원칙** (보류 중, 재개 시 필수): 원문 확인 못 한 인용은
+  추정하지 않고 `unverified`로 표기한다. 콘텐츠 수정 시 이 검증 원칙(README 참조)을
+  깨지 말 것. `archive/korea100/web/`에는 자체 CLAUDE.md(→AGENTS.md)가 있다.
 
 ### 포트 계약
 8000(search) · 8003(combiner) · 8010(workbench) · 8020(hermes PoC) · 5173(dashboard dev).
