@@ -1,0 +1,37 @@
+# ~/.hermes/config.yaml에 병합할 최소 예시다.
+# command는 실제 가상환경 Python의 절대 경로로 변경한다.
+mcp_servers:
+  nara:
+    command: "C:\\project\\apps\\hermes_poc\\venv\\Scripts\\python.exe"
+    args:
+      - "-m"
+      - "mcp_server.server"
+    env:
+      PYTHONPATH: "C:\\project\\apps\\hermes_poc"
+      PYTHONUTF8: "1"
+      NARA_SEARCH_URL: "http://127.0.0.1:8000"
+      NARA_COMBINER_URL: "http://127.0.0.1:8003"
+      NARA_COMPOSE_TIMEOUT: "240"
+      # check_doc_freshness는 매니페스트를 읽기만 한다. 인덱스 빌드 시각이
+      # 비어 있으면 fresh/stale을 주장하지 않고 unverified로 보고한다.
+      NARA_STORAGE_DIR: "C:\\project\\nara_storage"
+      NARA_INDEX_BUILT_AT: ""
+    supports_parallel_tool_calls: false
+    tools:
+      include:
+        - search_api_docs
+        - get_api_detail
+        - derive_relations
+        - compose_service_plan
+        - check_doc_freshness
+      resources: false
+      prompts: false
+
+approvals:
+  mode: smart
+
+memory:
+  write_approval: true
+
+skills:
+  write_approval: true
