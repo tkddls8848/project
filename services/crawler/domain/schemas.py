@@ -25,6 +25,9 @@ class CrawlData(BaseModel):
     info: Dict[str, Any] = Field(default_factory=dict) # Metadata from table
     operation_ids: Optional[List[str]] = None # UDDI operation IDs
     download_urls: Optional[Dict[str, str]] = None # File download URLs (for fileData)
+    external_endpoint_urls: List[str] = Field(default_factory=list)
+    api_type_evidence: Dict[str, Any] = Field(default_factory=dict)
+    jsonld_datasets: List[Dict[str, Any]] = Field(default_factory=list)
 
     # Specific fields (optional as they depend on type)
     endpoints: Optional[List[Dict[str, Any]]] = None # For Swagger

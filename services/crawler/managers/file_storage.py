@@ -40,8 +40,10 @@ class DataExporter:
 
         data_dir = output_dir if output_dir else './data'
 
-        # For openapi types, save in api_type subdirectory
-        if api_type in ['openapi_link', 'openapi_new']:
+        # For openapi types, save in api_type subdirectory.
+        # openapi_old is the historical bucket for non-LINK documents without a
+        # parseable inline swaggerJson. Their API rules are rendered as HTML.
+        if api_type in ['openapi_link', 'openapi_new', 'openapi_old']:
             base_dir = os.path.join(data_dir, api_type)
         else:
             # Save directly under data type folder for other types

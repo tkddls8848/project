@@ -1,5 +1,10 @@
 ﻿from typing import Dict, List, Any, Optional
 
+from bs4 import BeautifulSoup, Tag
+
+from crawler.link_spec_builder import build_link_endpoints
+
+
 class NaraParser:
     """Parser for OpenAPI/Swagger JSON specifications."""
 
@@ -20,13 +25,20 @@ class NaraParser:
             return f"{scheme}://{host}{base_path}"
         return ""
 
-    def extract_endpoints(self, swagger_json: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Extracts endpoint details from the Swagger definition."""
+    def extract_endpoints(
+        self,
+        source: Any,
+        operation_ids: Optional[List[str]] = None,
+    ) -> List[Dict[str, Any]]:
+        """Extract endpoint details from Swagger JSON or LINK detail HTML."""
+        if isinstance(source, (str, BeautifulSoup, Tag)):
+            return build_link_endpoints(source, operation_ids)
+
         endpoints = []
-        if not swagger_json:
+        if not source:
             return endpoints
 
-        paths = swagger_json.get('paths', {})
+        paths = source.get('paths', {})
         for path, methods in paths.items():
             for method, data in methods.items():
                 if method.lower() in ['get', 'post', 'put', 'delete', 'patch']:

@@ -3,6 +3,7 @@ import asyncio
 import aiohttp
 import json
 import re
+import html as html_module
 from typing import List, Dict, Optional, Any
 from bs4 import BeautifulSoup
 
@@ -60,6 +61,7 @@ class FileDataCrawler(BaseCrawler):
                 html_info = {}
                 html_operation_ids = []
                 jsonld_download_urls = {}
+                jsonld_datasets = []
                 merged_info = csv_row_data.copy()
                 try:
                     async with session.get(url) as response:
@@ -70,7 +72,10 @@ class FileDataCrawler(BaseCrawler):
                             html_operation_ids = self._extract_public_data_detail_pks(soup)
                             merged_info.update(html_info)
                             file_name = merged_info.get('파일데이터명') or merged_info.get('목록명') or api_id
-                            jsonld_download_urls = self._extract_jsonld_download_urls(html, file_name)
+                            jsonld_datasets = self._extract_jsonld_datasets(html)
+                            jsonld_download_urls = self._extract_jsonld_download_urls(
+                                html, file_name, jsonld_datasets
+                            )
                 except Exception as exc:
                     errors.append(f"HTML metadata fetch failed: {exc}")
 
@@ -112,7 +117,8 @@ class FileDataCrawler(BaseCrawler):
                     crawled_url=url,
                     info=merged_info,
                     operation_ids=operation_ids,
-                    download_urls=download_urls_dict
+                    download_urls=download_urls_dict,
+                    jsonld_datasets=jsonld_datasets,
                 )
 
                 success = bool(merged_info or operation_ids or download_urls_dict)
@@ -229,23 +235,33 @@ class FileDataCrawler(BaseCrawler):
     def _generate_download_url(self, atch_file_id: str) -> str:
         return f"https://www.data.go.kr/cmm/cmm/fileDownload.do?atchFileId={atch_file_id}&fileDetailSn=1"
 
-    def _extract_jsonld_download_urls(self, html: str, file_name: str) -> Dict[str, str]:
-        """Extracts download URLs from the page's JSON-LD distribution block.
-
-        data.go.kr embeds the full download URL (including atchFileId) in the
-        <script type="application/ld+json"> Dataset metadata, available from the
-        single page fetch. A targeted regex is used instead of json.loads
-        because the JSON-LD description field frequently contains unescaped
-        quotes that break strict JSON parsing.
-        """
+    def _extract_jsonld_download_urls(
+        self,
+        html: str,
+        file_name: str,
+        datasets: Optional[List[Dict[str, Any]]] = None,
+    ) -> Dict[str, str]:
+        """Extracts download URLs from parsed Dataset JSON-LD distributions."""
         if not html:
             return {}
 
-        pattern = re.compile(
-            r'"encodingFormat"\s*:\s*"([^"]*)"\s*,\s*"contentUrl"\s*:\s*"([^"]*atchFileId=[^"]*)"',
-            re.IGNORECASE,
-        )
-        matches = pattern.findall(html)
+        matches: List[tuple[str, str]] = []
+        for dataset in datasets if datasets is not None else self._extract_jsonld_datasets(html):
+            distributions = dataset.get('distribution', [])
+            if isinstance(distributions, dict):
+                distributions = [distributions]
+            if not isinstance(distributions, list):
+                continue
+            for distribution in distributions:
+                if not isinstance(distribution, dict):
+                    continue
+                content_url = distribution.get('contentUrl')
+                if isinstance(content_url, str) and 'atchFileId=' in content_url:
+                    encoding_format = distribution.get('encodingFormat', '')
+                    matches.append((str(encoding_format or ''), content_url))
+
+        # Preserve the old download fast path even when a malformed block is too
+        # damaged for the tolerant full-document parser.
         if not matches:
             urls_only = re.findall(r'"contentUrl"\s*:\s*"([^"]*atchFileId=[^"]*)"', html, re.IGNORECASE)
             matches = [('', content_url) for content_url in urls_only]
@@ -262,6 +278,119 @@ class FileDataCrawler(BaseCrawler):
                 key = f"{base}_{idx + 1}"
             download_urls[key] = content_url
         return download_urls
+
+    def _extract_jsonld_datasets(self, html: str) -> List[Dict[str, Any]]:
+        """Parses and preserves complete schema.org Dataset JSON-LD objects.
+
+        Some data.go.kr pages contain bare quotes inside ``description``. The
+        tolerant loader repairs only quotes that cannot close a JSON key/value,
+        then retries with permissive control-character handling.
+        """
+        if not html:
+            return []
+
+        soup = BeautifulSoup(html, 'lxml')
+        datasets: List[Dict[str, Any]] = []
+        for script in soup.find_all('script', attrs={'type': re.compile(r'application/ld\+json', re.I)}):
+            raw = script.string if script.string is not None else script.get_text()
+            parsed = self._loads_jsonld_tolerant(raw or '')
+            if parsed is None:
+                continue
+            self._collect_jsonld_datasets(parsed, datasets)
+        return datasets
+
+    def _loads_jsonld_tolerant(self, raw: str) -> Optional[Any]:
+        text = html_module.unescape(raw).strip()
+        if text.startswith('<![CDATA[') and text.endswith(']]>'):
+            text = text[9:-3].strip()
+        if not text:
+            return None
+        try:
+            return json.loads(text, strict=False)
+        except json.JSONDecodeError:
+            repaired = self._repair_json_string_field(text, 'description')
+            repaired = self._repair_bare_json_quotes(repaired)
+            repaired = re.sub(r',\s*([}\]])', r'\1', repaired)
+            try:
+                return json.loads(repaired, strict=False)
+            except json.JSONDecodeError:
+                return None
+
+    def _repair_json_string_field(self, text: str, field_name: str) -> str:
+        """Escapes bare quotes up to the next JSON property after a string field."""
+        field_pattern = re.compile(rf'("{re.escape(field_name)}"\s*:\s*")', re.I)
+        cursor = 0
+        pieces: List[str] = []
+        while True:
+            match = field_pattern.search(text, cursor)
+            if not match:
+                pieces.append(text[cursor:])
+                break
+            pieces.append(text[cursor:match.end()])
+            value_start = match.end()
+            closing = re.search(
+                r'(?<!\\)"\s*(?=,\s*"[^"\\]+"\s*:|})',
+                text[value_start:],
+                re.DOTALL,
+            )
+            if not closing:
+                pieces.append(text[value_start:])
+                break
+            value_end = value_start + closing.start()
+            value = text[value_start:value_end]
+            value = re.sub(r'(?<!\\)"', r'\\"', value)
+            pieces.extend((value, text[value_end:value_end + 1]))
+            cursor = value_end + 1
+        return ''.join(pieces)
+
+    def _repair_bare_json_quotes(self, text: str) -> str:
+        output: List[str] = []
+        in_string = False
+        escaped = False
+        for index, char in enumerate(text):
+            if escaped:
+                output.append(char)
+                escaped = False
+                continue
+            if char == '\\' and in_string:
+                output.append(char)
+                escaped = True
+                continue
+            if char != '"':
+                output.append(char)
+                continue
+            if not in_string:
+                in_string = True
+                output.append(char)
+                continue
+
+            next_non_space = ''
+            for following in text[index + 1:]:
+                if not following.isspace():
+                    next_non_space = following
+                    break
+            if next_non_space in ':,}]' or not next_non_space:
+                in_string = False
+                output.append(char)
+            else:
+                output.append(r'\"')
+        return ''.join(output)
+
+    def _collect_jsonld_datasets(self, value: Any, datasets: List[Dict[str, Any]]) -> None:
+        if isinstance(value, dict):
+            jsonld_type = value.get('@type')
+            types = jsonld_type if isinstance(jsonld_type, list) else [jsonld_type]
+            if any(
+                str(item).lower() == 'dataset' or str(item).lower().rstrip('/').endswith('/dataset')
+                for item in types
+                if item is not None
+            ):
+                datasets.append(value)
+            for child in value.values():
+                self._collect_jsonld_datasets(child, datasets)
+        elif isinstance(value, list):
+            for child in value:
+                self._collect_jsonld_datasets(child, datasets)
 
     def refine_results(self, results: List[CrawlResult]) -> Dict[str, Any]:
         return {"total_refined": 0, "failed_refines": 0, "refined_files": []}

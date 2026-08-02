@@ -86,6 +86,24 @@ data.go.kr ──크롤링──> services/crawler ──JSON──> nara_storag
   `Scripts/*.exe` 콘솔 셔뱅은 절대경로를 내장해 이동 시 깨진다 —
   `python -m pip install --force-reinstall --no-deps <pkg>`로 개별 복구한다.
 
+### 크롤러 심화 파이프라인은 전부 옵트인이다 (2026-08-01)
+- `services/crawler`에 `profiling/`(파일 수신·스키마·품질·주소/좌표)과
+  `portals/`(산개 기관 포털 하베스터)가 추가됐다. **평범한 크롤에서는 하나도
+  실행되지 않는다** — `--deep`(스키마·품질·주소 리포트) 또는 `--harvest`(산개
+  포털 수집)로 명시적으로 켜야 한다. 파일 전량 다운로드(`--full-download`)는 그 안에서 또 한 겹 옵트인이다.
+  기본은 Range 샘플링이며, 83,589건 전량 수신은 포털 부하·용량 때문에 기본값이 아니다.
+- openapi 하위 타입은 `openapi_new` / `openapi_old` / `openapi_link` 셋이다.
+  CSV가 LINK를 명시하면 `openapi_link`, 비-LINK 중 인라인 `swaggerJson` 파싱에
+  성공하면 `openapi_new`, 나머지는 HTML 표 기반 구형 문서인 `openapi_old`다.
+  특정 DOM 태그는 진단 정보일 뿐 판별자로 쓰지 않으며, 상세 근거는 각 문서의
+  `api_type_evidence.reason`에 남는다.
+- LINK형도 이제 `endpoints[]`를 갖는다. data.go.kr 상세 페이지의 요청/응답 표를
+  openapi_new와 같은 스키마로 합성한 것이며 **외부 요청이 없다.** 기관 포털을
+  실제로 도는 것은 `--harvest`(Phase B)뿐이다.
+- **`external_endpoint_urls`는 신규 필드라 기존 저장분에 없다.** 재크롤링 전에는
+  `--harvest`가 0호스트를 보고한다. 설계·근거는
+  `docs/superpowers/plans/2026-08-01-crawler-depth-and-link-harvest.md`.
+
 ### 외부 API·모델 특이사항
 - **data.go.kr 크롤링**: 공식 API가 아니라 HTML/CSV 스크래핑이다. OpenAPI 문서는
   페이지에 인라인된 `swaggerJson`을 추출하고, fileData는 HTML에 임베드된
