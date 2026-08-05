@@ -1,7 +1,21 @@
+from pathlib import Path
+
 import pytest
 
-from crawler.link_spec_builder import UNVERIFIED, build_link_endpoints
+from crawler.link_spec_builder import (
+    UNVERIFIED,
+    build_link_endpoints,
+    list_detail_functions,
+)
 from infrastructure.nara_parser import NaraParser
+
+
+RENEWED_FIXTURES = Path(__file__).parent / 'fixtures' / 'renewed'
+
+
+def read_renewed(name):
+    """Load a 2026-08 renewal capture; tests never touch data.go.kr."""
+    return (RENEWED_FIXTURES / name).read_text(encoding='utf-8', errors='replace')
 
 
 @pytest.fixture
@@ -87,6 +101,68 @@ def test_marks_method_and_path_unverified_instead_of_guessing():
     assert endpoint['method'] == UNVERIFIED
     assert endpoint['path'] == UNVERIFIED
     assert endpoint['parameters'][0]['type'] == UNVERIFIED
+
+
+def test_builds_endpoint_from_renewed_detail_container():
+    """The 2026-08 renewal moved the tables into #apiDetailFunctionDiv."""
+    endpoints = build_link_endpoints(read_renewed('openapi_old_15061362.html'))
+
+    assert len(endpoints) == 1
+    endpoint = endpoints[0]
+    assert endpoint['path'] == '/1613000/ConAdminInfoSvc1/GongsiReg'
+    assert endpoint['method'] == UNVERIFIED
+    assert endpoint['description'] == '국토교통부_건설업체등록'
+    assert endpoint['tags'] == ['uddi:3c88abcf-d240-472b-b4b4-a8f2e8388bfc_202204011509']
+    assert len(endpoint['parameters']) == 8
+    assert len(endpoint['responses']) == 20
+    assert endpoint['parameters'][0]['name'] == 'ServiceKey'
+    assert endpoint['parameters'][0]['required'] is True
+    assert endpoint['parameters'][0]['type'] == UNVERIFIED
+    assert endpoint['responses'][0] == {
+        'status_code': UNVERIFIED,
+        'description': 'resultCode: 결과코드',
+    }
+
+
+def test_renewed_container_is_detected_by_selector_not_by_substring():
+    """'open-api-detail-result' survives only inside the page's AJAX script."""
+    html = read_renewed('openapi_old_15061362.html')
+
+    assert 'open-api-detail-result' in html
+    assert build_link_endpoints(html)
+
+
+@pytest.mark.parametrize('fixture_name', [
+    'openapi_link_15001702.html',  # no request/response tables at all
+    'openapi_new_15000863.html',   # only an error-code table, not an endpoint
+    'fileData_15000249.html',
+    'standard_15072622.html',
+])
+def test_renewed_pages_without_detail_tables_yield_no_endpoints(fixture_name):
+    assert build_link_endpoints(read_renewed(fixture_name)) == []
+
+
+def test_nara_parser_html_branch_matches_builder_on_renewed_page():
+    html = read_renewed('openapi_old_15061362.html')
+
+    assert NaraParser().extract_endpoints(html) == build_link_endpoints(html)
+
+
+def test_lists_detail_functions_that_are_not_rendered_server_side():
+    """Only one of the eight detail functions is in the served HTML."""
+    functions = list_detail_functions(read_renewed('openapi_old_15061362.html'))
+
+    assert [item['oprtin_seq_no'] for item in functions] == [
+        '41635', '41636', '41637', '41638', '41639', '41640', '41641', '41642'
+    ]
+    assert functions[0]['name'] == '국토교통부_건설업체등록'
+    assert functions[0]['public_data_pk'] == '15061362'
+    assert functions[0]['public_data_detail_pk'] == (
+        'uddi:3c88abcf-d240-472b-b4b4-a8f2e8388bfc_202204011509'
+    )
+    # data.go.kr marks none of them selected, so nothing is inferred.
+    assert not any(item['selected'] for item in functions)
+    assert list_detail_functions(read_renewed('openapi_new_15000863.html')) == []
 
 
 def test_existing_swagger_extraction_is_unchanged():

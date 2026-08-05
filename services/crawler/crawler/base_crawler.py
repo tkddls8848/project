@@ -1,6 +1,7 @@
 ﻿from abc import ABC, abstractmethod
 import asyncio
 import aiohttp
+import collections
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Dict, Optional, Any
@@ -8,6 +9,7 @@ from bs4 import BeautifulSoup, SoupStrainer
 from tqdm import tqdm
 
 from domain.schemas import CrawlerConfig, CrawlResult
+from infrastructure.quick_summary import fetch_quick_summary
 from managers.file_storage import DataExporter
 
 from managers.summary_service import SummaryService
@@ -27,11 +29,28 @@ class BaseCrawler(ABC):
             'table_crawl_success': 0,
             'table_crawl_failed': 0
         }
+        # Per-outcome tally of the Quick Summary calls. Every document type
+        # makes one, so this lives on the base rather than in each crawler.
+        self.quick_summary_fetches: collections.Counter = collections.Counter()
 
     @abstractmethod
     async def crawl(self, urls: List[str], csv_metadata: Optional[Dict[int, Dict]] = None) -> List[CrawlResult]:
         """Execute the crawling logic."""
         pass
+
+    async def collect_quick_summary(
+        self, session: aiohttp.ClientSession, page_url: str, api_id: str
+    ) -> Dict[str, Any]:
+        """Fetches the page's AI Quick Summary and tallies the outcome.
+
+        One request per document, on the caller's session. The portal writes
+        this block for every type, and it states what a dataset is *for* in
+        prose the metadata fields never carry — which is what makes it worth
+        the call when the documents are indexed for search.
+        """
+        record = await fetch_quick_summary(session, page_url, api_id)
+        self.quick_summary_fetches[record.get('status', 'unknown')] += 1
+        return record
 
     @staticmethod
     def make_soup(html: str, only_tags: Optional[List[str]] = None) -> BeautifulSoup:

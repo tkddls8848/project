@@ -16,6 +16,41 @@ from bs4 import BeautifulSoup, Tag
 UNVERIFIED = "unverified"
 _HTTP_METHODS = ("GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS")
 
+# Containers that hold one rendered detail-function block, most recent markup
+# first. The 2026-08 data.go.kr renewal replaced the two legacy containers with
+# ``#apiDetailFunctionDiv``; the legacy ones are kept as fallbacks so documents
+# captured before the renewal keep parsing. Note that the literal string
+# ``open-api-detail-result`` still appears inside the page's AJAX script, so
+# container detection must go through ``soup.select`` and never a substring
+# check on the raw HTML.
+_DETAIL_ROOT_SELECTORS = (
+    "#apiDetailFunctionDiv",
+    ".open-api-detail-result",
+    "#tab_layer_detail_function",
+)
+
+# data.go.kr renders only one detail function server-side even when
+# ``select#open_api_detail_select`` offers several, and every option has its own
+# 요청주소, request parameters and response elements. The rest are pulled in by
+# the 조회하기 button, ``apiObj.fn_selectApiDetailFunction()``:
+#
+#     POST /tcs/dss/selectApiDetailFunction.do
+#         oprtinSeqNo        = option value of select#open_api_detail_select
+#         publicDataDetailPk = value of input#publicDataDetailPk
+#         publicDataPk       = value of input#publicDataPk
+#
+# All three fields are required: the portal answers 404 when publicDataPk is
+# left out (verified live on 15000063, 2026-08-05). The page also carries a
+# stale global ``fn_selectApiDetailFunction`` that omits it — that one is dead
+# code and must not be used as the contract.
+#
+# The response is a container-less HTML fragment which the page appends to
+# ``#apiDetailFunctionDiv`` after removing ``.data-info-tit`` and
+# ``.data-report-group``. This module stays a pure parser: it never issues the
+# request. ``list_detail_functions`` reports the choices and ``build_fragment``
+# turns a fetched answer into an endpoint.
+DETAIL_FUNCTION_REQUEST_PATH = "/tcs/dss/selectApiDetailFunction.do"
+
 
 class LinkSpecBuilder:
     """Convert rendered LINK detail-function tables to ``endpoints[]`` records."""
@@ -30,10 +65,7 @@ class LinkSpecBuilder:
             return []
 
         identifiers = self._operation_ids(soup, operation_ids)
-        roots = list(soup.select(".open-api-detail-result"))
-        if not roots:
-            detail_root = soup.select_one("#tab_layer_detail_function")
-            roots = [detail_root] if detail_root else []
+        roots = self._detail_roots(soup)
 
         endpoints: List[Dict[str, Any]] = []
         seen = set()
@@ -47,6 +79,25 @@ class LinkSpecBuilder:
                 seen.add(signature)
                 endpoints.append(endpoint)
         return endpoints
+
+    def _detail_roots(self, soup: Union[BeautifulSoup, Tag]) -> List[Tag]:
+        """Return the detail-function containers rendered on the page.
+
+        The first selector that actually matches an element wins. When the
+        renewal container already holds legacy blocks — the page's AJAX handler
+        appends fetched fragments into it — the inner blocks are used so each
+        detail function stays a separate endpoint.
+        """
+        for selector in _DETAIL_ROOT_SELECTORS:
+            matched = list(soup.select(selector))
+            if not matched:
+                continue
+            roots: List[Tag] = []
+            for root in matched:
+                nested = list(root.select(".open-api-detail-result"))
+                roots.extend(nested or [root])
+            return roots
+        return []
 
     def _make_soup(
         self, html: Union[str, BeautifulSoup, Tag]
@@ -91,7 +142,30 @@ class LinkSpecBuilder:
             return operation_ids[index]
         return UNVERIFIED
 
-    def _build_endpoint(self, root: Tag, operation_id: str) -> Optional[Dict[str, Any]]:
+    def build_fragment(
+        self,
+        html: Union[str, BeautifulSoup, Tag],
+        operation_id: str = UNVERIFIED,
+        section: str = "",
+    ) -> List[Dict[str, Any]]:
+        """Build the endpoint for one fetched detail-function fragment.
+
+        The fragment has none of the page's container markup — it is only what
+        the page appends into ``#apiDetailFunctionDiv`` — so the whole fragment
+        is the root. ``section`` carries the dropdown label: the fragment states
+        its own heading ("등록기준사항신고 리스트") but not the name the caller
+        selected it by ("국토교통부_등록기준사항신고"), and the document is keyed
+        on the latter.
+        """
+        soup = self._make_soup(html)
+        if soup is None:
+            return []
+        endpoint = self._build_endpoint(soup, operation_id, section=section)
+        return [endpoint] if endpoint else []
+
+    def _build_endpoint(
+        self, root: Tag, operation_id: str, section: str = ""
+    ) -> Optional[Dict[str, Any]]:
         request_tables: List[Tag] = []
         response_tables: List[Tag] = []
         for table in root.select("table"):
@@ -107,7 +181,7 @@ class LinkSpecBuilder:
         if not request_tables and not response_tables:
             return None
 
-        title = self._detail_title(root)
+        title = section or self._detail_title(root)
         description = self._description(root, title)
         parameters = [item for table in request_tables for item in self._parameters(table)]
         responses = [item for table in response_tables for item in self._responses(table)]
@@ -300,6 +374,43 @@ class LinkSpecBuilder:
     def _clean(self, value: Any) -> str:
         return re.sub(r"\s+", " ", str(value or "")).strip()
 
+    def detail_functions(
+        self, html: Union[str, BeautifulSoup, Tag]
+    ) -> List[Dict[str, Any]]:
+        """List the detail functions the page offers, rendered or not.
+
+        Only one of them is present in the served HTML; see
+        ``DETAIL_FUNCTION_REQUEST_PATH`` for what fetching the others costs.
+        """
+        soup = self._make_soup(html)
+        if soup is None:
+            return []
+        select = soup.select_one("select#open_api_detail_select")
+        if not select:
+            return []
+
+        detail_pk = soup.select_one("input#publicDataDetailPk")
+        data_pk = soup.select_one("input#publicDataPk")
+        functions: List[Dict[str, str]] = []
+        for option in select.find_all("option"):
+            sequence = self._clean(option.get("value"))
+            if not sequence:
+                continue
+            functions.append(
+                {
+                    "oprtin_seq_no": sequence,
+                    "name": self._clean(option.get_text(" ", strip=True)),
+                    "public_data_detail_pk": self._clean(
+                        detail_pk.get("value") if detail_pk else ""
+                    ) or UNVERIFIED,
+                    "public_data_pk": self._clean(
+                        data_pk.get("value") if data_pk else ""
+                    ) or UNVERIFIED,
+                    "selected": option.has_attr("selected"),
+                }
+            )
+        return functions
+
 
 def build_link_endpoints(
     html: Union[str, BeautifulSoup, Tag],
@@ -308,3 +419,21 @@ def build_link_endpoints(
     """Functional entry point used by crawler wiring and tests."""
 
     return LinkSpecBuilder().build(html, operation_ids)
+
+
+def list_detail_functions(
+    html: Union[str, BeautifulSoup, Tag],
+) -> List[Dict[str, Any]]:
+    """Report every detail function offered by the page, fetched or not."""
+
+    return LinkSpecBuilder().detail_functions(html)
+
+
+def build_detail_function_endpoints(
+    html: Union[str, BeautifulSoup, Tag],
+    operation_id: str = UNVERIFIED,
+    section: str = "",
+) -> List[Dict[str, Any]]:
+    """Functional entry point for a fetched detail-function fragment."""
+
+    return LinkSpecBuilder().build_fragment(html, operation_id, section)

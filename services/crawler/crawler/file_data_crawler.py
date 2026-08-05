@@ -9,7 +9,7 @@ from bs4 import BeautifulSoup
 
 from crawler.base_crawler import BaseCrawler
 from domain.schemas import CrawlResult, CrawlData
-from utils.text_utils import clean_text
+from infrastructure.detail_page_parser import extract_detail_info
 from utils.url_utils import ApiIdExtractor
 
 class FileDataCrawler(BaseCrawler):
@@ -67,8 +67,13 @@ class FileDataCrawler(BaseCrawler):
                     async with session.get(url) as response:
                         if response.status == 200:
                             html = await response.text()
-                            soup = self.make_soup(html, ['table', 'input'])
-                            html_info = self._extract_table_bs(soup)
+                            # Parsed whole rather than through a SoupStrainer: the
+                            # renewal moved metadata into <li><strong class="key">
+                            # blocks, and any tag list narrow enough to be worth its
+                            # ~9% parse saving silently drops whichever tags the
+                            # shared parser selects — which is how this broke before.
+                            soup = self.make_soup(html)
+                            html_info = extract_detail_info(soup, html)
                             html_operation_ids = self._extract_public_data_detail_pks(soup)
                             merged_info.update(html_info)
                             file_name = merged_info.get('파일데이터명') or merged_info.get('목록명') or api_id
@@ -79,19 +84,28 @@ class FileDataCrawler(BaseCrawler):
                 except Exception as exc:
                     errors.append(f"HTML metadata fetch failed: {exc}")
 
-                # Fast path: data.go.kr embeds the full download URL (atchFileId)
-                # in the page's JSON-LD, so for most file datasets we can build
-                # the download links from the single page fetch — no extra
-                # infuser/selectFileDataDownload requests needed.
+                # Fast path: pages whose file is hosted on the portal embed the
+                # full download URL (atchFileId) in their JSON-LD, so the links
+                # come out of the single page fetch with no extra
+                # infuser/selectFileDataDownload requests.
+                #
+                # Datasets served from the agency's own site instead
+                # (제공형태 "기관자체에서 다운로드") carry no JSON-LD and no
+                # atchFileId at all, so they always take the fallback below.
                 if jsonld_download_urls:
                     download_urls_dict = jsonld_download_urls
                     operation_ids = html_operation_ids
                     self.stats['jsonld_fastpath'] = self.stats.get('jsonld_fastpath', 0) + 1
                 else:
                     # Fallback: resolve operation IDs, then fetch atchFileId per file.
-                    operation_ids = await self._extract_operation_ids(session, api_id)
+                    # The page's own publicDataDetailPk is preferred: it is the uddi
+                    # selectFileDataDownload expects, whereas infuser returns a
+                    # different id shape and answered 404 for every namespace tried
+                    # on 2026-08-03. infuser is still queried when the page has no
+                    # id, so a namespace that does resolve is not lost.
+                    operation_ids = html_operation_ids
                     if not operation_ids:
-                        operation_ids = html_operation_ids
+                        operation_ids = await self._extract_operation_ids(session, api_id)
 
                     download_urls_dict = {}
                     if operation_ids:
@@ -110,6 +124,8 @@ class FileDataCrawler(BaseCrawler):
                             for data_nm, atch_id in file_info.items():
                                 download_urls_dict[data_nm] = self._generate_download_url(atch_id)
 
+                quick_summary = await self.collect_quick_summary(session, url, api_id)
+
                 # Prepare Data
                 crawl_data = CrawlData(
                     api_id=api_id,
@@ -119,6 +135,7 @@ class FileDataCrawler(BaseCrawler):
                     operation_ids=operation_ids,
                     download_urls=download_urls_dict,
                     jsonld_datasets=jsonld_datasets,
+                    quick_summary=quick_summary,
                 )
 
                 success = bool(merged_info or operation_ids or download_urls_dict)
@@ -136,23 +153,18 @@ class FileDataCrawler(BaseCrawler):
                 return CrawlResult(url=url, success=False, errors=[str(e)])
 
     def _extract_table_bs(self, soup: BeautifulSoup) -> Dict:
-        """Extracts fileData detail tables from page HTML."""
-        info = {}
-        for table in soup.select('table.fileDataDetail, table.dataset-table'):
-            for row in table.find_all('tr'):
-                th = row.find('th')
-                td = row.find('td')
-                if not th or not td:
-                    continue
-                key = clean_text(th.get_text())
-                if not key:
-                    continue
-                for script in td.find_all('script'):
-                    script.decompose()
-                value = clean_text(td.get_text())
-                if value:
-                    info[key] = value
-        return info
+        """Deprecated alias for the shared detail-page parser.
+
+        The table scan this used to carry is gone; ``utils.metadata_updater``
+        borrows this crawler purely for the helper, so the name is kept as a
+        delegation rather than broken from the outside. New code should call
+        ``extract_detail_info`` directly.
+
+        Note that ``metadata_updater`` passes a soup built with a
+        ``['table', 'input']`` strainer, which drops the renewed key blocks
+        before this is ever reached — that call site needs widening too.
+        """
+        return extract_detail_info(soup)
 
     def _extract_public_data_detail_pks(self, soup: BeautifulSoup) -> List[str]:
         ids = []

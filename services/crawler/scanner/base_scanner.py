@@ -1,6 +1,13 @@
 ﻿"""
 Purpose: Base class for scanning metadata JSON APIs in bulk.
 Guide: Use subclasses like OpenAPIMetadataScanner. Automatically handles waiting rooms and retries.
+
+스키마 주의 (2026-08 data.go.kr 리뉴얼):
+    /catalog/{num}/{type}.json 은 여전히 200을 주지만 본문이 schema.org Dataset
+    스키마로 바뀌었다. title/organization/apiType/updateDate 키가 사라지고
+    name/creator.name/dateModified 등으로 대체됐다. 응답 Content-Type은
+    text/html 이지만 본문은 JSON 이다(requests의 .json()은 정상 동작).
+    옛 스키마 키는 폴백으로 남겨 리뉴얼 전 저장분도 계속 파싱된다.
 """
 
 import requests
@@ -11,6 +18,91 @@ from datetime import datetime
 from tqdm import tqdm
 import time
 import threading
+
+# 데이터셋이 없을 때 포털이 돌려주는 고정 문구 (리뉴얼 전후 동일)
+NOT_FOUND_DESCRIPTION = '해당 데이터는 존재하지 않습니다.'
+
+
+def pick_text(source, *keys):
+    """주어진 키를 순서대로 훑어 처음 만나는 비어있지 않은 문자열 값을 돌려준다."""
+    if not isinstance(source, dict):
+        return ''
+
+    for key in keys:
+        value = source.get(key)
+        if value is None:
+            continue
+        if not isinstance(value, str):
+            value = str(value)
+        value = value.strip()
+        if value:
+            return value
+
+    return ''
+
+
+def extract_organization(data):
+    """제공기관명 추출 - 신규 creator/publisher 객체 우선, 옛 organization 폴백"""
+    for key in ('creator', 'publisher'):
+        node = data.get(key)
+        if isinstance(node, dict):
+            name = pick_text(node, 'name')
+            if name:
+                return name
+        elif isinstance(node, str) and node.strip():
+            return node.strip()
+
+    return pick_text(data, 'organization')
+
+
+def extract_contact(data):
+    """담당 부서/전화번호 추출 - creator.contactPoint (리뉴얼 스키마)"""
+    creator = data.get('creator')
+    contact = creator.get('contactPoint') if isinstance(creator, dict) else None
+    if not isinstance(contact, dict):
+        contact = {}
+
+    return {
+        'department': pick_text(contact, 'contactType') or pick_text(data, 'department'),
+        'tel_no': pick_text(contact, 'telephone') or pick_text(data, 'telNo', 'telephone'),
+    }
+
+
+def extract_common_info(data):
+    """타입 공통 메타데이터 추출 (신규 schema.org 키 우선, 옛 키 폴백)"""
+    common = {
+        'title': pick_text(data, 'name', 'title'),
+        'organization': extract_organization(data),
+        'description': pick_text(data, 'description'),
+        'url': pick_text(data, 'url'),
+        'update_date': pick_text(data, 'dateModified', 'datePublished', 'updateDate', 'modified'),
+        'create_date': pick_text(data, 'dateCreated', 'datePublished', 'createDate'),
+        'license': pick_text(data, 'license'),
+        'classification': pick_text(data, 'additionalType', 'classification'),
+        'data_format': pick_text(data, 'encodingFormat', 'format'),
+        'keywords': pick_text(data, 'keywords'),
+    }
+    common.update(extract_contact(data))
+    return common
+
+
+def is_metadata_document(data):
+    """메타데이터 문서로 볼 수 있는 JSON인지 판정 (대기실/에러 페이지 구분용)
+
+    리뉴얼 후에는 title/organization 키가 없으므로 schema.org 표식(@type/@context)과
+    name 을 근거로 삼고, 리뉴얼 전 저장분을 위해 옛 키도 함께 인정한다.
+    """
+    if not isinstance(data, dict):
+        return False
+
+    if pick_text(data, '@type') == 'Dataset':
+        return True
+    if 'schema.org' in pick_text(data, '@context'):
+        return True
+    if pick_text(data, 'name', 'title', 'organization'):
+        return True
+
+    return False
 
 class BaseMetadataScanner:
     """공공데이터포털 메타데이터 스캐너 베이스 클래스"""
@@ -52,20 +144,22 @@ class BaseMetadataScanner:
                 return True
             
             # 2. JSON 파싱 시도
+            #    Content-Type이 text/html이어도 본문은 JSON이므로 파싱이 먼저다.
+            #    (대기실은 JSON을 돌려주지 않는다 - 파싱에 성공하면 정상 응답으로 본다)
             try:
                 data = response.json()
                 if isinstance(data, dict):
-                    if data.get('description') == '해당 데이터는 존재하지 않습니다.':
+                    if data.get('description') == NOT_FOUND_DESCRIPTION:
                         return False
-                    if data.get('title') or data.get('organization'):
+                    if is_metadata_document(data):
                         return False
-                    if isinstance(data, dict) and len(data) == 0:
+                    if len(data) == 0:
                         return False
                 elif isinstance(data, list):
                     return False
-                
+
                 return False
-                
+
             except (json.JSONDecodeError, ValueError):
                 pass
             
@@ -181,8 +275,8 @@ class BaseMetadataScanner:
                 
                 # 데이터셋 존재 여부 확인
                 if (
-                    'description' in data and 
-                    data['description'] == '해당 데이터는 존재하지 않습니다.'
+                    isinstance(data, dict) and
+                    data.get('description') == NOT_FOUND_DESCRIPTION
                 ):
                     return {
                         'number': num,
@@ -238,26 +332,27 @@ class BaseMetadataScanner:
                     'error': f'요청 시간 초과 (재시도 {retry_count}회 후 실패)',
                     'retry_count': retry_count
                 }
-        except requests.exceptions.RequestException as e:
-            return {
-                'number': num,
-                'has_data': False,
-                'status': 'error',
-                'error': str(e),
-                'retry_count': retry_count
-            }
+        # requests의 JSONDecodeError는 RequestException도 상속하므로 반드시 먼저 잡는다
         except json.JSONDecodeError:
             print(f"⚠️  JSON 파싱 실패 - 번호: {num}")
             print(f"📄 응답 내용 (처음 500자):")
             print(response.text[:500])
             print("=" * 50)
-            
+
             return {
                 'number': num,
                 'has_data': False,
                 'status': 'error',
                 'error': '잘못된 JSON 형식',
                 'response_content': response.text[:500],
+                'retry_count': retry_count
+            }
+        except requests.exceptions.RequestException as e:
+            return {
+                'number': num,
+                'has_data': False,
+                'status': 'error',
+                'error': str(e),
                 'retry_count': retry_count
             }
         except Exception as e:
@@ -424,7 +519,7 @@ class BaseMetadataScanner:
                 type_numbers = []
                 type_key = f"{self.scan_type}_type"
                 for num, details in self.results['details'].items():
-                    if details.get(type_key, '').upper() == data_type:
+                    if (details.get(type_key) or '').upper() == data_type:
                         type_numbers.append(num)
                 
                 if type_numbers:

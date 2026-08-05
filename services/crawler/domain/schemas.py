@@ -27,6 +27,12 @@ class CrawlData(BaseModel):
     download_urls: Optional[Dict[str, str]] = None # File download URLs (for fileData)
     external_endpoint_urls: List[str] = Field(default_factory=list)
     api_type_evidence: Dict[str, Any] = Field(default_factory=dict)
+    # One record per option of the detail-function dropdown, with the outcome of
+    # fetching it. Empty when a document offers no dropdown.
+    detail_functions: List[Dict[str, Any]] = Field(default_factory=list)
+    # The portal's AI-written Quick Summary: {status, markdown, text, headings}.
+    # Present for every document type; None when the call was never made.
+    quick_summary: Optional[Dict[str, Any]] = None
     jsonld_datasets: List[Dict[str, Any]] = Field(default_factory=list)
 
     # Specific fields (optional as they depend on type)
