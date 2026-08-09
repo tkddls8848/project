@@ -1,0 +1,58 @@
+# <ACCOUNT_ID>를 바꾸고 .env에 CLOUDFLARE_API_TOKEN을 넣는다.
+
+providers:
+  cloudflare:
+    base_url: "https://api.cloudflare.com/client/v4/accounts/<ACCOUNT_ID>/ai/v1"
+    key_env: CLOUDFLARE_API_TOKEN
+    default_model: "@cf/mistralai/mistral-small-3.1-24b-instruct"
+
+gateway:
+  platforms:
+    api_server:
+      enabled: true
+      host: "127.0.0.1"
+      port: 8642
+
+model:
+  default: "@cf/mistralai/mistral-small-3.1-24b-instruct"
+  provider: "custom:cloudflare"
+  context_length: 128000
+  max_tokens: 4096
+
+mcp_servers:
+  nara:
+    command: "C:\\project\\apps\\prometheus\\venv\\Scripts\\python.exe"
+    args:
+      - "-m"
+      - "mcp_server.server"
+    env:
+      PYTHONPATH: "C:\\project\\apps\\prometheus"
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: "utf-8"
+      NARA_SEARCH_URL: "http://127.0.0.1:8000"
+      NARA_COMBINER_URL: "http://127.0.0.1:8003"
+      NARA_COMPOSE_TIMEOUT: "240"
+      NARA_STORAGE_DIR: "C:\\project\\nara_storage"
+      NARA_INDEX_BUILT_AT: ""
+    connect_timeout: 30.0
+    enabled: true
+    supports_parallel_tool_calls: false
+    tools:
+      include:
+        - search_api_docs
+        - get_api_detail
+        - derive_relations
+        - compose_service_plan
+        - check_doc_freshness
+      resources: false
+      prompts: false
+
+approvals:
+  mode: smart
+
+memory:
+  write_approval: true
+
+skills:
+  write_approval: true
+  external_dirs: '[C:\project\apps\prometheus\skills]'

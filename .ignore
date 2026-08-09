@@ -1,0 +1,9 @@
+# Keep code search and LLM context on the active product.
+archive/
+nara_storage/
+**/__pycache__/
+**/.pytest_cache/
+**/venv/
+**/node_modules/
+**/dist/
+.tmp/

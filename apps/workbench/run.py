@@ -13,6 +13,13 @@ from pathlib import Path
 from typing import Iterable
 
 BASE_DIR = Path(__file__).resolve().parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
+REPO_ROOT = BASE_DIR.parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from nara_common.cli import interactive_argv, wants_interactive  # noqa: E402
 
 
 def find_project_root(start: Path) -> Path:
@@ -201,7 +208,13 @@ def main() -> int:
         help="기존 8000/8003 서비스를 시작하지 않고 통합 UI만 실행",
     )
     parser.add_argument("--port", type=int, default=8010, help="통합 앱 포트 (기본 8010)")
-    args = parser.parse_args()
+    argv = sys.argv[1:]
+    if wants_interactive(argv):
+        # 콘솔에서 인자 없이 부르면 물어본다. 비대화형이면 예전처럼 기본값으로 뜬다.
+        argv = interactive_argv(parser)
+        if argv is None:
+            return 0
+    args = parser.parse_args(argv)
 
     current_python = Path(sys.executable)
     if not supports_modules(current_python, GATEWAY_MODULES):

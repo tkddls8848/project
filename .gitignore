@@ -1,17 +1,4 @@
-# ============================================================
-# 통합 .gitignore — 저장소 루트 (.nara-root 마커가 있는 곳)
-# 대상: services/{crawler,search,combiner},
-#       apps/{dashboard,workbench,hermes_poc,gazetta}, archive/
-#
-# 모듈 경로는 2026-07-29 재배치로 services/·apps/ 계층이 됐다.
-# 경로를 박은 규칙보다 이름 기반 규칙(venv/, __pycache__/)을 선호할 것 —
-# 모듈이 또 옮겨져도 따라온다.
-# ============================================================
-
-
-# ─────────────────────────────────────────────
-# Python (services/*, apps/{workbench,hermes_poc})
-# ─────────────────────────────────────────────
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -19,16 +6,12 @@ __pycache__/
 *.egg
 *.egg-info/
 MANIFEST
-
-# 가상환경
 venv/
 .venv/
 env/
 ENV/
 env.bak/
 venv.bak/
-
-# 빌드/배포 (Python setuptools)
 .Python
 develop-eggs/
 downloads/
@@ -41,8 +24,6 @@ share/python-wheels/
 *.spec
 pip-log.txt
 pip-delete-this-directory.txt
-
-# 테스트 / 커버리지 / 타입체크
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
@@ -60,189 +41,96 @@ coverage.xml
 nosetests.xml
 .cache/
 cover/
-
-# 도구 / 의존성 관리
 .pdm.toml
 poetry.toml
 pyrightconfig.json
 __pypackages__/
 cython_debug/
-
-# Jupyter
 .ipynb_checkpoints/
 */.ipynb_checkpoints/*
 profile_default/
 ipython_config.py
-
-# IDE-Python
 .spyderproject
 .spyproject
 .ropeproject
 
-
-# ─────────────────────────────────────────────
-# Node.js / Vite / Next.js (apps/dashboard, archive/korea100/web)
-# ─────────────────────────────────────────────
+# JavaScript
 node_modules/
 .pnp
 .pnp.js
 .yarn/install-state.gz
-
-# 빌드 산출
 dist/
 build/
 .next/
 out/
 .vercel
-
-# TypeScript
 *.tsbuildinfo
 next-env.d.ts
-
-# npm / yarn / pnpm 로그
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
-
-# 테스트
 coverage/
 
-
-# ─────────────────────────────────────────────
-# 환경 변수 / 시크릿
-# ─────────────────────────────────────────────
+# Local configuration and editors
 .env
 .env.local
 .env.*.local
 .env.development.local
 .env.test.local
 .env.production.local
-
-# 인증/키
 *.pem
 *.key
 client_secret_*.json
 credentials.json
 password.rb
-
-
-# ─────────────────────────────────────────────
-# 도구 / 환경
-# ─────────────────────────────────────────────
-# Claude AI 캐시·설정
 .claude/
-
-# Vagrant
 .vagrant/
 *.box
-
-
-# ─────────────────────────────────────────────
-# IDE
-# ─────────────────────────────────────────────
 .vscode/
 .idea/
 *.swp
 *.swo
 *.sublime-workspace
 *.sublime-project
-
-
-# ─────────────────────────────────────────────
-# OS
-# ─────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 desktop.ini
-
-
-# ─────────────────────────────────────────────
-# 로그
-# ─────────────────────────────────────────────
 *.log
+.tmp/
 
-
-# ─────────────────────────────────────────────
-# 데이터 / 모델 / 인덱스 (전 프로젝트 일괄)
-# ─────────────────────────────────────────────
-
-# 원본 / 정제 / 출력
-# ※ **/data/는 apps/dashboard/src/data 같은 프론트 소스 폴더와
-#    archive/*/data/의 추적 중인 파일까지 잡으므로 사용 금지.
-#    현행 모듈은 산출물을 전부 nara_storage/에 쓰므로 모듈별 data/ 규칙은 없앴다.
-#    (옛 nara_crawler/·nara_relist/·nara_agui/ 규칙은 해당 경로가 사라져 삭제)
+# Generated Nara data
+nara_storage/
 **/raw_data/
 **/refine_data/
 **/refine_data_dev/
 **/refined_data/
 **/output/
 **/results/
-
-# 공유 데이터 루트 (services/crawler 산출물 — git 제외)
-# openapi_{new,old,link}/ · fileData/ · standard/ · manifests/ · reports/ 전부.
-# fresh clone에는 없으므로 search/combiner 기동 전에 크롤러를 먼저 돌려야 한다.
-nara_storage/
-
 **/apidata/
-# 테스트 fixture는 예외 (재현 가능한 계약 테스트용 소형 문서)
 !**/tests/fixtures/apidata/
 !**/tests/fixtures/apidata/**
-
-# 실행 감사 기록 (런타임 생성, archive/nara_openclaw)
 **/runs/*.json
-
-# API 메타
 **/api_data/
 **/api_docs/
-
-# 임베딩 모델 (services/search/models/ko-sroberta-multitask — 최초 실행 시 자동 다운로드)
 **/models/
 **/embeddings/
-
-# 검색 인덱스 (재생성 가능)
 **/storage/
-
-# 캐시 / 청크 / 테스트 데이터
 **/cache/
 **/rag_chunks/
 **/test_data/
-
-# 크롤러 목록 CSV (자동 갱신 다운로드, metadata_file.csv만 100MB 이상)
-# 같은 폴더의 date.json은 추적 대상이므로 폴더째 무시하지 않는다.
 services/crawler/scanner/database/*.csv
+media_links_*.json
+uddi*
 
-
-# ─────────────────────────────────────────────
-# 백업 / 아카이브 / 레거시
-# ─────────────────────────────────────────────
-# ※ 보류 모듈을 모아둔 archive/는 추적 대상이다 (CLAUDE.md의 "보류(archive/)" 참고).
-#    아래는 모듈 내부에 생기는 백업 폴더용 규칙이다.
+# Local backups and binary assets
 backups/
 **/_archive/
 **/archieve/
 **/legacy/
-
-
-# ─────────────────────────────────────────────
-# 미디어 / 바이너리 (CSV 포함)
-# ※ 문서용 이미지 커밋이 필요하면 개별 예외 추가
-# ─────────────────────────────────────────────
 *.png
 *.svg
 *.woff
 *.csv
-# ※ 크롤러 테스트 fixture(tests/fixtures/renewed/*.html)는 위 확장자에 걸리지 않는다.
-#    HTML 캡처를 계속 추가할 예정이므로 *.html은 무시하지 말 것.
-
-
-# ─────────────────────────────────────────────
-# 프로젝트별 잡종
-# ─────────────────────────────────────────────
-# 임시 메모
 task.txt
 ISSUE.md
-
-# 크롤링 산출 패턴
-media_links_*.json
-uddi*

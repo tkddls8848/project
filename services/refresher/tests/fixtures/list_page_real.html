@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<title>활용신청 현황 | 공공데이터포털</title></head>
+<body>
+<form id="searchVO" name="searchVO" action="/iim/api/selectAcountList.do?status=dupReq" method="post" onsubmit="return false;">
+        <input id="pageIndex" name="pageIndex" type="hidden" value="1">
+        <input id="searchCondition3" name="searchCondition3" type="hidden" value="total">
+        <input id="publicDataDetailPk" name="publicDataDetailPk" type="hidden" value="">
+        <input id="prcuseReqstSeqNo" name="prcuseReqstSeqNo" type="hidden" value="">
+        <input id="cloudApi" name="cloudApi" type="hidden" value="0">
+        <input id="publicDataTyCode" name="publicDataTyCode" type="hidden" value="">
+        <input id="deleteAt" name="deleteAt" type="hidden" value="">
+</form>
+<div class="apply-result-link">
+                        <span class="krds-badge large outline-success">활용신청</span>
+
+                        <a href="javascript:fn_detail('uddi:00000000-0000-0000-0000-000000000001_202201010001','111111111','0','PR0027')" title="">
+                            
+                                
+                                
+                                    [승인] 국토교통부_(TAGO)_버스정류소정보
+                                
+                            
+                            <span class="add-state">
+                                
+                                    
+                                    
+                                
+                            </span>
+                        </a>
+                    </div>
+<div class="apply-result-link">
+                        <span class="krds-badge large outline-success">활용신청</span>
+
+                        <a href="javascript:fn_detail('uddi:00000000-0000-0000-0000-000000000002_202201010002','111111112','0','PR0027')" title="">
+                            
+                                
+                                
+                                    [승인] 국토교통부_(TAGO)_버스노선정보
+                                
+                            
+                            <span class="add-state">
+                                
+                                    
+                                    
+                                
+                            </span>
+                        </a>
+                    </div>
+<nav class="paging">
+<a class="page-link active" href="javascript:fn_page(1)">
+                    
+                        <span class="sr-only">현재페이지 </span>
+                    
+                    1
+                </a>
+<a class="page-link " href="javascript:fn_page(2)">
+                    
+                    2
+                </a>
+<a class="page-link " href="javascript:fn_page(3)">
+                    
+                    3
+                </a>
+</nav>
+<script>
+    function fn_detail(key, reqstNo, cloudApi, publicDataTyCode) {
+        $("#publicDataDetailPk").val(key);
+        $("#prcuseReqstSeqNo").val(reqstNo);
+        $("#cloudApi").val(cloudApi);
+        $("#publicDataTyCode").val(publicDataTyCode);
+        $("#searchVO").attr("onSubmit", "");
+        $("#searchVO").attr("action", "/iim/api/selectAPIAcountView.do").submit();
+    }
+    window.fn_page = function(pageNo) {
+//console.log(pageNo)
+        const $form = $('#searchVO')
+        if (!$form.length) return
+
+        $form.find("input[name='pageIndex']").val(pageNo)
+        $form.attr("onSubmit", "")
+        $form.attr("action", "/iim/api/selectAcountList.do")
+        $form.submit()
+    }
+</script>
+</body></html>

@@ -3,6 +3,7 @@ import asyncio
 import json
 import os
 import sys
+from pathlib import Path
 from typing import Dict, List, Optional
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -11,12 +12,16 @@ STAGE_DIR = current_dir
 
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
+PROJECT_ROOT = Path(BASE_DIR).parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from domain.schemas import CrawlerConfig
 from crawler.file_data_crawler import FileDataCrawler
 from managers.crawl_run_manager import CrawlRunManager
 from crawler.openapi_crawler import OpenAPICrawler
 from crawler.standard_crawler import StandardCrawler
+from nara_common.cli import interactive_argv, wants_interactive
 from utils.metadata_csv import MetadataCsvReader
 from utils.metadata_updater import maybe_update_metadata
 from utils.url_utils import URLGenerator
@@ -40,6 +45,9 @@ DEFAULT_WORKERS_BY_TYPE = {
     "standard": 30,
 }
 
+# 스캐너가 목록 CSV를 내려받는 곳이자 크롤러가 읽는 곳. 한 자리뿐이라 옵션이 아니다.
+CSV_DIR = os.path.join(STAGE_DIR, "scanner", "database")
+
 CSV_PREFIX_MAP = {
     "fileData": "metadata_file",
     "openapi": "metadata_api",
@@ -59,6 +67,20 @@ CRAWLER_CLASSES = {
 }
 
 OPENAPI_SUBTYPES = {"openapi_new", "openapi_old", "openapi_link"}
+
+
+# 심화 단계는 이번 크롤이 아니라 저장소를 읽는다(run_depth_stages 참고). 그래도 방금
+# 크롤한 것과 무관한 단계를 묻는 것은 오해를 부르므로, **그 코퍼스를 만들 수 있는
+# 실행에서만** 대화형 질문을 띄운다. 타입이 비면 심화 단독 실행이라 둘 다 묻는다.
+def _may_produce_file_data(answers: Dict) -> bool:
+    return bool(answers.get("full")) or (answers.get("type") or "") in ("", "fileData")
+
+
+def _may_produce_link_docs(answers: Dict) -> bool:
+    # openapi 크롤은 하위 타입을 크롤 후에 정하므로 LINK 문서를 만들어낸다.
+    # openapi_link만 대상이라고 보면 `openapi --harvest`가 부당하게 막힌다.
+    data_type = answers.get("type") or ""
+    return bool(answers.get("full")) or not data_type or data_type.startswith("openapi")
 
 
 def find_latest_metadata_csv(base_dir: str, prefix: str) -> Optional[str]:
@@ -235,7 +257,7 @@ async def run_depth_stages(args, run_manager: CrawlRunManager, crawl_run_id: str
     reports_dir = storage / "reports"
 
     if args.deep:
-        from profiling import fetch_download_urls, infer_fetched_files
+        from profiling import FetchPolicy, fetch_download_urls, infer_fetched_files
 
         records = _load_stored_records(storage / "fileData")
         download_urls: Dict[str, str] = {}
@@ -246,7 +268,18 @@ async def run_depth_stages(args, run_manager: CrawlRunManager, crawl_run_id: str
         else:
             print(f"Profiling {len(download_urls)} file(s) "
                   f"({'full download' if args.full_download else 'range sampling'})...")
-            fetched = await fetch_download_urls(download_urls, full_download=args.full_download)
+            # 전량 수신은 받은 파일을 둘 곳이 있어야 한다 (fetcher가 output_dir을 요구한다).
+            # 샘플링은 메모리에만 남으므로 디렉터리를 만들지 않는다.
+            files_dir = storage / "files" / crawl_run_id if args.full_download else None
+            fetched = await fetch_download_urls(
+                download_urls,
+                policy=FetchPolicy(full_download=args.full_download),
+                output_dir=files_dir,
+            )
+            if files_dir is not None:
+                print(f"  saved files to {files_dir}")
+            # 이하 산출물은 전부 파일명(download_urls의 키)으로 색인한다. 리포트를
+            # 배열로 두면 어느 파일에서 나온 지표인지 알 수 없다.
             schemas = infer_fetched_files(fetched)
             reports_dir.mkdir(parents=True, exist_ok=True)
             schema_path = reports_dir / f"{crawl_run_id}_file_schemas.json"
@@ -261,18 +294,26 @@ async def run_depth_stages(args, run_manager: CrawlRunManager, crawl_run_id: str
                 inspect_coordinate_columns,
             )
 
-            quality = [generate_quality_report(schema) for schema in schemas]
+            # 품질 리포트는 스키마와 **그 스키마를 뽑은 바로 그 바이트**를 함께 본다.
+            quality = {}
+            for name, schema in schemas.items():
+                result = fetched.get(name)
+                if result is None or getattr(result, "status", None) != "ok":
+                    continue
+                quality[name] = generate_quality_report(
+                    schema, result.sample, truncated=result.truncated
+                )
             quality_path = reports_dir / f"{crawl_run_id}_quality.json"
             _dump_json(quality_path, quality)
             outputs["quality"] = str(quality_path)
 
-            findings = [
-                {
+            findings = {
+                name: {
                     "address_columns": detect_address_columns(schema),
                     "coordinates": inspect_coordinate_columns(schema),
                 }
-                for schema in schemas
-            ]
+                for name, schema in schemas.items()
+            }
             address_path = reports_dir / f"{crawl_run_id}_address_geo.json"
             _dump_json(address_path, findings)
             outputs["address_geo"] = str(address_path)
@@ -365,6 +406,9 @@ def _dump_json(path, payload) -> None:
 async def main():
     parser = argparse.ArgumentParser(description="Integrated Nara Crawler (FileData, OpenAPI, Standard)")
 
+    # --full은 type/start/end를 대신하므로 먼저 선언한다. 대화형 모드가 선언 순서대로
+    # 물어보기 때문에, 이 순서라야 전체 크롤을 고른 사람에게 범위를 되묻지 않는다.
+    parser.add_argument("--full", action="store_true", help="Crawl all types with full range from CSV")
     parser.add_argument(
         "type",
         nargs="?",
@@ -381,10 +425,6 @@ async def main():
         default=None,
         help="Number of workers. Defaults: fileData=30, openapi/openapi_* =16, standard=30",
     )
-    parser.add_argument("--full", action="store_true", help="Crawl all types with full range from CSV")
-    parser.add_argument("--crawl-run-id", help="Optional crawl run id. Defaults to current KST timestamp")
-    default_csv_dir = os.path.join(STAGE_DIR, "scanner", "database")
-    parser.add_argument("--csv-dir", default=default_csv_dir, help="Directory for CSV metadata")
     parser.add_argument(
         "--skip-update",
         action="store_true",
@@ -422,7 +462,29 @@ async def main():
         help="Maximum distinct hosts to probe per harvest run (default: 4)",
     )
 
-    args = parser.parse_args()
+    argv = sys.argv[1:]
+    if wants_interactive(argv):
+        # type/-s/-e가 필수라 인자 없이 부르면 원래 usage 에러였다. 콘솔이면 그 자리에서
+        # 물어보고, 비대화형(파이프·CI)이면 예전처럼 에러를 낸다.
+        argv = interactive_argv(
+            parser,
+            ask_if={
+                "type": "!full",
+                "start": "!full",
+                "end": "!full",
+                "deep": _may_produce_file_data,
+                "full_download": "deep",
+                "harvest": _may_produce_link_docs,
+                "harvest_max_hosts": "harvest",
+            },
+            # openapi_new/old/link은 openapi를 CSV에서 걸러낸 부분집합일 뿐이고,
+            # 실제 하위 타입은 크롤 후 인라인 swagger 파싱 결과로 정해져 저장 폴더가
+            # 어차피 셋으로 갈린다. 고를 것은 openapi 하나다. 명령줄로는 여전히 받는다.
+            choices_for={"type": ["fileData", "openapi", "standard"]},
+        )
+        if argv is None:
+            return
+    args = parser.parse_args(argv)
     if args.workers is not None and args.workers < 1:
         parser.error("--workers must be greater than 0")
 
@@ -437,9 +499,9 @@ async def main():
 
     # 크롤 시작 전 목록 CSV 신규 여부 자동 확인 후 필요 시 다운로드
     if not args.skip_update and not depth_only:
-        await maybe_update_metadata(args.csv_dir, force=args.force_update)
+        await maybe_update_metadata(CSV_DIR, force=args.force_update)
 
-    crawl_run_id = args.crawl_run_id or CrawlRunManager.create_run_id()
+    crawl_run_id = CrawlRunManager.create_run_id()
     run_manager = CrawlRunManager(BASE_DIR)
     manifest = {
         "crawl_run_id": crawl_run_id,
@@ -453,11 +515,11 @@ async def main():
         print("\n" + "=" * 80)
         print("FULL MODE: Crawling all types (openapi, fileData, standard)")
         print("=" * 80)
-        print(f"Using metadata CSV directory: {args.csv_dir}")
+        print(f"Using metadata CSV directory: {CSV_DIR}")
 
         type_ranges = {}
         for data_type in ["openapi", "fileData", "standard"]:
-            csv_path = find_latest_metadata_csv(args.csv_dir, CSV_PREFIX_MAP[data_type])
+            csv_path = find_latest_metadata_csv(CSV_DIR, CSV_PREFIX_MAP[data_type])
             if not csv_path:
                 print(f"Warning: No CSV found for {data_type}, skipping...")
                 continue
@@ -481,7 +543,7 @@ async def main():
                 start=start,
                 end=end,
                 workers=args.workers,
-                csv_dir=args.csv_dir,
+                csv_dir=CSV_DIR,
                 crawl_run_id=crawl_run_id,
                 output_dir=args.output_dir,
             )
@@ -514,7 +576,7 @@ async def main():
         start=args.start,
         end=args.end,
         workers=args.workers,
-        csv_dir=args.csv_dir,
+        csv_dir=CSV_DIR,
         crawl_run_id=crawl_run_id,
         output_dir=args.output_dir,
     )

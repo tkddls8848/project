@@ -1,4 +1,4 @@
-# Runtime dependencies for nara_crawler.
+# Runtime dependencies for services/crawler.
 # Keep this file limited to packages imported by crawler code.
 
 aiohttp>=3.9.0

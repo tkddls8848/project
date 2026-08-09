@@ -2,6 +2,24 @@
 
 Crawler for Korean public-API documentation from data.go.kr.
 
+## 실행
+
+옵션이 많아 외우기 어렵다면 **인자 없이 실행한다.** 크롤 타입·범위·심화 옵션을
+차례로 묻고, 마지막에 조립된 명령을 보여준 뒤 확인을 받는다 (`-i`로도 진입한다).
+`--full`을 켜면 타입·범위를, `--deep`을 끄면 `--full-download`를 묻지 않는다.
+
+타입 메뉴는 `fileData`·`openapi`·`standard` 셋만 제시한다. `openapi_new`·`openapi_old`·
+`openapi_link`는 같은 CSV를 걸러낸 부분집합이고 실제 하위 타입은 크롤 후에 정해지므로
+(아래 "openapi 하위 타입") 고를 것은 `openapi` 하나다. 명령줄로는 그대로 받는다.
+
+```powershell
+python main.py                          # 대화형: 물어보고 채워준다
+python main.py openapi -s 1 -e 100      # 기존 명령줄 방식은 그대로
+```
+
+파이프·CI처럼 입력이 콘솔이 아니면 대화형으로 들어가지 않고 예전처럼 인자 부족
+에러를 낸다.
+
 ## 산출물 경로
 
 크롤링 결과는 저장소 공통 데이터 루트 `../../nara_storage/`에 저장된다 (run 폴더 없음).
@@ -25,12 +43,29 @@ Crawler for Korean public-API documentation from data.go.kr.
 | 플래그 | 하는 일 | 산출물 |
 | --- | --- | --- |
 | `--deep` | fileData를 Range 샘플링으로 받아 스키마·품질·주소 리포트를 전부 생성 | `nara_storage/reports/{run_id}_{file_schemas,quality,address_geo}.json` |
-| `--full-download` | `--deep`을 샘플링 대신 전량 다운로드로 (포털 부하 큼) | 〃 |
+| `--full-download` | `--deep`을 샘플링 대신 전량 다운로드로 (포털 부하 큼) | 〃 + 받은 파일 `nara_storage/files/{run_id}/` |
 | `--harvest` | LINK형에서 추출한 외부 호스트를 프로토콜 감지로 수집 | `..._portal_harvest.json` |
 | `--harvest-max-hosts N` | 한 실행에서 프로브할 최대 호스트 수 (기본 4) | — |
 
 리포트를 개별로 켜는 플래그는 없다. 비용은 전부 파일 수신에 있고 품질·주소
 분석은 같은 샘플을 후처리할 뿐이라 나눌 실익이 없기 때문이다.
+
+세 리포트는 모두 **파일명(`download_urls`의 키)으로 색인된 객체**다. 배열로 두면
+어느 파일에서 나온 지표인지 알 수 없다.
+
+### 심화 단계의 대상은 "이번 크롤"이 아니라 "저장소 전체"다
+
+`--deep`은 `nara_storage/fileData/`를, `--harvest`는 `nara_storage/openapi_link/`를
+읽는다. **이번 실행의 타입도 `-s/-e` 범위도 보지 않는다.** `fileData -s 1 -e 10 --deep`은
+그 10건이 아니라 저장된 fileData 문서 전량을 프로파일링한다 — 파일 수신 비용이 크롤
+범위에 비례하지 않으니 켜기 전에 저장 건수를 확인할 것. 대상 폴더가 비어 있으면
+안내만 출력하고 넘어간다.
+
+그래서 두 옵션은 크롤 없이 단독으로도 돈다(위 예시). 대화형 모드는 **그 코퍼스를
+만들어낼 수 있는 실행에서만** 질문을 띄운다: `--deep`은 fileData·`--full`·타입 없는
+단독 실행에서, `--harvest`는 openapi 계열·`--full`·단독 실행에서 묻는다.
+openapi 크롤이 `--harvest` 대상이 되는 이유는 하위 타입이 크롤 후에 정해져
+`openapi` 한 번이 LINK 문서를 만들어내기 때문이다. 명령줄에서는 어느 조합이든 받는다.
 
 심화 단계는 저장된 문서를 읽으므로 **크롤 타입 없이 단독 실행**되며, 이때는
 목록 CSV 갱신도 자동 생략된다 (`--skip-update` 불필요):
@@ -42,8 +77,7 @@ python main.py --harvest
 
 ### openapi 하위 타입이 셋으로 늘었다
 
-`openapi_link`가 진짜 LINK형과 swagger 파싱 실패분을 뭉개고 있었다. 이제 셋으로
-나뉘고, 분류 근거는 각 문서의 `api_type_evidence`에 남는다.
+openapi 문서는 셋으로 나뉘며 분류 근거는 각 문서의 `api_type_evidence`에 남는다.
 
 | 타입 | 판별 근거 | 의미 |
 | --- | --- | --- |
@@ -51,12 +85,7 @@ python main.py --harvest
 | `openapi_old` | 비-LINK + 인라인 `swaggerJson` 파싱 불가/부재 | 구형 HTML 문서. 상세 표에서 API 규칙을 추출한다 |
 | `openapi_link` | CSV `API 유형`이 LINK | 기관 자체 포털에 API가 있음 |
 
-`openapi_old`는 새로 만든 이름이 아니라 **원래 있던 분류를 되살린 것**이다.
-리팩터링 과정에서 분기가 사라지면서 구형 문서들이 `openapi_link`에 조용히
-섞여 들어갔다 (git 이력: `nara_crawler/crawler/crawler/openapi_crawler.py`). 특정
-`select` 태그 하나에 의존하지 않고, 파싱 가능한 Swagger 명세의 유무로 신·구형을
-구분한다.
-저장된 7,643건 중 37.9%가 실제로는 LINK형이 아니었다.
+특정 `select` 태그가 아니라 파싱 가능한 Swagger 명세의 유무로 신·구형을 구분한다.
 
 LINK형 문서도 이제 `endpoints[]`를 갖는다. data.go.kr 상세 페이지의 요청/응답
 표를 openapi_new와 **동일한 스키마로** 합성한 것이며, 이 과정에 외부 요청은 없다.
@@ -73,10 +102,3 @@ LINK형 문서도 이제 `endpoints[]`를 갖는다. data.go.kr 상세 페이지
 (페이지의 조회하기 버튼과 같은 요청). 옵션별 성패는 문서의 `detail_functions[]`에
 남고, 하나가 실패해도 나머지는 수집되며 전부 실패하면 페이지가 렌더한 하나가 남는다.
 인라인 swagger가 있는 `openapi_new`는 스펙이 이미 전체를 담으므로 조회하지 않는다.
-
-> **재크롤링이 필요하다.** 기존 저장분의 `openapi_old`·`openapi_link` 문서는
-> 오퍼레이션 하나만 갖고 있다.
-
-> **재크롤링이 필요하다.** `external_endpoint_urls`는 이번에 추가된 필드라
-> 기존에 저장된 LINK 문서 7,643건에는 없다. `--harvest-portals`는 이 필드를
-> 입력으로 쓰므로, 재크롤링 전에는 0호스트를 보고한다.
