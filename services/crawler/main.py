@@ -406,8 +406,8 @@ def _dump_json(path, payload) -> None:
 async def main():
     parser = argparse.ArgumentParser(description="Integrated Nara Crawler (FileData, OpenAPI, Standard)")
 
-    # --full은 type/start/end를 대신하므로 먼저 선언한다. 대화형 모드가 선언 순서대로
-    # 물어보기 때문에, 이 순서라야 전체 크롤을 고른 사람에게 범위를 되묻지 않는다.
+    # --full은 type/start/end를 대신한다. 대화형 순서는 아래 ask_first가 정하므로
+    # 전체 크롤을 고른 사람에게 범위를 되묻지 않는다.
     parser.add_argument("--full", action="store_true", help="Crawl all types with full range from CSV")
     parser.add_argument(
         "type",
@@ -481,6 +481,9 @@ async def main():
             # 실제 하위 타입은 크롤 후 인라인 swagger 파싱 결과로 정해져 저장 폴더가
             # 어차피 셋으로 갈린다. 고를 것은 openapi 하나다. 명령줄로는 여전히 받는다.
             choices_for={"type": ["fileData", "openapi", "standard"]},
+            # 무엇을 크롤할지는 답이 없으면 실행 자체가 불가능하니 하나씩 묻는다.
+            # 나머지는 전부 기본값이 있는 곁가지라, 켤 것만 한 번에 고르게 한다.
+            ask_first=["full", "type", "start", "end"],
         )
         if argv is None:
             return

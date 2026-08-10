@@ -83,6 +83,43 @@ def test_callable_condition_sees_the_earlier_answers(console):
     assert cli.interactive_argv(parser, ask_if=ask_if) == ["--full", "--deep"]
 
 
+def test_optional_options_are_picked_in_one_menu(console):
+    """ask_first 밖의 옵션은 하나씩이 아니라 한 번에 고른다."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--full", action="store_true")
+    parser.add_argument("type", nargs="?", choices=["openapi", "fileData"])
+    parser.add_argument("--workers", type=int)
+    parser.add_argument("--skip-update", action="store_true")
+    parser.add_argument("--deep", action="store_true")
+    ask_first = ["full", "type"]
+
+    console("n", "2", "", "")  # 타입만 고르고 나머지는 Enter 한 번으로 끝낸다
+    assert cli.interactive_argv(parser, ask_first=ask_first) == ["fileData"]
+
+    console("n", "1", "1,3", "8", "")  # --workers 8 --deep
+    argv = cli.interactive_argv(parser, ask_first=ask_first)
+    assert argv == ["openapi", "--workers", "8", "--deep"]
+    assert parser.parse_args(argv).workers == 8
+
+    console("n", "1", "--skip-update", "")  # 번호 대신 옵션 이름으로도 고른다
+    assert cli.interactive_argv(parser, ask_first=ask_first) == ["openapi", "--skip-update"]
+
+
+def test_menu_reopens_for_options_a_pick_unlocked(console):
+    """--deep을 고르면 그때 열리는 --full-download를 다음 라운드에서 묻는다."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument("type", nargs="?", choices=["openapi", "fileData"])
+    parser.add_argument("--deep", action="store_true")
+    parser.add_argument("--full-download", action="store_true")
+    kwargs = {"ask_if": {"full_download": "deep"}, "ask_first": ["type"]}
+
+    console("2", "1", "1", "")  # --deep -> 추가 메뉴에서 --full-download
+    assert cli.interactive_argv(parser, **kwargs) == ["fileData", "--deep", "--full-download"]
+
+    console("2", "", "")  # --deep을 안 고르면 추가 메뉴 자체가 없다
+    assert cli.interactive_argv(parser, **kwargs) == ["fileData"]
+
+
 def test_cancel_and_console_detection(console, monkeypatch):
     console()
     assert cli.interactive_argv(sample_parser()) is None
