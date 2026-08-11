@@ -18,9 +18,9 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
-PROJECT_ROOT = BASE_DIR.parents[1]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
+LIBS_DIR = BASE_DIR.parents[1] / "libs"
+if str(LIBS_DIR) not in sys.path:
+    sys.path.insert(0, str(LIBS_DIR))
 
 from app.accounts import fetch_account_rows  # noqa: E402
 from app.browser import BrowserSession  # noqa: E402

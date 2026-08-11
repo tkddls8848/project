@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import argparse
 import os
-import socket
 import subprocess
 import sys
 import time
@@ -18,10 +17,17 @@ from pathlib import Path
 
 from app.config import PROJECT_ROOT, load_project_env
 
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
+LIBS_DIR = PROJECT_ROOT / "libs"
+if str(LIBS_DIR) not in sys.path:
+    sys.path.insert(0, str(LIBS_DIR))
 
 from nara_common.cli import interactive_argv, wants_interactive
+from nara_common.process import (
+    port_open,
+    project_python,
+    start_uvicorn as _start_uvicorn,
+    terminate,
+)
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -34,20 +40,6 @@ class Service:
     cwd: Path
     module: str
     python: Path
-
-
-def port_open(port: int) -> bool:
-    try:
-        with socket.create_connection(("127.0.0.1", port), timeout=0.3):
-            return True
-    except OSError:
-        return False
-
-
-def project_python(directory: Path) -> Path:
-    if os.name == "nt":
-        return directory / "venv" / "Scripts" / "python.exe"
-    return directory / "venv" / "bin" / "python"
 
 
 def service_definitions(service_port: int) -> tuple[Service, ...]:
@@ -105,23 +97,13 @@ def start_uvicorn(service: Service) -> subprocess.Popen:
         raise RuntimeError(f"{service.name} 프로젝트 폴더가 없습니다: {service.cwd}")
     if not service.python.is_file():
         raise RuntimeError(f"{service.name} Python 환경이 없습니다: {service.python}")
-    command = [
-        str(service.python),
-        "-m",
-        "uvicorn",
+    return _start_uvicorn(
         service.module,
-        "--host",
-        "127.0.0.1",
-        "--port",
-        str(service.port),
-    ]
-    kwargs: dict[str, object] = {
-        "cwd": str(service.cwd),
-        "env": child_environment(),
-    }
-    if os.name == "nt":
-        kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
-    return subprocess.Popen(command, **kwargs)
+        service.cwd,
+        service.port,
+        service.python,
+        child_environment(),
+    )
 
 
 def health_ready(port: int) -> bool:
@@ -186,19 +168,6 @@ def start_hermes(profile: str) -> subprocess.Popen:
         ],
         **kwargs,
     )
-
-
-def terminate(children: list[subprocess.Popen]) -> None:
-    for child in reversed(children):
-        if child.poll() is None:
-            child.terminate()
-    deadline = time.monotonic() + 5
-    for child in reversed(children):
-        if child.poll() is None:
-            try:
-                child.wait(timeout=max(0.1, deadline - time.monotonic()))
-            except subprocess.TimeoutExpired:
-                child.kill()
 
 
 def main() -> int:

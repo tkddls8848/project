@@ -14,10 +14,12 @@ apps/dashboard :5173   React Flow 편집기
 apps/workbench :8010   search/combiner 통합 UI
 apps/prometheus :8020  Hermes Gateway(:8642) + Nara MCP 오케스트레이터
 services/refresher     data.go.kr 활용신청 연장 CLI
+libs/nara_common       표준 라이브러리 기반 저장소 공통 유틸리티
 ```
 
 - `apps/*`는 `services/*`를 HTTP로 사용한다. 서비스 구현을 직접 import하지 않는다.
-- 실행기 공통 CLI 코드만 `nara_common/`에서 공유한다.
+- 표준 라이브러리만 사용하는 저장소 공통 유틸리티는 `libs/nara_common/`에서 공유한다.
+  각 독립 실행기는 `libs/`를 `sys.path`에 넣어 import한다. 루트에는 컨테이너 디렉터리만 둔다.
 - 저장소 루트는 `.nara-root`로 찾고 모든 산출물은 루트 `nara_storage/`에 둔다.
 - `archive/`와 날짜가 붙은 계획 문서는 현재 구현 판단에 사용하지 않는다.
 

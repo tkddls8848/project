@@ -12,9 +12,9 @@ STAGE_DIR = current_dir
 
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
-PROJECT_ROOT = Path(BASE_DIR).parents[1]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
+LIBS_DIR = Path(BASE_DIR).parents[1] / "libs"
+if str(LIBS_DIR) not in sys.path:
+    sys.path.insert(0, str(LIBS_DIR))
 
 from domain.schemas import CrawlerConfig
 from crawler.file_data_crawler import FileDataCrawler

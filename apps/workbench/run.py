@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import os
-import socket
 import subprocess
 import sys
 import time
@@ -15,26 +14,18 @@ from typing import Iterable
 BASE_DIR = Path(__file__).resolve().parent
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
-REPO_ROOT = BASE_DIR.parents[1]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+LIBS_DIR = BASE_DIR.parents[1] / "libs"
+if str(LIBS_DIR) not in sys.path:
+    sys.path.insert(0, str(LIBS_DIR))
 
 from nara_common.cli import interactive_argv, wants_interactive  # noqa: E402
-
-
-def find_project_root(start: Path) -> Path:
-    """Walk up to the `.nara-root` marker that pins the repository root.
-
-    The result does not depend on directory depth, so moving this module under
-    apps/ keeps sibling service lookup working.  Without a marker we fall back to
-    the previous convention (module is a direct child of the root).
-
-    Cross-module imports are forbidden, so this helper is duplicated per module.
-    """
-    for candidate in (start, *start.parents):
-        if (candidate / ".nara-root").is_file():
-            return candidate
-    return start.parent
+from nara_common.paths import find_project_root  # noqa: E402
+from nara_common.process import (  # noqa: E402
+    port_open,
+    project_python as _project_python,
+    start_uvicorn as _start_uvicorn,
+    terminate,
+)
 
 
 PROJECT_ROOT = find_project_root(BASE_DIR)
@@ -73,14 +64,6 @@ SERVICES = (
 )
 
 
-def port_open(port: int) -> bool:
-    try:
-        with socket.create_connection(("127.0.0.1", port), timeout=0.3):
-            return True
-    except OSError:
-        return False
-
-
 def _unique_paths(paths: Iterable[Path]) -> list[Path]:
     result: list[Path] = []
     seen: set[str] = set()
@@ -90,12 +73,6 @@ def _unique_paths(paths: Iterable[Path]) -> list[Path]:
             seen.add(normalized)
             result.append(path)
     return result
-
-
-def _project_python(project_dir: Path) -> Path:
-    if os.name == "nt":
-        return project_dir / "venv" / "Scripts" / "python.exe"
-    return project_dir / "venv" / "bin" / "python"
 
 
 def supports_modules(python: Path, modules: Iterable[str]) -> bool:
@@ -170,34 +147,7 @@ def start_uvicorn(
     port: int,
     python: Path,
 ) -> subprocess.Popen:
-    command = [
-        str(python),
-        "-m",
-        "uvicorn",
-        module,
-        "--host",
-        "127.0.0.1",
-        "--port",
-        str(port),
-    ]
-    kwargs: dict = {"cwd": str(cwd), "env": os.environ.copy()}
-    if os.name == "nt":
-        kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
-    return subprocess.Popen(command, **kwargs)
-
-
-def terminate(children: list[subprocess.Popen]) -> None:
-    for child in reversed(children):
-        if child.poll() is None:
-            child.terminate()
-    deadline = time.monotonic() + 5
-    for child in reversed(children):
-        if child.poll() is not None:
-            continue
-        try:
-            child.wait(timeout=max(0.1, deadline - time.monotonic()))
-        except subprocess.TimeoutExpired:
-            child.kill()
+    return _start_uvicorn(module, cwd, port, python, os.environ.copy())
 
 
 def main() -> int:

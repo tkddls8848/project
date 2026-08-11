@@ -5,24 +5,11 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
+from nara_common.paths import find_project_root
 from tqdm import tqdm
 
 
 KST = timezone(timedelta(hours=9))
-
-
-def find_project_root(start: Path) -> Path:
-    """`.nara-root` 마커를 위로 훑어 저장소 루트를 찾는다.
-
-    디렉터리 깊이에 의존하지 않으므로 모듈을 services/ 아래로 옮겨도 같은 지점을 가리킨다.
-    마커를 못 찾으면 예전 규약(모듈이 루트의 직계 자식)으로 폴백한다.
-
-    모듈 간 import 금지 제약 때문에 이 함수는 각 모듈에 복제되어 있다.
-    """
-    for candidate in (start, *start.parents):
-        if (candidate / ".nara-root").is_file():
-            return candidate
-    return start.parent
 
 
 class CrawlRunManager:

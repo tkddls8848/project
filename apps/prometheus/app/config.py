@@ -6,24 +6,9 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from nara_common.paths import find_project_root
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-
-def find_project_root(start: Path) -> Path:
-    """Walk up to the `.nara-root` marker that pins the repository root.
-
-    The result does not depend on directory depth, so moving this module under
-    apps/ keeps `nara_storage` resolving to the same place.  Without a marker we
-    fall back to the previous convention (module is a direct child of the root).
-
-    Cross-module imports are forbidden, so this helper is duplicated per module.
-    """
-    for candidate in (start, *start.parents):
-        if (candidate / ".nara-root").is_file():
-            return candidate
-    return start.parent
-
 
 PROJECT_ROOT = find_project_root(BASE_DIR)
 DEFAULT_STORAGE_DIR = PROJECT_ROOT / "nara_storage"

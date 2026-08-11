@@ -6,15 +6,9 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from nara_common.paths import find_project_root
+
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-
-def find_project_root(start: Path) -> Path:
-    for candidate in (start, *start.parents):
-        if (candidate / ".nara-root").is_file():
-            return candidate
-    return start.parent
-
 
 PROJECT_ROOT = find_project_root(BASE_DIR)
 DEFAULT_STORAGE_DIR = PROJECT_ROOT / "nara_storage" / "refresher"
