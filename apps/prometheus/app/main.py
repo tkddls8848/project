@@ -89,6 +89,19 @@ async def agent_health():
         }
 
 
+@app.post("/data/rebuild")
+async def rebuild_search_data():
+    """Rebuild the Search index from the current nara_storage snapshot."""
+    async with NaraClient() as client:
+        return await client.rebuild_search_index()
+
+
+@app.get("/data/rebuild/status")
+async def search_data_rebuild_status():
+    async with NaraClient() as client:
+        return await client.rebuild_status()
+
+
 @app.post("/agent/design-runs", response_model=AgentRunResponse, status_code=202)
 async def create_agent_design_run(request: AgentRunRequest) -> AgentRunResponse:
     return await agent_runs.create(request)

@@ -42,7 +42,10 @@ libs/nara_common       표준 라이브러리 기반 저장소 공통 유틸리�
 ### prometheus
 
 - 애플리케이션 run 하나가 Hermes Gateway run 하나에 대응한다.
-- Nara MCP의 읽기 전용 도구만 허용하고 최대 12회 호출한다.
+- Nara MCP는 `search_api_docs`와 `get_api_detail`만 노출하고 최대 4회 호출한다.
+  두 도구는 선택에 필요한 요약만 반환한다. 문서 전문은 루프가 끝난 뒤
+  Orchestrator가 Nara에서 다시 조회한다.
+- LLM은 service_id 선택기다. 요청이 `selected_service_ids`를 지정하면 run을 만들지 않는다.
 - 최종 LLM 출력은 코드 펜스 없는 JSON 객체여야 한다.
 - critic은 로컬 결정형 검증만 수행한다. 결과 재검증을 위한 추가 LLM run을 만들지 않는다.
 - 실제 행정 처리나 외부 시스템 변경을 수행했다고 주장하지 않는다.

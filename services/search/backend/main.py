@@ -109,6 +109,7 @@ def health():
         "index_collection_total": chunk_count,
         "data_path":             retriever._openapi_dir,
         "index_error":           retriever.last_error() if chunk_count is None else "",
+        "index_warning":         retriever.index_warning(),
         "build_state":           build_status.state,
         "diagnostics":           retriever.diagnostics(),
         "lexical_corpus_total":  lexical_retriever.corpus_size(),
@@ -128,13 +129,16 @@ def search(request: SearchRequest):
     if len(query) < 2:
         raise HTTPException(status_code=400, detail="query must be at least 2 characters")
 
-    vector_raw = retriever.search(query, top_k=request.top_k) if request.use_vector else []
-    lexical_raw = lexical_retriever.search(query, top_k=request.top_k)
+    # Over-fetch before enforcing the detail-availability contract so a stale
+    # candidate cannot crowd out a valid result near the requested cutoff.
+    candidate_k = min(20, max(request.top_k, request.top_k * 4))
+    vector_raw = retriever.search(query, top_k=candidate_k) if request.use_vector else []
+    lexical_raw = lexical_retriever.search(query, top_k=candidate_k)
 
     if vector_raw and lexical_raw:
         fused = reciprocal_rank_fusion(
             {"vector": vector_raw, "lexical": lexical_raw},
-            top_k=request.top_k,
+            top_k=candidate_k,
             weights={
                 "vector": config.VECTOR_RRF_WEIGHT,
                 "lexical": config.LEXICAL_RRF_WEIGHT,
@@ -143,26 +147,38 @@ def search(request: SearchRequest):
         fusion = "rrf"
     elif vector_raw or lexical_raw:
         channel = "vector" if vector_raw else "lexical"
-        fused = [dict(m, match_channels=[channel]) for m in (vector_raw or lexical_raw)][: request.top_k]
+        fused = [dict(m, match_channels=[channel]) for m in (vector_raw or lexical_raw)][:candidate_k]
         fusion = channel
     else:
         fused = []
         fusion = "none"
 
-    results = [_to_result(m) for m in fused]
+    available, unavailable_ids = [], []
+    for meta in fused:
+        canonical_id = to_canonical(str(meta.get("api_id", "")))
+        if detail_provider.has_detail(canonical_id):
+            available.append(meta)
+        else:
+            unavailable_ids.append(canonical_id)
+    available = available[: request.top_k]
+    if not available:
+        fusion = "none"
+
+    results = [_to_result(m) for m in available]
     return {
         "query": query,
         "results": results,
         "diagnostics": {
             "vector_enabled":     request.use_vector,
             "vector_candidates":  len(vector_raw),
-            "vector_error":       retriever.last_error() if not vector_raw else "",
+            "vector_error":       (retriever.last_error() or retriever.index_warning()) if not vector_raw else "",
             "vector_search":      retriever.search_diagnostics() if request.use_vector else {},
             "vector_rrf_weight":  config.VECTOR_RRF_WEIGHT,
             "lexical_rrf_weight": config.LEXICAL_RRF_WEIGHT,
             "lexical_candidates": len(lexical_raw),
             "lexical_source":     lexical_retriever.corpus_source(),
             "fusion":             fusion,
+            "unavailable_candidates": unavailable_ids,
         },
     }
 

@@ -1,39 +1,52 @@
-# <ACCOUNT_ID>를 바꾸고 .env에 CLOUDFLARE_API_TOKEN을 넣는다.
+# Managed template used by run.py for the project-local Hermes profile.
+# Values wrapped in __...__ are rendered at startup; do not put provider
+# credentials in this file. Cloudflare credentials stay in apps/prometheus/.env
+# and are consumed only by the loopback compatibility proxy.
 
 providers:
-  cloudflare:
-    base_url: "https://api.cloudflare.com/client/v4/accounts/<ACCOUNT_ID>/ai/v1"
-    key_env: CLOUDFLARE_API_TOKEN
-    default_model: "@cf/mistralai/mistral-small-3.1-24b-instruct"
+  cloudflare_proxy:
+    base_url: __NARA_CLOUDFLARE_PROXY_URL__
+    key_env: NARA_CLOUDFLARE_PROXY_KEY
+    default_model: __NARA_HERMES_MODEL__
+    transport: "chat_completions"
 
 gateway:
   platforms:
     api_server:
       enabled: true
-      host: "127.0.0.1"
-      port: 8642
+      extra:
+        host: "127.0.0.1"
+        port: 8642
+        model_routes:
+          __NARA_HERMES_MODEL__:
+            model: __NARA_HERMES_MODEL__
+            provider: "custom:cloudflare_proxy"
 
 model:
-  default: "@cf/mistralai/mistral-small-3.1-24b-instruct"
-  provider: "custom:cloudflare"
+  default: __NARA_HERMES_MODEL__
+  provider: "custom:cloudflare_proxy"
+  base_url: __NARA_CLOUDFLARE_PROXY_URL__
+  api_mode: "chat_completions"
   context_length: 128000
-  max_tokens: 4096
+  # The loop only has to name up to three service_id values, so a large output
+  # budget buys nothing and output tokens cost more per neuron than input.
+  max_tokens: 512
 
 mcp_servers:
   nara:
-    command: "C:\\project\\apps\\prometheus\\venv\\Scripts\\python.exe"
+    command: __NARA_PROMETHEUS_PYTHON__
     args:
       - "-m"
       - "mcp_server.server"
     env:
-      PYTHONPATH: "C:\\project\\apps\\prometheus"
+      PYTHONPATH: __NARA_PROMETHEUS_DIR__
       PYTHONUTF8: "1"
       PYTHONIOENCODING: "utf-8"
-      NARA_SEARCH_URL: "http://127.0.0.1:8000"
-      NARA_COMBINER_URL: "http://127.0.0.1:8003"
-      NARA_COMPOSE_TIMEOUT: "240"
-      NARA_STORAGE_DIR: "C:\\project\\nara_storage"
-      NARA_INDEX_BUILT_AT: ""
+      NARA_SEARCH_URL: __NARA_SEARCH_URL__
+      NARA_COMBINER_URL: __NARA_COMBINER_URL__
+      NARA_COMPOSE_TIMEOUT: __NARA_COMPOSE_TIMEOUT__
+      NARA_STORAGE_DIR: __NARA_STORAGE_DIR__
+      NARA_INDEX_BUILT_AT: __NARA_INDEX_BUILT_AT__
     connect_timeout: 30.0
     enabled: true
     supports_parallel_tool_calls: false
@@ -41,9 +54,6 @@ mcp_servers:
       include:
         - search_api_docs
         - get_api_detail
-        - derive_relations
-        - compose_service_plan
-        - check_doc_freshness
       resources: false
       prompts: false
 
@@ -55,4 +65,4 @@ memory:
 
 skills:
   write_approval: true
-  external_dirs: '[C:\project\apps\prometheus\skills]'
+  external_dirs: __NARA_SKILLS_DIRS__

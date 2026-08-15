@@ -19,10 +19,14 @@ DEFAULT_STORAGE_DIR = PROJECT_ROOT / "nara_storage"
 HERMES_ENV_DEFAULTS = {
     "NARA_HERMES_PROFILE": "nara-cf",
     "NARA_HERMES_MODEL": "@cf/mistralai/mistral-small-3.1-24b-instruct",
+    "NARA_CLOUDFLARE_PROXY_PORT": "8643",
+    "NARA_CLOUDFLARE_PROXY_KEY": "change-me-local-proxy",
     "HERMES_API_URL": "http://127.0.0.1:8642",
     "API_SERVER_KEY": "change-me-local-dev",
     "NARA_HERMES_RUN_TIMEOUT": "300",
-    "NARA_HERMES_MAX_TOOL_CALLS": "12",
+    # One search plus at most three details. Each extra call re-sends every
+    # earlier tool result, so the cap is what bounds token spend per run.
+    "NARA_HERMES_MAX_TOOL_CALLS": "4",
 }
 
 # Local post-run verification. It never starts another LLM run.

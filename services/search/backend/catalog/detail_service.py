@@ -17,6 +17,7 @@ from ..core import config
 from ..core.service_id import split_service_id
 from .data_loader import DataRepository, clean_text
 from .document_builder import DocumentBuilder
+from .source_inventory import build_flat_file_index
 
 
 class DetailUnavailableError(RuntimeError):
@@ -197,6 +198,7 @@ class ServiceDetailProvider:
         self._repo: DataRepository | None = None
         self._builder: DocumentBuilder | None = None
         self._catalog_checked = False
+        self._flat_files: dict[str, Path] | None = None
 
     def _catalog_builder(self) -> DocumentBuilder | None:
         """catalog 산출물이 존재할 때만 DocumentBuilder를 준비한다."""
@@ -212,16 +214,44 @@ class ServiceDetailProvider:
         self._repo = None
         self._builder = None
         self._catalog_checked = False
+        self._flat_files = None
+
+    def _flat_file_index(self) -> dict[str, Path]:
+        if self._flat_files is None:
+            self._flat_files = build_flat_file_index(config.APIDATA_DIR)
+        return self._flat_files
 
     def _find_flat_file(self, api_id: str) -> Path | None:
+        files = self._flat_file_index()
+        current = files.get(api_id)
+        if current is not None and current.is_file():
+            return current
+        if current is not None:
+            files.pop(api_id, None)
+
+        # The crawler may add a document while Search is running.  Refresh only
+        # the requested ID on a cache miss so new data is visible without a
+        # process restart, while keeping normal detail lookups inexpensive.
         apidata_dir = config.APIDATA_DIR
         if not apidata_dir.exists():
             return None
-        for pattern in (f"{api_id}_*.json", f"{api_id}.json"):
-            matches = sorted(apidata_dir.glob(f"**/{pattern}"))
-            if matches:
-                return matches[-1]  # 같은 api_id가 여러 날짜면 최신 파일
-        return None
+        matches: list[Path] = []
+        for pattern in (f"{api_id}.json", f"{api_id}_*.json"):
+            matches.extend(apidata_dir.glob(f"**/{pattern}"))
+        if not matches:
+            return None
+        latest = sorted(matches)[-1]
+        files[api_id] = latest
+        return latest
+
+    def has_detail(self, canonical_id: str) -> bool:
+        """Whether ``canonical_id`` can immediately be served by ``get_detail``."""
+        builder = self._catalog_builder()
+        if builder is not None and self._repo is not None:
+            if self._repo.service_exists(canonical_id):
+                return True
+        _, api_id = split_service_id(canonical_id)
+        return self._find_flat_file(api_id) is not None
 
     def get_detail(self, canonical_id: str) -> dict[str, Any] | None:
         """정규화된 service_id의 상세 문서를 반환한다. 미존재 시 None.

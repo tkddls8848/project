@@ -51,7 +51,9 @@ def test_lexical_search_no_match(monkeypatch, fixture_apidata_dir, tmp_path):
     assert retriever.search("zzz9999", top_k=5) == []
 
 
-def test_lexical_prefers_storage_metadata_when_present(monkeypatch, fixture_apidata_dir, tmp_path):
+def test_lexical_prefers_authoritative_apidata_over_stale_storage_metadata(
+    monkeypatch, fixture_apidata_dir, tmp_path
+):
     import json
 
     from backend.core import config
@@ -66,8 +68,9 @@ def test_lexical_prefers_storage_metadata_when_present(monkeypatch, fixture_apid
     monkeypatch.setattr(config, "STORAGE_META_PATH", meta_path)
 
     retriever = LexicalRetriever()
-    assert retriever.corpus_source() == "storage_metadata"
-    assert retriever.search("메타데이터")[0]["api_id"] == "77777777"
+    assert retriever.corpus_source() == "apidata_scan"
+    assert retriever.corpus_size() == 3
+    assert retriever.search("메타데이터") == []
 
 
 # ── RRF ──────────────────────────────────────────────────────────────────────

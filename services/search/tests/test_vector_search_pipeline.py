@@ -1,6 +1,6 @@
 from backend.core import config
 from backend.indexing.index_builder import _build_search_chunks
-from backend.search.faiss_retriever import split_query_intents
+from backend.search.faiss_retriever import FAISSRetriever, split_query_intents
 
 
 def test_split_query_intents_keeps_full_query_and_korean_sub_intents():
@@ -14,6 +14,18 @@ def test_split_query_intents_keeps_full_query_and_korean_sub_intents():
 
 def test_single_intent_query_is_not_split():
     assert split_query_intents("미세먼지 측정소") == ["미세먼지 측정소"]
+
+
+def test_stale_vector_index_is_disabled_before_model_search():
+    retriever = FAISSRetriever(eager=False)
+    retriever._index = object()
+    retriever._model = object()
+    retriever._index_compatible = False
+    retriever._index_warning = "stale index"
+
+    assert retriever.search("여행경보", top_k=5) == []
+    assert retriever.search_diagnostics()["index_compatible"] is False
+    assert retriever.search_diagnostics()["reason"] == "stale index"
 
 
 def test_search_chunks_repeat_identity_and_preserve_interface_fields(monkeypatch):

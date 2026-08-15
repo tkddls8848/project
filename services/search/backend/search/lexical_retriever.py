@@ -101,11 +101,14 @@ class LexicalRetriever:
         if self._loaded:
             return
         self._loaded = True
-        metadata = _load_metadata_corpus()
-        self._source = "storage_metadata" if metadata else ""
-        if not metadata:
-            metadata = _load_apidata_corpus()
-            self._source = "apidata_scan" if metadata else ""
+        # APIDATA_DIR is the authoritative detail-document store.  A persisted
+        # metadata file can outlive or predate that store, so using it first can
+        # produce search IDs for which /services/{id} necessarily returns 404.
+        metadata = _load_apidata_corpus()
+        self._source = "apidata_scan" if metadata else ""
+        if not metadata and not config.APIDATA_DIR.exists():
+            metadata = _load_metadata_corpus()
+            self._source = "storage_metadata" if metadata else ""
         self._metadata = metadata
 
         for meta in metadata:

@@ -87,6 +87,22 @@ class NaraClient:
         )
         return {"search": search, "combiner": combiner}
 
+    async def rebuild_search_index(self) -> dict[str, Any]:
+        """Start a CPU rebuild from the authoritative nara_storage documents."""
+        return await self._request(
+            "nara-search",
+            "POST",
+            f"{self.settings.search_url}/build",
+            json={"device": "cpu"},
+        )
+
+    async def rebuild_status(self) -> dict[str, Any]:
+        return await self._request(
+            "nara-search",
+            "GET",
+            f"{self.settings.search_url}/build/status",
+        )
+
     async def search(
         self, query: str, top_k: int = 5, use_vector: bool = True
     ) -> dict[str, Any]:

@@ -30,6 +30,10 @@ def test_client_uses_existing_nara_contracts():
             return httpx.Response(200, json={"relations": [{"type": "shared"}]})
         if request.url.path == "/compose":
             return httpx.Response(200, json={"suggestion": "계획 초안"})
+        if request.url.path == "/build":
+            return httpx.Response(200, json={"ok": True, "message": "빌드 시작"})
+        if request.url.path == "/build/status":
+            return httpx.Response(200, json={"state": "running", "progress": 1, "total": 2})
         return httpx.Response(404)
 
     async def scenario():
@@ -44,6 +48,8 @@ def test_client_uses_existing_nara_contracts():
                 ["openapi_new:15000001", "openapi_new:15000002"]
             )
             await client.compose(["openapi_new:15000001"], "계획해줘")
+            await client.rebuild_search_index()
+            await client.rebuild_status()
 
     asyncio.run(scenario())
 
@@ -52,6 +58,8 @@ def test_client_uses_existing_nara_contracts():
         "/services/openapi_new:15000001",
         "/relations",
         "/compose",
+        "/build",
+        "/build/status",
     ]
     assert requests[0].read()
     assert "ids=openapi_new%3A15000001%2Copenapi_new%3A15000002" in str(

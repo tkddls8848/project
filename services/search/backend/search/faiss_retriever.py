@@ -8,6 +8,7 @@ faiss / sentence_transformers는 이 모듈 import 시점이 아니라 실제 �
 import json
 import re
 
+from ..catalog.source_inventory import build_flat_file_index
 from ..core import config, faiss_io
 
 
@@ -36,10 +37,21 @@ class FAISSRetriever:
         self._last_search = {}
         self._openapi_dir = ""
         self._metadata_path = None
+        self._indexed_api_ids: set[str] = set()
+        self._available_api_ids: set[str] = set()
+        self._index_compatible = False
+        self._index_warning = ""
         if eager:
             self._load()
 
     def _load(self) -> None:
+        self._index = None
+        self._metadata = []
+        self._metadata_path = None
+        self._indexed_api_ids = set()
+        self._available_api_ids = set()
+        self._index_compatible = False
+        self._index_warning = ""
         try:
             self._openapi_dir = str(config.APIDATA_DIR) if config.APIDATA_DIR.exists() else ""
 
@@ -76,11 +88,31 @@ class FAISSRetriever:
                     "FAISS 인덱스와 벡터 메타데이터 개수가 다릅니다: "
                     f"{self._index.ntotal} != {len(self._metadata)} — POST /build로 다시 생성하세요"
                 )
+            self._indexed_api_ids = {
+                str(row.get("api_id", ""))
+                for row in self._metadata
+                if row.get("api_id")
+            }
+            self._available_api_ids = set(build_flat_file_index(config.APIDATA_DIR))
+            self._index_compatible = self._indexed_api_ids == self._available_api_ids
+            if self._index_compatible:
+                self._index_warning = ""
+            else:
+                missing = len(self._indexed_api_ids - self._available_api_ids)
+                unindexed = len(self._available_api_ids - self._indexed_api_ids)
+                self._index_warning = (
+                    "FAISS 인덱스와 현재 nara_storage 원본이 일치하지 않습니다: "
+                    f"상세 문서가 없는 인덱스 서비스 {missing}건, "
+                    f"인덱스에 없는 현재 서비스 {unindexed}건. "
+                    "데이터 수집 완료 후 POST /build로 다시 생성하세요."
+                )
             self._metadata_path = metadata_path
             print(
                 f"[retriever] 준비 완료. 서비스 {self.service_count()}건 / "
                 f"벡터 청크 {self._index.ntotal}건"
             )
+            if self._index_warning:
+                print(f"[retriever] 경고: {self._index_warning}")
             self._last_error = ""
         except ImportError as exc:
             self._index = None
@@ -105,7 +137,10 @@ class FAISSRetriever:
     def service_count(self) -> int | None:
         if self._index is None:
             return None
-        return len({str(row.get("api_id", "")) for row in self._metadata if row.get("api_id")})
+        return len(self._available_api_ids)
+
+    def index_warning(self) -> str:
+        return self._index_warning
 
     def search_diagnostics(self) -> dict:
         return dict(self._last_search)
@@ -123,6 +158,11 @@ class FAISSRetriever:
             "model_max_seq_length": config.MODEL_MAX_SEQ_LENGTH,
             "vector_min_score": config.VECTOR_MIN_SCORE,
             "model_exists": model_dir.exists() and any(model_dir.iterdir()),
+            "index_compatible": self._index_compatible,
+            "indexed_services": len(self._indexed_api_ids),
+            "detail_services": len(self._available_api_ids),
+            "stale_index_services": len(self._indexed_api_ids - self._available_api_ids),
+            "unindexed_detail_services": len(self._available_api_ids - self._indexed_api_ids),
         }
 
     def search(self, query: str, top_k: int = 10) -> list[dict]:
@@ -132,6 +172,16 @@ class FAISSRetriever:
                 "raw_candidates": 0,
                 "accepted_services": 0,
                 "min_score": config.VECTOR_MIN_SCORE,
+            }
+            return []
+        if not self._index_compatible:
+            self._last_search = {
+                "query_intents": 0,
+                "raw_candidates": 0,
+                "accepted_services": 0,
+                "min_score": config.VECTOR_MIN_SCORE,
+                "index_compatible": False,
+                "reason": self._index_warning,
             }
             return []
         try:

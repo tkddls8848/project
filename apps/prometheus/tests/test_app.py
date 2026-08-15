@@ -24,6 +24,7 @@ def test_root_serves_orchestrator_front_page():
     assert response.status_code == 200
     assert "Nara Hermes Orchestrator" in response.text
     assert "Hermes가 Nara MCP" in response.text
+    assert "데이터 리빌드" in response.text
 
 
 def test_static_assets_are_served():
@@ -31,6 +32,27 @@ def test_static_assets_are_served():
 
     assert client.get("/static/styles.css").status_code == 200
     assert client.get("/static/app.js").status_code == 200
+
+
+def test_rebuild_endpoints_proxy_search_service(monkeypatch):
+    class FakeClient:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_):
+            return None
+
+        async def rebuild_search_index(self):
+            return {"ok": True, "message": "CPU 빌드를 시작했습니다."}
+
+        async def rebuild_status(self):
+            return {"state": "running", "step": 2, "progress": 3, "total": 10}
+
+    monkeypatch.setattr("app.main.NaraClient", FakeClient)
+    client = TestClient(app)
+
+    assert client.post("/data/rebuild").json()["ok"] is True
+    assert client.get("/data/rebuild/status").json()["state"] == "running"
 
 
 def test_favicon_is_handled_without_not_found():

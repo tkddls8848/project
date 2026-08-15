@@ -41,6 +41,20 @@ def test_search_result_id_works_for_detail(app_client, monkeypatch):
     assert detail.json()["service_id"] == service_id
 
 
+def test_search_filters_candidates_without_detail(app_client, monkeypatch):
+    """검색 결과로 반환된 모든 ID는 즉시 상세 조회가 가능해야 한다."""
+    from backend import main
+
+    stale = dict(_fake_search_results()[0], api_id="15112307")
+    valid = _fake_search_results()[0]
+    monkeypatch.setattr(main.retriever, "search", lambda query, top_k: [stale, valid])
+    monkeypatch.setattr(main.lexical_retriever, "search", lambda query, top_k: [])
+
+    body = app_client.post("/search", json={"query": "미세먼지 조회"}).json()
+    assert [row["service_id"] for row in body["results"]] == ["openapi_new:15000001"]
+    assert body["diagnostics"]["unavailable_candidates"] == ["openapi_new:15112307"]
+
+
 def test_search_source_path_is_not_absolute(app_client, monkeypatch):
     from backend import main
 

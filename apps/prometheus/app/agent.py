@@ -4,18 +4,17 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import uuid
 from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-from pydantic import ValidationError
-
 from .config import Settings, get_settings
 from .critic import run_critic
 from .freshness import check_document_freshness
 from .hermes_client import HermesGatewayClient, HermesGatewayError, HermesRunResult
-from .nara_client import NaraClient
+from .nara_client import NaraClient, NaraServiceError
 from .schemas import (
     AgentEvent,
     AgentRunRequest,
@@ -26,39 +25,23 @@ from .schemas import (
     StageRecord,
 )
 
-NARA_TOOLS = {
-    "search_api_docs", "get_api_detail", "derive_relations",
-    "compose_service_plan", "check_doc_freshness",
-}
-TOOL_STAGES = {
-    "search_api_docs": "search", "get_api_detail": "detail",
-    "derive_relations": "relations", "compose_service_plan": "compose",
-    "check_doc_freshness": "freshness",
-}
+TOOL_STAGES = {"search_api_docs": "search", "get_api_detail": "detail"}
 
 HERMES_INSTRUCTIONS = """Nara 공공 API 설계 도우미다.
-nara MCP의 읽기 전용 도구만 사용한다. 검색 결과의 상세를 확인해 최대 3개를 고르고,
-2개 이상이면 관계를 확인한다. compose=true일 때만 계획을 만든다. 외부 작업을 했다고
-주장하지 않는다. 최종 출력은 Markdown 없이 다음 키를 모두 가진 JSON 객체 하나다:
-query, selected_service_ids, search, details, relations, plan, warnings."""
+nara MCP의 search_api_docs와 get_api_detail만 사용한다. 검색 결과의 상세를 확인해
+최대 3개를 고른다. 관계나 계획을 추측하거나 외부 작업을 했다고 주장하지 않는다.
+최종 응답에는 선택한 service_id를 정확히 포함하고 선택 이유만 간결하게 설명한다.
+응답 형식은 자유이며, 관계·계획·최종 데이터 계약은 Orchestrator가 Nara 원본에서 구성한다."""
+
+SERVICE_ID_RE = re.compile(r"(?<![A-Za-z0-9._-])openapi_new:\d+(?!\d)")
 
 
 def _tool_name(raw: object) -> str:
     value = str(raw or "")
-    for name in NARA_TOOLS:
+    for name in TOOL_STAGES:
         if value == name or value.endswith(f"__{name}"):
             return name
     return value
-
-
-def _extract_json_object(text: str) -> dict[str, Any]:
-    try:
-        payload = json.loads(text)
-    except json.JSONDecodeError as exc:
-        raise ValueError("Hermes 최종 응답이 JSON 객체가 아닙니다.") from exc
-    if not isinstance(payload, dict):
-        raise ValueError("Hermes 최종 응답이 JSON 객체가 아닙니다.")
-    return payload
 
 
 def _request_text(request: AgentRunRequest) -> str:
@@ -70,40 +53,92 @@ def _request_text(request: AgentRunRequest) -> str:
     }, ensure_ascii=False)
 
 
-def _canonical_stages(payload: dict[str, Any], compose: bool) -> list[StageRecord]:
-    selected = payload.get("selected_service_ids") or []
-    details = payload.get("details") or []
-    relations = payload.get("relations")
-    plan = payload.get("plan")
-    return [
-        StageRecord(name="search", status="completed", message="Hermes가 검색 결과를 검토했습니다."),
-        StageRecord(name="detail", status="completed" if selected and details else "skipped",
-                    message=f"선택 문서 {len(details)}개의 상세를 검토했습니다." if details else "선택된 문서가 없습니다."),
-        StageRecord(name="relations", status="completed" if relations is not None else "skipped",
-                    message="문서 관계 근거를 확인했습니다." if relations is not None else "관계 분석을 생략했습니다."),
-        StageRecord(name="compose", status="completed" if plan is not None else "skipped",
-                    message="서비스 계획 초안을 만들었습니다." if plan is not None else ("계획을 만들 근거가 없습니다." if compose else "요청에 따라 계획 생성을 생략했습니다.")),
-    ]
+def _unique_service_ids(values: list[object]) -> list[str]:
+    unique: list[str] = []
+    for raw in values:
+        service_id = str(raw or "").strip()
+        if service_id and service_id not in unique:
+            unique.append(service_id)
+    return unique
 
 
-def parse_design_result(output: str, request: AgentRunRequest) -> DesignResponse:
-    payload = _extract_json_object(output)
-    payload["query"] = request.query
-    payload["stages"] = _canonical_stages(payload, request.compose)
-    selected = payload.get("selected_service_ids")
-    if (
-        not isinstance(selected, list)
-        or not all(isinstance(value, str) and value.strip() for value in selected)
-        or len(selected) > 3
-        or len(set(selected)) != len(selected)
-    ):
-        raise ValueError("Hermes 결과의 selected_service_ids는 중복 없는 최대 3개 배열이어야 합니다.")
-    if not request.compose and payload.get("plan") is not None:
-        raise ValueError("compose=false 요청에서 Hermes가 계획을 생성했습니다.")
-    try:
-        result = DesignResponse.model_validate(payload)
-    except ValidationError as exc:
-        raise ValueError(f"Hermes 결과가 DesignResponse 계약과 맞지 않습니다: {exc}") from exc
+def _selected_ids_from_output(
+    output: str, request: AgentRunRequest, search: dict[str, Any]
+) -> tuple[list[str], bool]:
+    """Use Hermes only as a selector, never as the final data authority."""
+    requested = _unique_service_ids(list(request.selected_service_ids))[:3]
+    if requested:
+        return requested, False
+
+    results = search.get("results") or []
+    candidates = _unique_service_ids([
+        row.get("service_id") for row in results if isinstance(row, dict)
+    ])
+    proposed = _unique_service_ids(SERVICE_ID_RE.findall(output or ""))
+    if proposed:
+        # Do not require a second search to reproduce Hermes' exact ranking.
+        # Every proposed ID is still verified through the authoritative detail
+        # endpoint below before it can enter the public result.
+        return proposed[:3], False
+    return candidates[:3], bool(candidates)
+
+
+async def materialize_design_result(
+    output: str,
+    request: AgentRunRequest,
+    client: NaraClient,
+) -> DesignResponse:
+    """Build the public result deterministically from Nara service responses.
+
+    Hermes output influences selection only. Search documents, details,
+    relations and plan content are always re-fetched from their owning services.
+    """
+    search = await client.search(
+        request.query, top_k=request.top_k, use_vector=request.use_vector
+    )
+    selected, used_fallback = _selected_ids_from_output(output, request, search)
+    warnings: list[str] = []
+    if used_fallback:
+        warnings.append(
+            "Hermes 선택 ID를 확인할 수 없어 현재 검색 결과 상위 문서를 사용했습니다."
+        )
+
+    details: list[dict[str, Any]] = []
+    verified_ids: list[str] = []
+    for service_id in selected:
+        try:
+            detail = await client.detail(service_id)
+        except NaraServiceError as exc:
+            warnings.append(f"상세 문서를 확인하지 못해 제외했습니다: {service_id} ({exc})")
+            continue
+        details.append(detail)
+        verified_ids.append(service_id)
+
+    relations: dict[str, Any] | None = None
+    if len(verified_ids) >= 2:
+        try:
+            relations = await client.relations(verified_ids)
+        except NaraServiceError as exc:
+            warnings.append(f"문서 관계를 확인하지 못했습니다: {exc}")
+
+    plan: dict[str, Any] | None = None
+    if request.compose and verified_ids:
+        try:
+            plan = await client.compose(verified_ids, request.query)
+        except NaraServiceError as exc:
+            warnings.append(f"계획 초안을 생성하지 못했습니다: {exc}")
+
+    payload: dict[str, Any] = {
+        "query": request.query,
+        "selected_service_ids": verified_ids,
+        "search": search,
+        "details": details,
+        "relations": relations,
+        "plan": plan,
+        "warnings": warnings,
+    }
+    payload["stages"] = _canonical_stages(payload, request)
+    result = DesignResponse.model_validate(payload)
     if result.plan:
         if result.plan.get("warning"):
             result.warnings.append(str(result.plan["warning"]))
@@ -111,6 +146,28 @@ def parse_design_result(output: str, request: AgentRunRequest) -> DesignResponse
             if not any(item in warning for warning in result.warnings):
                 result.warnings.append(f"조합기에서 찾지 못한 문서: {item}")
     return result
+
+
+def _canonical_stages(payload: dict[str, Any], request: AgentRunRequest) -> list[StageRecord]:
+    selected = payload.get("selected_service_ids") or []
+    details = payload.get("details") or []
+    relations = payload.get("relations")
+    plan = payload.get("plan")
+    compose = request.compose
+    search_message = (
+        "요청이 지정한 문서를 검색 결과에서 확인했습니다."
+        if request.selected_service_ids
+        else "Hermes가 검색 결과를 검토했습니다."
+    )
+    return [
+        StageRecord(name="search", status="completed", message=search_message),
+        StageRecord(name="detail", status="completed" if selected and details else "skipped",
+                    message=f"선택 문서 {len(details)}개의 상세를 검토했습니다." if details else "선택된 문서가 없습니다."),
+        StageRecord(name="relations", status="completed" if relations is not None else "skipped",
+                    message="문서 관계 근거를 확인했습니다." if relations is not None else "관계 분석을 생략했습니다."),
+        StageRecord(name="compose", status="completed" if plan is not None else "skipped",
+                    message="서비스 계획 초안을 만들었습니다." if plan is not None else ("계획을 만들 근거가 없습니다." if compose else "요청에 따라 계획 생성을 생략했습니다.")),
+    ]
 
 
 @dataclass
@@ -183,24 +240,39 @@ class AgentRunManager:
 
     async def _execute(self, run: _Run) -> None:
         run.status = "running"
+        # Hermes is only a selector. When the request already names the
+        # documents its output is discarded, so the run is never started.
+        preselected = bool(run.request.selected_service_ids)
         run.hermes = {
-            "status": "connecting",
+            "status": "skipped" if preselected else "connecting",
             "transport": "gateway-runs-api",
             "model": self.settings.hermes_model,
             "tool_calls": [],
         }
-        self._emit(run, "agent", "running", "Hermes Gateway에 오케스트레이션을 요청합니다.")
         try:
-            async with self.gateway_factory(self.settings) as gateway:
-                hermes_run_id = await gateway.create_run(
-                    _request_text(run.request), HERMES_INSTRUCTIONS, f"nara-{run.run_id}"
+            if preselected:
+                run.hermes["skip_reason"] = "request-selected-service-ids"
+                self._emit(run, "agent", "skipped",
+                           "요청이 문서를 직접 지정해 Hermes 호출 없이 진행합니다.")
+                hermes_output = ""
+            else:
+                self._emit(run, "agent", "running", "Hermes Gateway에 오케스트레이션을 요청합니다.")
+                async with self.gateway_factory(self.settings) as gateway:
+                    hermes_run_id = await gateway.create_run(
+                        _request_text(run.request), HERMES_INSTRUCTIONS, f"nara-{run.run_id}"
+                    )
+                    run.hermes.update({"status": "running", "run_id": hermes_run_id})
+                    hermes_result = await gateway.wait(
+                        hermes_run_id, on_event=lambda event: self._on_hermes_event(run, event)
+                    )
+                self._apply_hermes_result(run, hermes_result)
+                hermes_output = hermes_result.output
+            run.hermes["result_mode"] = "deterministic-nara-rehydration"
+            async with NaraClient(self.settings) as client:
+                run.result = await materialize_design_result(
+                    hermes_output, run.request, client
                 )
-                run.hermes.update({"status": "running", "run_id": hermes_run_id})
-                hermes_result = await gateway.wait(
-                    hermes_run_id, on_event=lambda event: self._on_hermes_event(run, event)
-                )
-            self._apply_hermes_result(run, hermes_result)
-            run.result = parse_design_result(hermes_result.output, run.request)
+            self._emit_materialized_stages(run)
             await self._run_freshness(run)
             await self._run_critic(run)
             run.status = "completed"
@@ -230,6 +302,18 @@ class AgentRunManager:
             "usage": result.usage,
             "tool_calls": [_tool_name(item) for item in result.tool_calls],
         })
+
+    def _emit_materialized_stages(self, run: _Run) -> None:
+        if run.result is None:
+            return
+        already_reported = {
+            event.name
+            for event in run.events
+            if event.status in {"completed", "skipped"}
+        }
+        for stage in run.result.stages:
+            if stage.name not in already_reported:
+                self._emit(run, stage.name, stage.status, stage.message)
 
     async def _on_hermes_event(self, run: _Run, event: dict[str, Any]) -> None:
         event_name = event.get("event")
@@ -293,4 +377,8 @@ class AgentRunManager:
         run.changed.set()
 
 
-__all__ = ["AgentRunManager", "HERMES_INSTRUCTIONS", "parse_design_result"]
+__all__ = [
+    "AgentRunManager",
+    "HERMES_INSTRUCTIONS",
+    "materialize_design_result",
+]

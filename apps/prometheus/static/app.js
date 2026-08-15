@@ -6,9 +6,13 @@ const submitButton = $("#submit-button");
 const stopButton = $("#stop-button");
 const runBadge = $("#run-mode");
 const progress = $("#agent-progress");
+const rebuildButton = $("#rebuild-data");
+const rebuildLabel = $("#rebuild-label");
+const rebuildHelp = $("#rebuild-help");
 let currentRunId = null;
 let source = null;
 let eventRows = new Map();
+let rebuildPollTimer = null;
 
 const labels = {
   queued: "실행 준비",
@@ -68,6 +72,65 @@ async function refreshHealth() {
   } catch {
     button.classList.add("offline");
     text.textContent = "서비스 연결 확인 필요";
+  }
+}
+
+function setRebuildState(state, label, help) {
+  rebuildButton.classList.remove("running", "done", "error");
+  if (state !== "idle") rebuildButton.classList.add(state);
+  rebuildButton.disabled = state === "running";
+  rebuildLabel.textContent = label;
+  if (help) rebuildHelp.textContent = help;
+}
+
+function stopRebuildPolling() {
+  if (rebuildPollTimer) clearInterval(rebuildPollTimer);
+  rebuildPollTimer = null;
+}
+
+async function pollRebuildStatus({ quiet = false } = {}) {
+  try {
+    const data = await fetchJson("/data/rebuild/status");
+    if (data.state === "running") {
+      const pct = data.total > 0 ? Math.round((data.progress / data.total) * 100) : 0;
+      const step = data.step_name ? `${data.step}/4 ${data.step_name}` : "준비 중";
+      setRebuildState("running", `리빌드 ${pct}%`, `${step} · ${data.message || "처리 중"}`);
+      if (!rebuildPollTimer) rebuildPollTimer = setInterval(pollRebuildStatus, 1000);
+      return;
+    }
+
+    stopRebuildPolling();
+    if (data.state === "done") {
+      setRebuildState("done", "리빌드 완료", data.message || "검색 인덱스 리빌드가 완료되었습니다.");
+      await refreshHealth();
+      return;
+    }
+    if (data.state === "error") {
+      setRebuildState("error", "리빌드 실패", data.message || "리빌드 상태를 확인하세요.");
+      return;
+    }
+    setRebuildState("idle", "데이터 리빌드", "리빌드는 현재 nara_storage 데이터로 검색 인덱스를 다시 만듭니다.");
+  } catch (error) {
+    stopRebuildPolling();
+    if (!quiet) setRebuildState("error", "상태 확인 실패", error.message);
+  }
+}
+
+async function triggerRebuild() {
+  const confirmed = window.confirm(
+    "현재 nara_storage 데이터로 검색 인덱스를 다시 만듭니다.\n\n" +
+    "데이터 수집이 진행 중이라면 수집 완료 후 실행하는 것이 좋습니다. 계속할까요?"
+  );
+  if (!confirmed) return;
+
+  setRebuildState("running", "리빌드 요청 중", "Nara Search에 CPU 리빌드를 요청하고 있습니다.");
+  try {
+    const data = await fetchJson("/data/rebuild", { method: "POST" });
+    if (!data.ok) throw new Error(data.message || "리빌드를 시작하지 못했습니다.");
+    rebuildHelp.textContent = data.message || "검색 인덱스 리빌드를 시작했습니다.";
+    await pollRebuildStatus();
+  } catch (error) {
+    setRebuildState("error", "리빌드 실패", error.message);
   }
 }
 
@@ -133,7 +196,8 @@ function renderResult(result, hermes) {
   $("#relation-result").textContent = relations.length ? JSON.stringify(relations, null, 2) : "관계 근거가 없거나 문서가 한 개여서 관계 분석을 생략했습니다.";
   $("#plan-result").textContent = result.plan?.suggestion || "계획 생성을 생략했거나 생성하지 못했습니다.";
   const warnings = [...(result.warnings || [])];
-  if (hermes?.status && hermes.status !== "completed") warnings.unshift(`Hermes Gateway 상태: ${hermes.status}`);
+  // "skipped"는 요청이 문서를 직접 지정해 Hermes를 부르지 않은 정상 경로다.
+  if (hermes?.status && !["completed", "skipped"].includes(hermes.status)) warnings.unshift(`Hermes Gateway 상태: ${hermes.status}`);
   const box = $("#warnings");
   box.textContent = warnings.join(" · ");
   box.classList.toggle("hidden", !warnings.length);
@@ -213,5 +277,7 @@ $("#export-flow").addEventListener("click", () => { if (currentRunId) window.ope
 $("#reset-button").addEventListener("click", () => { if (source) source.close(); currentRunId = null; eventRows = new Map(); progress.replaceChildren(element("div", { className: "empty-state", text: "에이전트 실행 시 MCP 호출과 각 처리 단계가 실시간으로 표시됩니다." })); $("#document-list").replaceChildren(element("div", { className: "empty-state", text: "검색 결과가 여기에 표시됩니다." })); $("#relation-result").textContent = "선택된 문서가 두 개 이상이면 관계 분석 결과가 표시됩니다."; $("#plan-result").textContent = "계획 초안이 여기에 표시됩니다."; $("#selected-list").textContent = "선택된 API가 없습니다."; $("#selected-count").textContent = "0 / 3"; $("#search-summary").textContent = "요청을 입력하면 검색된 문서가 표시됩니다."; $("#agent-summary").textContent = "아직 실행된 도구 호출이 없습니다."; $("#critic-report").classList.add("hidden"); $("#export-flow").classList.add("hidden"); setRunState("idle", "대기"); resetWorkflow(); });
 document.querySelectorAll("[data-example]").forEach((button) => button.addEventListener("click", () => { queryInput.value = button.dataset.example; queryInput.focus(); }));
 $("#refresh-health").addEventListener("click", refreshHealth);
+rebuildButton.addEventListener("click", triggerRebuild);
 setRunState("idle", "대기");
 refreshHealth();
+pollRebuildStatus({ quiet: true });
