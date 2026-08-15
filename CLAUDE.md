@@ -10,16 +10,19 @@ data.go.kr -> services/crawler -> nara_storage/ (gitignore)
                                  -> services/search :8000
                                  -> services/combiner :8003
 
-apps/dashboard :5173   React Flow 편집기
+apps/dashboard :5173   React Flow 편집기 (dev 서버가 Ollama :11434도 프록시)
 apps/workbench :8010   search/combiner 통합 UI
 apps/prometheus :8020  Hermes Gateway(:8642) + Nara MCP 오케스트레이터
-services/refresher     data.go.kr 활용신청 연장 CLI
+services/crawler       크롤링 CLI + 제어 UI :8004
+services/refresher     활용신청 연장 CLI + 제어 UI :8005
 libs/nara_common       표준 라이브러리 기반 저장소 공통 유틸리티
 ```
 
 - `apps/*`는 `services/*`를 HTTP로 사용한다. 서비스 구현을 직접 import하지 않는다.
 - 표준 라이브러리만 사용하는 저장소 공통 유틸리티는 `libs/nara_common/`에서 공유한다.
   각 독립 실행기는 `libs/`를 `sys.path`에 넣어 import한다. 루트에는 컨테이너 디렉터리만 둔다.
+  CLI를 실행·관찰·중단하는 공용 실행기는 `nara_common.process_runs`에 있다.
+  요청을 argv로 옮기는 규칙만 각 서비스가 갖는다.
 - 저장소 루트는 `.nara-root`로 찾고 모든 산출물은 루트 `nara_storage/`에 둔다.
 - `archive/`와 날짜가 붙은 계획 문서는 현재 구현 판단에 사용하지 않는다.
 
@@ -32,6 +35,9 @@ libs/nara_common       표준 라이브러리 기반 저장소 공통 유틸리�
   `openapi_old`는 현재도 Swagger JSON이 없는 HTML 문서를 뜻하므로 제거 대상이 아니다.
 - 심화 파일 분석은 `--deep`, 전체 파일 수신은 `--full-download`, 외부 기관 수집은
   `--harvest`를 명시해야 실행한다.
+- `backend/`는 CLI를 서브프로세스로 실행하고 출력을 SSE로 흘린다. 크롤러 내부
+  함수를 직접 호출하지 않으므로 UI와 터미널이 같은 코드 경로를 탄다.
+- 실행될 명령은 서버가 만든다(`POST /runs/preview`). UI가 argv를 자체 조립하지 않는다.
 
 ### search / combiner
 
@@ -64,13 +70,24 @@ libs/nara_common       표준 라이브러리 기반 저장소 공통 유틸리�
 - 로그인은 사람이 브라우저에서 수행하고 Playwright storage state를 저장한다.
 - `extend`는 dry-run이며 실제 제출에는 `--commit`이 필요하다.
 - HTTP 직접 제출, 사이트 자동 탐색, 다른 포털/과거 마크업 폴백은 지원하지 않는다.
+- `backend/`도 CLI를 서브프로세스로 실행한다. 목록 표시만 읽기 전용으로
+  `fetch_account_rows`를 직접 호출한다(표로 그리려면 구조화된 값이 필요하다).
+- UI에서의 실제 제출은 `commit`과 별개로 `confirm_commit`을 함께 받아야 만들어진다.
+  dry-run 요청을 그대로 되보내는 것만으로 실제 제출이 되지 않는다.
+- 로그인 창은 서버가 도는 컴퓨터에 열린다. 원격 제어용이 아니다.
 
 ## 개발 환경
 
 - 기준 환경: Windows PowerShell, 저장소 예시 경로 `C:\project`.
 - 각 모듈의 가상환경은 해당 디렉터리 `venv/`에 둔다.
-- 서비스 포트: search 8000, combiner 8003, workbench 8010, prometheus 8020,
-  Hermes Gateway 8642, dashboard 5173.
+- 서비스 포트: search 8000, combiner 8003, crawler UI 8004, refresher UI 8005,
+  workbench 8010, prometheus 8020, Hermes Gateway 8642, dashboard 5173.
+- dashboard의 dev 서버는 `/api`→search, `/combiner`→combiner와 함께
+  `/ollama`→`localhost:11434`를 프록시한다. Ollama는 저장소 밖 런타임이며
+  없으면 그 경로만 실패한다. 나머지 화면은 동작한다.
+- 제어 UI(crawler·refresher)는 CORS를 열지 않고 `127.0.0.1`에만 바인딩한다.
+  실행을 일으키는 표면이라 다른 출처의 페이지가 요청을 보내게 두면 안 된다.
+  한 번에 하나의 실행만 허용한다.
 - Python 테스트는 쓰기 가능한 임시 폴더를 사용한다:
 
 ```powershell

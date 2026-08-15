@@ -27,15 +27,6 @@ from utils.metadata_updater import maybe_update_metadata
 from utils.url_utils import URLGenerator
 
 
-DATA_TYPE_OUTPUT_DIRS = {
-    "fileData": "02_fileData_results",
-    "openapi": "01_openapi_results",
-    "openapi_new": "01_openapi_results",
-    "openapi_link": "01_openapi_results",
-    "openapi_old": "01_openapi_results",
-    "standard": "03_standard_results",
-}
-
 DEFAULT_WORKERS_BY_TYPE = {
     "fileData": 30,
     "openapi": 16,

@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Nara Refresher Control</title>
+    <link rel="stylesheet" href="/static/styles.css?v=1" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="top-band">
+        <div class="brand">
+          <span class="brand-mark">R</span>
+          <div>
+            <h1>활용신청 연장 제어</h1>
+            <p id="sessionText">세션 확인 중</p>
+          </div>
+        </div>
+        <div class="session-actions">
+          <span id="sessionBadge" class="badge idle">세션 미확인</span>
+          <button type="button" id="loginButton" class="ghost">브라우저 로그인</button>
+          <label class="check compact">
+            <input type="checkbox" id="manualLoginInput" />
+            <span>수동 저장 방식</span>
+          </label>
+        </div>
+      </header>
+
+      <div class="body-grid">
+        <section class="panel">
+          <h2>보유 API</h2>
+          <div class="list-actions">
+            <button type="button" id="reloadAccountsButton">목록 불러오기</button>
+            <span id="accountsHint" class="hint">저장된 세션으로 포털을 읽습니다.</span>
+          </div>
+          <div id="accountsBox" class="accounts">아직 불러오지 않았습니다.</div>
+        </section>
+
+        <section class="panel">
+          <h2>연장 실행</h2>
+
+          <label class="field">
+            <span>대상 필터 <small class="hint">이름·식별자에 이 문자열이 든 항목만</small></span>
+            <input id="onlyInput" type="text" placeholder="비우면 전체" />
+          </label>
+
+          <label class="field">
+            <span>최대 건수 <small class="hint">비우면 제한 없음</small></span>
+            <input id="limitInput" type="number" min="1" placeholder="제한 없음" />
+          </label>
+
+          <fieldset class="field danger">
+            <legend>실제 제출</legend>
+            <p class="danger-note">
+              기본은 <strong>dry-run</strong>입니다. 아래를 켜야 포털에 실제 연장이
+              제출되며, 되돌릴 수 없습니다.
+            </p>
+            <label class="check">
+              <input type="checkbox" id="commitInput" />
+              <span>실제로 연장 제출 (--commit)</span>
+            </label>
+            <label class="field confirm-field hidden" id="confirmField">
+              <span>확인을 위해 <code>연장</code>을 입력하세요</span>
+              <input id="confirmInput" type="text" autocomplete="off" />
+            </label>
+          </fieldset>
+
+          <div class="command-preview">
+            <span class="label">실행될 명령</span>
+            <code id="commandPreview">—</code>
+            <p id="previewError" class="error hidden"></p>
+          </div>
+
+          <div class="actions">
+            <button type="button" id="dryRunButton">dry-run 실행</button>
+            <button type="button" id="commitButton" class="danger-button" disabled>
+              실제 연장 제출
+            </button>
+            <button type="button" id="stopButton" class="ghost" disabled>중단</button>
+          </div>
+        </section>
+
+        <section class="panel wide">
+          <h2>진행</h2>
+          <div class="run-state">
+            <span id="runBadge" class="badge idle">대기</span>
+            <span id="runCommand" class="run-command"></span>
+            <button type="button" id="stdinButton" class="ghost hidden">
+              로그인 완료 — 세션 저장
+            </button>
+          </div>
+          <pre id="logBox" class="log" aria-live="polite">실행하면 로그가 여기에 표시됩니다.</pre>
+        </section>
+      </div>
+    </main>
+    <script src="/static/app.js?v=1"></script>
+  </body>
+</html>

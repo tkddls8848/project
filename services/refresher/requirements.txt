@@ -2,3 +2,7 @@ beautifulsoup4>=4.13.0
 lxml>=4.9.0
 playwright>=1.40
 pytest>=8,<10
+
+# backend/ (브라우저 제어 UI). login/extend는 CLI 서브프로세스로 돈다.
+fastapi>=0.110.0
+uvicorn>=0.27.0
