@@ -50,7 +50,10 @@ class BrowserSession:
 
     def __enter__(self) -> "BrowserSession":
         state = load_state(self.settings)
-        self._driver = _import_playwright().start()
+        # _import_playwright()는 sync_playwright 함수 자체를 돌려준다. 매니저를
+        # 얻으려면 한 번 호출해야 하며, 함수에 바로 .start()를 부르면 안 된다.
+        sync_playwright = _import_playwright()
+        self._driver = sync_playwright().start()
         self._browser = self._driver.chromium.launch(headless=self.headless)
         self.context = self._browser.new_context(storage_state=state, user_agent=USER_AGENT)
         self.context.set_default_timeout(self.settings.timeout * 1000)
