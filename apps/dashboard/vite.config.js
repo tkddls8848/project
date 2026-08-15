@@ -10,7 +10,9 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       '/ollama': {
-        target: 'http://localhost:11434',
+        // Ollama는 127.0.0.1(IPv4)로만 듣는다. 'localhost'로 두면 Node가 ::1을
+        // 먼저 골라 연결이 거부되고 프록시가 500을 낸다.
+        target: 'http://127.0.0.1:11434',
         changeOrigin: true,
         rewrite: path => path.replace(/^\/ollama/, ''),
       },

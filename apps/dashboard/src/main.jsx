@@ -1,12 +1,12 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { ReactFlowProvider } from '@xyflow/react';
-import App from './App.jsx';
+import Root from './Root.jsx';
 import './index.css';
 import '@xyflow/react/dist/style.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <ReactFlowProvider>
-    <App />
+    <Root />
   </ReactFlowProvider>
 );
