@@ -44,11 +44,43 @@ def compute_verdict(findings: list[CriticFinding]) -> str:
     return "pass"
 
 
-async def run_deterministic_checks(
-    result: DesignResponse, requested_ids: list[str], client: Any,
+def _check_selection_evidence(
+    result: DesignResponse, requested_ids: list[str], observed_tools: list[str],
     findings: list[CriticFinding],
 ) -> None:
+    """Require the loop's own selection to rest on an observed detail lookup.
+
+    The Orchestrator re-fetches every detail regardless, so this does not test
+    whether the documents exist. It tests whether Hermes looked at them before
+    naming them, which is the one selection claim only the run log can settle.
+    """
+    if requested_ids or not result.selected_service_ids:
+        findings.append(_finding(
+            "selection-observed-detail", "info", "-",
+            "Hermes 선택 근거를 검증할 대상이 없습니다.",
+        ))
+        return
+    detail_calls = observed_tools.count("get_api_detail")
+    if detail_calls:
+        findings.append(_finding(
+            "selection-observed-detail", "info", "-",
+            f"선택에 앞서 get_api_detail 호출 {detail_calls}회가 실행 기록에 있습니다.",
+            evidence=observed_tools,
+        ))
+        return
+    findings.append(_finding(
+        "selection-observed-detail", "violation", "selected_service_ids",
+        "상세 조회 도구 호출 기록 없이 문서가 선택되었습니다. 선택 이유의 근거를 확인할 수 없습니다.",
+        evidence=observed_tools,
+    ))
+
+
+async def run_deterministic_checks(
+    result: DesignResponse, requested_ids: list[str], client: Any,
+    findings: list[CriticFinding], observed_tools: list[str] | None = None,
+) -> None:
     selected = result.selected_service_ids
+    _check_selection_evidence(result, requested_ids, observed_tools or [], findings)
 
     detail_ids = {str(doc.get("service_id", "")).strip() for doc in result.details}
     missing_details = [sid for sid in selected if sid not in detail_ids]
@@ -166,6 +198,7 @@ async def run_critic(
     requested_ids: list[str],
     settings: Settings,
     client_factory: Callable[[], Any],
+    observed_tools: list[str] | None = None,
 ) -> CriticReport:
     """Verify a completed result. Never raises except on cancellation."""
     findings: list[CriticFinding] = []
@@ -174,7 +207,9 @@ async def run_critic(
     async def _work() -> None:
         nonlocal deterministic
         async with client_factory() as client:
-            await run_deterministic_checks(result, requested_ids, client, findings)
+            await run_deterministic_checks(
+                result, requested_ids, client, findings, observed_tools
+            )
         deterministic = True
 
     try:

@@ -35,12 +35,14 @@ CRITIC_ENV_DEFAULTS = {
     "NARA_CRITIC_TIMEOUT": "60",
 }
 
-# Freshness checks are read-only.  The index build time is supplied explicitly
-# so missing metadata cannot become a misleading freshness claim.
+# Freshness checks are read-only. Leaving NARA_INDEX_BUILT_AT empty is the
+# normal case: the orchestrator then reads the active index build time from
+# Search /health, so the check runs instead of reporting 'unverified'. Set it
+# only to override that value.
 FRESHNESS_ENV_DEFAULTS = {
     "NARA_DOC_FRESHNESS_MODE": "deterministic",  # disabled | deterministic
     "NARA_STORAGE_DIR": str(DEFAULT_STORAGE_DIR),
-    "NARA_INDEX_BUILT_AT": "",  # ISO 8601 timestamp of the active search index
+    "NARA_INDEX_BUILT_AT": "",  # ISO 8601 override; empty = ask Search
 }
 
 

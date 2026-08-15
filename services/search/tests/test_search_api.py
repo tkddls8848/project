@@ -146,3 +146,17 @@ def test_health_reports_diagnostics_without_index(app_client):
     assert diag["metadata_exists"] is False
     assert body["lexical_corpus_total"] == 3
     assert body["lexical_source"] == "apidata_scan"
+    # 인덱스가 없으면 빌드 시각을 지어내지 않는다.
+    assert body["index_built_at"] == ""
+
+
+def test_health_reports_index_build_time_from_the_index_file(app_client):
+    from backend import main
+    from backend.core import config
+
+    config.FAISS_INDEX_PATH.parent.mkdir(parents=True, exist_ok=True)
+    config.FAISS_INDEX_PATH.write_bytes(b"stub index")
+
+    built_at = app_client.get("/health").json()["index_built_at"]
+    assert built_at
+    assert built_at == main.index_built_at()

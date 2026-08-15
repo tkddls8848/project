@@ -204,7 +204,6 @@ def render_hermes_profile(
             "NARA_STORAGE_DIR", str(PROJECT_ROOT / "nara_storage")
         ),
         "__NARA_INDEX_BUILT_AT__": environment.get("NARA_INDEX_BUILT_AT", ""),
-        "__NARA_SKILLS_DIRS__": [str(BASE_DIR / "skills")],
     }
     rendered = HERMES_PROFILE_TEMPLATE.read_text(encoding="utf-8")
     for placeholder, value in replacements.items():

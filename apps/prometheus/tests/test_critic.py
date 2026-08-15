@@ -68,10 +68,12 @@ def settings(**overrides) -> Settings:
     return Settings(**overrides)
 
 
-def critic(result, requested_ids=(), client=None, config=None):
+def critic(result, requested_ids=(), client=None, config=None, observed_tools=None):
     return asyncio.run(run_critic(
         result, list(requested_ids), config or settings(),
         client_factory=lambda: client or FakeClient(),
+        observed_tools=["search_api_docs", "get_api_detail", "get_api_detail"]
+        if observed_tools is None else list(observed_tools),
     ))
 
 
@@ -81,6 +83,31 @@ def test_clean_result_passes_with_info_findings_only():
     assert report.verdict == "pass"
     assert report.deterministic
     assert all(finding.severity == "info" for finding in report.findings)
+
+
+def test_selection_without_an_observed_detail_call_is_an_evidence_gap():
+    report = critic(make_result(), observed_tools=["search_api_docs"])
+
+    assert report.verdict == "evidence_gap"
+    assert any(
+        finding.check == "selection-observed-detail"
+        and finding.severity == "violation"
+        for finding in report.findings
+    )
+
+
+def test_requested_ids_need_no_observed_detail_call():
+    report = critic(
+        make_result(),
+        requested_ids=["openapi_new:1", "openapi_new:2"],
+        observed_tools=[],
+    )
+
+    assert report.verdict == "pass"
+    assert any(
+        finding.check == "selection-observed-detail" and finding.severity == "info"
+        for finding in report.findings
+    )
 
 
 def test_selected_id_without_detail_is_an_evidence_gap():
@@ -168,7 +195,8 @@ def test_critic_exception_yields_failed_report_without_raising():
             raise RuntimeError("client factory broke")
 
     report = asyncio.run(run_critic(
-        make_result(), [], settings(), client_factory=BrokenFactory()
+        make_result(), [], settings(), client_factory=BrokenFactory(),
+        observed_tools=["search_api_docs", "get_api_detail"],
     ))
 
     assert report.verdict == "failed"

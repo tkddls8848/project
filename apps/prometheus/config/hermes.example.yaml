@@ -57,12 +57,10 @@ mcp_servers:
       resources: false
       prompts: false
 
+# The orchestrator denies every approval request from the client side
+# (hermes_client.deny_approval), so no run can reach an interactive prompt.
 approvals:
   mode: smart
 
 memory:
   write_approval: true
-
-skills:
-  write_approval: true
-  external_dirs: __NARA_SKILLS_DIRS__

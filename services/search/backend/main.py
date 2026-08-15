@@ -1,4 +1,5 @@
 import threading
+from datetime import datetime
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -98,12 +99,26 @@ def index():
     return FileResponse(STATIC_DIR / "index.html")
 
 
+def index_built_at() -> str:
+    """활성 FAISS 인덱스 파일의 수정 시각을 ISO 8601로 반환한다.
+
+    build_status는 프로세스 메모리라 재시작하면 사라지므로, 디스크에 남는
+    인덱스 파일 시각을 쓴다. 인덱스가 없으면 빈 문자열이다.
+    """
+    try:
+        mtime = config.FAISS_INDEX_PATH.stat().st_mtime
+    except OSError:
+        return ""
+    return datetime.fromtimestamp(mtime).astimezone().isoformat()
+
+
 @app.get("/health")
 def health():
     chunk_count = retriever.collection_count()
     service_count = retriever.service_count()
     return {
         "ok":                    chunk_count is not None,
+        "index_built_at":        index_built_at(),
         "services_total":        service_count or 0,
         "chunks_total":          chunk_count or 0,
         "index_collection_total": chunk_count,

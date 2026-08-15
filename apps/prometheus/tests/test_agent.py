@@ -11,11 +11,16 @@ from app.schemas import AgentRunRequest
 
 
 class FakeNaraClient:
+    index_time = ""
+
     async def __aenter__(self):
         return self
 
     async def __aexit__(self, *_):
         return None
+
+    async def index_built_at(self):
+        return self.index_time
 
     async def search(self, query, top_k=5, use_vector=True):
         return {
@@ -292,5 +297,66 @@ def test_freshness_metadata_gap_is_reported_without_failing_run(monkeypatch):
         assert [item.status for item in completed.freshness] == ["unverified", "unverified"]
         assert any(event.name == "freshness" and event.status == "completed" for event in completed.events)
         assert any("문서 최신성" in warning for warning in completed.result.warnings)
+
+    asyncio.run(scenario())
+
+
+def test_unset_index_time_is_read_from_the_search_service(monkeypatch, tmp_path):
+    """An empty NARA_INDEX_BUILT_AT must not silently disable the check."""
+    manifests = tmp_path / "manifests"
+    manifests.mkdir()
+    (manifests / "run.json").write_text(json.dumps({
+        "started_at": "2026-08-01T09:00:00+09:00",
+        "runs": [{"files": [
+            {"path": "openapi_new/1.json", "checksum": "aaa"},
+            {"path": "openapi_new/2.json", "checksum": "bbb"},
+        ]}],
+    }, ensure_ascii=False), encoding="utf-8")
+
+    class IndexedClient(FakeNaraClient):
+        index_time = "2026-08-02T09:00:00+09:00"
+
+    async def scenario():
+        completed = await run_manager(
+            monkeypatch,
+            Settings(
+                critic_mode="disabled",
+                freshness_mode="deterministic",
+                storage_dir=tmp_path,
+                index_built_at="",
+            ),
+            client_factory=lambda _: IndexedClient(),
+        )
+        assert [item.status for item in completed.freshness] == ["fresh", "fresh"]
+        assert all(
+            item.index_built_at == IndexedClient.index_time
+            for item in completed.freshness
+        )
+
+    asyncio.run(scenario())
+
+
+def test_stage_messages_report_observed_tool_calls(monkeypatch):
+    class SearchOnlyGateway(FakeGateway):
+        async def wait(self, run_id, on_event=None):
+            return HermesRunResult(
+                run_id=run_id, status="completed", output=self.output,
+                session_id="session-1", tool_calls=["mcp__nara__search_api_docs"],
+            )
+
+    async def scenario():
+        completed = await run_manager(monkeypatch, Settings(critic_mode="disabled"))
+        stages = {stage.name: stage.message for stage in completed.result.stages}
+        assert "search_api_docs 호출 1회" in stages["search"]
+        assert "get_api_detail 호출 2회" in stages["detail"]
+
+        # 상세 호출이 없었다면 검토했다고 말하지 않는다.
+        without_detail = await run_manager(
+            monkeypatch, Settings(critic_mode="disabled"), gateway=SearchOnlyGateway
+        )
+        detail_stage = next(
+            stage for stage in without_detail.result.stages if stage.name == "detail"
+        )
+        assert "get_api_detail 호출 기록 없음" in detail_stage.message
 
     asyncio.run(scenario())

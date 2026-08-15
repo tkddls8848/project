@@ -87,6 +87,13 @@ class NaraClient:
         )
         return {"search": search, "combiner": combiner}
 
+    async def index_built_at(self) -> str:
+        """Read the active search index build time from its owning service."""
+        payload = await self._request(
+            "nara-search", "GET", f"{self.settings.search_url}/health"
+        )
+        return str(payload.get("index_built_at") or "")
+
     async def rebuild_search_index(self) -> dict[str, Any]:
         """Start a CPU rebuild from the authoritative nara_storage documents."""
         return await self._request(

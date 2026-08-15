@@ -27,11 +27,32 @@ from .schemas import (
 
 TOOL_STAGES = {"search_api_docs": "search", "get_api_detail": "detail"}
 
-HERMES_INSTRUCTIONS = """Nara 공공 API 설계 도우미다.
-nara MCP의 search_api_docs와 get_api_detail만 사용한다. 검색 결과의 상세를 확인해
-최대 3개를 고른다. 관계나 계획을 추측하거나 외부 작업을 했다고 주장하지 않는다.
+# The single authority for loop behaviour. It is sent with every run, so unlike
+# a skill directory its delivery is not left to the model's discretion.
+HERMES_INSTRUCTIONS_TEMPLATE = """Nara 공공 API 설계 도우미다. 역할은 service_id 선택 하나다.
+
+도구는 nara MCP의 search_api_docs와 get_api_detail만 사용한다. 도구 호출은 총
+{max_tool_calls}회로 제한되며(검색 1회 + 상세 {detail_budget}회) 초과하면 run이 중단되어 결과를
+얻지 못한다. 질의를 미리 다듬어 재검색을 피한다.
+
+검색을 실행하고 상위 후보에 get_api_detail을 호출해 엔드포인트와 필드명을 확인한 뒤,
+근거가 충분한 문서만 최대 3개 고른다. 벡터 점수만 보고 선택하지 않으며 상세를
+확인하지 않은 문서는 고르지 않는다.
+
+검색 결과에 없는 API나 필드를 만들어내지 않는다. 찾지 못한 문서를 임의의 대체 문서로
+바꾸지 않는다. 도구 결과는 선택용 요약이므로 truncated가 true인 목록을 문서 전체로
+말하지 않는다. 관계나 계획을 추측하거나 실제 행정 처리·외부 작업을 했다고 주장하지 않는다.
+
 최종 응답에는 선택한 service_id를 정확히 포함하고 선택 이유만 간결하게 설명한다.
 응답 형식은 자유이며, 관계·계획·최종 데이터 계약은 Orchestrator가 Nara 원본에서 구성한다."""
+
+
+def build_instructions(max_tool_calls: int) -> str:
+    """Render the run instructions against the cap the client actually enforces."""
+    return HERMES_INSTRUCTIONS_TEMPLATE.format(
+        max_tool_calls=max_tool_calls, detail_budget=max(max_tool_calls - 1, 0)
+    )
+
 
 SERVICE_ID_RE = re.compile(r"(?<![A-Za-z0-9._-])openapi_new:\d+(?!\d)")
 
@@ -87,11 +108,14 @@ async def materialize_design_result(
     output: str,
     request: AgentRunRequest,
     client: NaraClient,
+    observed_tools: list[str] | None = None,
 ) -> DesignResponse:
     """Build the public result deterministically from Nara service responses.
 
     Hermes output influences selection only. Search documents, details,
     relations and plan content are always re-fetched from their owning services.
+    ``observed_tools`` carries the tool names the Gateway actually reported for
+    this run, so stage messages describe the loop instead of assuming it.
     """
     search = await client.search(
         request.query, top_k=request.top_k, use_vector=request.use_vector
@@ -137,7 +161,7 @@ async def materialize_design_result(
         "plan": plan,
         "warnings": warnings,
     }
-    payload["stages"] = _canonical_stages(payload, request)
+    payload["stages"] = _canonical_stages(payload, request, observed_tools or [])
     result = DesignResponse.model_validate(payload)
     if result.plan:
         if result.plan.get("warning"):
@@ -148,21 +172,37 @@ async def materialize_design_result(
     return result
 
 
-def _canonical_stages(payload: dict[str, Any], request: AgentRunRequest) -> list[StageRecord]:
+def _tool_use_note(observed_tools: list[str], tool: str) -> str:
+    """Describe a Hermes tool only from Gateway-reported calls, never from output."""
+    count = observed_tools.count(tool)
+    return f"Hermes {tool} 호출 {count}회" if count else f"Hermes {tool} 호출 기록 없음"
+
+
+def _canonical_stages(
+    payload: dict[str, Any], request: AgentRunRequest, observed_tools: list[str]
+) -> list[StageRecord]:
     selected = payload.get("selected_service_ids") or []
     details = payload.get("details") or []
     relations = payload.get("relations")
     plan = payload.get("plan")
     compose = request.compose
+    # Every stage below is performed by the Orchestrator against Nara. Only the
+    # parenthetical reports what the Hermes loop itself was observed to do.
     search_message = (
         "요청이 지정한 문서를 검색 결과에서 확인했습니다."
         if request.selected_service_ids
-        else "Hermes가 검색 결과를 검토했습니다."
+        else f"Orchestrator가 검색 결과를 조회했습니다 ({_tool_use_note(observed_tools, 'search_api_docs')})."
+    )
+    detail_message = (
+        f"선택 문서 {len(details)}개의 상세를 Orchestrator가 조회했습니다 "
+        f"({_tool_use_note(observed_tools, 'get_api_detail')})."
+        if details
+        else "선택된 문서가 없습니다."
     )
     return [
         StageRecord(name="search", status="completed", message=search_message),
         StageRecord(name="detail", status="completed" if selected and details else "skipped",
-                    message=f"선택 문서 {len(details)}개의 상세를 검토했습니다." if details else "선택된 문서가 없습니다."),
+                    message=detail_message),
         StageRecord(name="relations", status="completed" if relations is not None else "skipped",
                     message="문서 관계 근거를 확인했습니다." if relations is not None else "관계 분석을 생략했습니다."),
         StageRecord(name="compose", status="completed" if plan is not None else "skipped",
@@ -259,7 +299,9 @@ class AgentRunManager:
                 self._emit(run, "agent", "running", "Hermes Gateway에 오케스트레이션을 요청합니다.")
                 async with self.gateway_factory(self.settings) as gateway:
                     hermes_run_id = await gateway.create_run(
-                        _request_text(run.request), HERMES_INSTRUCTIONS, f"nara-{run.run_id}"
+                        _request_text(run.request),
+                        build_instructions(self.settings.hermes_max_tool_calls),
+                        f"nara-{run.run_id}",
                     )
                     run.hermes.update({"status": "running", "run_id": hermes_run_id})
                     hermes_result = await gateway.wait(
@@ -268,9 +310,10 @@ class AgentRunManager:
                 self._apply_hermes_result(run, hermes_result)
                 hermes_output = hermes_result.output
             run.hermes["result_mode"] = "deterministic-nara-rehydration"
+            observed_tools = [str(name) for name in run.hermes.get("tool_calls") or []]
             async with NaraClient(self.settings) as client:
                 run.result = await materialize_design_result(
-                    hermes_output, run.request, client
+                    hermes_output, run.request, client, observed_tools
                 )
             self._emit_materialized_stages(run)
             await self._run_freshness(run)
@@ -327,6 +370,17 @@ class AgentRunManager:
         action = "호출하고 있습니다" if status == "running" else "완료했습니다"
         self._emit(run, stage, status, f"Hermes가 {tool} 도구를 {action}.")
 
+    async def _index_built_at(self) -> str:
+        """Prefer the explicit setting, else ask Search when its index was built.
+
+        Without this the default configuration leaves the timestamp empty and
+        every freshness check reports 'unverified'.
+        """
+        if self.settings.index_built_at:
+            return self.settings.index_built_at
+        async with NaraClient(self.settings) as client:
+            return await client.index_built_at()
+
     async def _run_freshness(self, run: _Run) -> None:
         """Compare selected documents with crawler manifests without refreshing data."""
         if self.settings.freshness_mode == "disabled" or run.result is None:
@@ -337,7 +391,7 @@ class AgentRunManager:
                 check_document_freshness,
                 run.result.selected_service_ids,
                 self.settings.storage_dir,
-                self.settings.index_built_at,
+                await self._index_built_at(),
             )
             issues = [item for item in run.freshness if item.status != "fresh"]
             for item in issues:
@@ -356,6 +410,7 @@ class AgentRunManager:
         run.critic = await run_critic(
             run.result, run.request.selected_service_ids, self.settings,
             client_factory=lambda: NaraClient(self.settings),
+            observed_tools=[str(name) for name in run.hermes.get("tool_calls") or []],
         )
         issues = sum(1 for f in run.critic.findings if f.severity != "info")
         messages = {
@@ -379,6 +434,7 @@ class AgentRunManager:
 
 __all__ = [
     "AgentRunManager",
-    "HERMES_INSTRUCTIONS",
+    "HERMES_INSTRUCTIONS_TEMPLATE",
+    "build_instructions",
     "materialize_design_result",
 ]

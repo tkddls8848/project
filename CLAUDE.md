@@ -46,7 +46,14 @@ libs/nara_common       표준 라이브러리 기반 저장소 공통 유틸리�
   두 도구는 선택에 필요한 요약만 반환한다. 문서 전문은 루프가 끝난 뒤
   Orchestrator가 Nara에서 다시 조회한다.
 - LLM은 service_id 선택기다. 요청이 `selected_service_ids`를 지정하면 run을 만들지 않는다.
-- 최종 LLM 출력은 코드 펜스 없는 JSON 객체여야 한다.
+- 루프 지침은 `HERMES_INSTRUCTIONS_TEMPLATE` 한 곳에만 둔다. 실행 경로가 로드를
+  확인할 수 없는 skill 문서로 절차를 나누지 않는다.
+- LLM 출력은 형식이 자유다. Orchestrator는 거기서 service_id만 읽고 검색·상세·관계·
+  계획은 Nara 원본에서 다시 조회한다.
+- 진행 단계와 critic이 루프 동작을 말할 때는 Gateway가 보고한 `tool_calls` 기록만
+  근거로 삼는다. 모델 출력의 자기보고를 근거로 쓰지 않는다.
+- 문서 최신성 검사의 인덱스 빌드 시각은 search `/health`에서 읽는다.
+  `NARA_INDEX_BUILT_AT`는 덮어쓰기용이며 비어 있는 것이 기본이다.
 - critic은 로컬 결정형 검증만 수행한다. 결과 재검증을 위한 추가 LLM run을 만들지 않는다.
 - 실제 행정 처리나 외부 시스템 변경을 수행했다고 주장하지 않는다.
 
