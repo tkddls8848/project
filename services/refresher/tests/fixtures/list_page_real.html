@@ -47,22 +47,30 @@
                             </span>
                         </a>
                     </div>
-<nav class="paging">
+<ul class="total"><li>전체 <span class="point"> 25 </span>건</li></ul>
+<button class="btn-search btn-exec open-modal" data-target="modal_p00-013" onclick="fn_page(1)">
+    <span class="sr-only">검색</span>
+</button>
+<div class="krds-pagination">
+<span class="page-navi prev disabled">이전</span>
+<div class="page-links">
 <a class="page-link active" href="javascript:fn_page(1)">
-                    
+
                         <span class="sr-only">현재페이지 </span>
-                    
+
                     1
                 </a>
-<a class="page-link " href="javascript:fn_page(2)">
-                    
+<a class="page-link" href="javascript:fn_page(2)">
+
                     2
                 </a>
-<a class="page-link " href="javascript:fn_page(3)">
-                    
+<a class="page-link" href="javascript:fn_page(3)">
+
                     3
                 </a>
-</nav>
+</div>
+<a class="page-navi next" href="javascript:fn_page(2)">다음</a>
+</div>
 <script>
     function fn_detail(key, reqstNo, cloudApi, publicDataTyCode) {
         $("#publicDataDetailPk").val(key);
