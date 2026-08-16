@@ -96,44 +96,105 @@ function groundedLabelling(nodeIds, attackEdges) {
 }
 
 /**
- * 지지 관계의 순환을 모두 찾는다 — 순환논증(begging the question).
+ * Tarjan의 강결합 요소(SCC). 한 요소 안의 노드들은 서로 오갈 수 있다.
+ */
+function stronglyConnectedComponents(nodeIds, outgoing) {
+  const index = new Map();
+  const lowlink = new Map();
+  const onStack = new Set();
+  const stack = [];
+  const components = [];
+  let counter = 0;
+
+  function connect(id) {
+    index.set(id, counter);
+    lowlink.set(id, counter);
+    counter += 1;
+    stack.push(id);
+    onStack.add(id);
+
+    for (const next of outgoing.get(id) ?? []) {
+      if (!index.has(next)) {
+        connect(next);
+        lowlink.set(id, Math.min(lowlink.get(id), lowlink.get(next)));
+      } else if (onStack.has(next)) {
+        lowlink.set(id, Math.min(lowlink.get(id), index.get(next)));
+      }
+    }
+
+    if (lowlink.get(id) === index.get(id)) {
+      const component = [];
+      for (;;) {
+        const member = stack.pop();
+        onStack.delete(member);
+        component.push(member);
+        if (member === id) break;
+      }
+      components.push(component);
+    }
+  }
+
+  for (const id of nodeIds) if (!index.has(id)) connect(id);
+  return components;
+}
+
+/**
+ * 얽힌 덩어리 안에서 실제로 되돌아오는 경로 하나를 뽑는다.
+ *
+ * 덩어리 전체를 보고하되 메시지에는 순서가 있어야 읽힌다. 최단 경로면 충분하다.
+ */
+function representativeCycle(component, outgoing, selfLoops) {
+  const start = component[0];
+  if (selfLoops.has(start)) return [start];
+
+  const members = new Set(component);
+  const previous = new Map([[start, null]]);
+  const queue = [start];
+
+  while (queue.length > 0) {
+    const id = queue.shift();
+    for (const next of outgoing.get(id) ?? []) {
+      if (!members.has(next)) continue;
+      if (next === start) {
+        const cycle = [];
+        for (let at = id; at !== null; at = previous.get(at)) cycle.push(at);
+        return cycle.reverse();
+      }
+      if (!previous.has(next)) {
+        previous.set(next, id);
+        queue.push(next);
+      }
+    }
+  }
+  return component;
+}
+
+/**
+ * 지지 관계의 순환을 찾는다 — 순환논증(begging the question).
  *
  * 공격의 순환은 오류가 아니다. Dung 의미론에서 정상이며 undecided를 낳는다.
  * 자기 근거로 자기를 떠받치는 것은 지지 관계에서만 오류다.
+ *
+ * 단순 순환을 경로 탐색으로 열거하면 경로 수만큼 시간이 든다. 지지가 갈라졌다
+ * 합쳐지는 모양이 이어지면 순환이 하나도 없는데도 경로가 2^k개라, 노드 73개에서
+ * 30초가 걸렸다. 강결합 요소는 O(V+E)로 찾는다. 서로 오갈 수 있는 덩어리가
+ * 곧 순환이므로, 얽힌 덩어리 하나를 순환논증 한 건으로 보고한다.
  */
 function supportCycles(nodeIds, supportEdges) {
   const outgoing = new Map();
+  const selfLoops = new Set();
   supportEdges.forEach(edge => {
+    if (edge.source === edge.target) selfLoops.add(edge.source);
     if (!outgoing.has(edge.source)) outgoing.set(edge.source, []);
     outgoing.get(edge.source).push(edge.target);
   });
 
-  const cycles = [];
-  const seen = new Set();
-  const onPath = new Map(); // id -> 현재 경로에서의 위치
-  const path = [];
-
-  function visit(id) {
-    if (onPath.has(id)) {
-      const cycle = path.slice(onPath.get(id));
-      const fingerprint = [...cycle].sort().join('|');
-      if (!seen.has(fingerprint)) {
-        seen.add(fingerprint);
-        cycles.push(cycle);
-      }
-      return;
-    }
-    if (path.includes(id)) return;
-
-    onPath.set(id, path.length);
-    path.push(id);
-    for (const next of outgoing.get(id) ?? []) visit(next);
-    path.pop();
-    onPath.delete(id);
-  }
-
-  for (const id of nodeIds) visit(id);
-  return cycles;
+  return stronglyConnectedComponents(nodeIds, outgoing)
+    .filter(component => component.length > 1 || selfLoops.has(component[0]))
+    .map(component => ({
+      members: component,
+      path: representativeCycle(component, outgoing, selfLoops),
+    }));
 }
 
 function nodeLabelText(node) {
@@ -174,9 +235,11 @@ export function judgeArgumentGraph(nodes, edges) {
     findings.push({
       code: FINDING.SUPPORT_CYCLE,
       severity: 'violation',
-      nodeIds: cycle,
+      // 얽힌 덩어리 전체를 표시한다. 경로 하나만 짚으면 같은 순환에 걸린
+      // 나머지 노드가 아무 표시도 없이 남는다.
+      nodeIds: cycle.members,
       message: `순환논증입니다. 지지 관계가 스스로에게 되돌아옵니다: ${
-        cycle.map(id => nodeLabelText(byId.get(id))).join(' → ')
+        cycle.path.map(id => nodeLabelText(byId.get(id))).join(' → ')
       } → …`,
     });
   });
