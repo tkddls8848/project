@@ -69,6 +69,9 @@ class _Run:
     metadata: dict[str, Any]
     status: str = "running"
     events: list[dict[str, Any]] = field(default_factory=list)
+    # 이벤트 배열은 MAX_EVENTS에서 잘리므로 길이로 번호를 매기면 그 뒤로
+    # 같은 번호가 반복된다. 잘림과 무관하게 계속 늘어나는 카운터를 따로 둔다.
+    last_sequence: int = 0
     log: list[str] = field(default_factory=list)
     progress: dict[str, Any] | None = None
     started_at: str = ""
@@ -292,9 +295,10 @@ class ProcessRunManager:
         self._emit(run, "log", text)
 
     def _emit(self, run: _Run, kind: str, message: str, **extra: Any) -> None:
+        run.last_sequence += 1
         run.events.append(
             {
-                "sequence": len(run.events) + 1,
+                "sequence": run.last_sequence,
                 "kind": kind,
                 "status": run.status,
                 "message": message,

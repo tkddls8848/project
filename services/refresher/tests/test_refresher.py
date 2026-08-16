@@ -5,10 +5,11 @@ import re
 from pathlib import Path
 
 from app import browser as browser_module
+from app import extender as extender_module
 from app.accounts import DETAIL_FIELDS, fetch_account_rows, parse_account_rows
 from app.browser import BrowserSession, DialogRecorder
 from app.config import DEFAULT_STORAGE_DIR, PROJECT_ROOT, Settings
-from app.extender import run_extension
+from app.extender import extend_via_ui, run_extension
 
 FIXTURE = (Path(__file__).parent / "fixtures" / "list_page_real.html").read_text(encoding="utf-8")
 
@@ -184,3 +185,128 @@ def test_browser_session_starts_the_playwright_manager(tmp_path, monkeypatch):
     assert started[0] == "started"
     assert "launch headless=True" in started
     assert "driver-stopped" in started
+
+
+# ── 연장 결과 판정 ──────────────────────────────────────────────────────
+
+
+class FakeDialog:
+    def __init__(self, message): self.message = message
+
+    def accept(self): pass
+
+
+class FakeLocator:
+    def __init__(self, page): self._page = page
+
+    @property
+    def last(self): return self
+
+    def count(self): return 1 if self._page.has_button else 0
+
+    def click(self):
+        self._page.clicked = True
+        if self._page.dialog_message is not None:
+            self._page.handler(FakeDialog(self._page.dialog_message))
+
+
+class FakeDetailPage:
+    """상세 페이지에서 연장 버튼을 누르는 흐름만 흉내낸다.
+
+    ``dialog_message=None``이면 포털이 아무 알림도 띄우지 않은 상황이다.
+    """
+
+    def __init__(self, *, has_button=True, dialog_message=None):
+        self.has_button = has_button
+        self.dialog_message = dialog_message
+        self.handler = None
+        self.clicked = False
+
+    def on(self, event, handler):
+        if event == "dialog":
+            self.handler = handler
+
+    def goto(self, _url, wait_until=None): pass
+
+    def evaluate(self, _script): pass
+
+    def expect_navigation(self, wait_until=None): return contextlib.nullcontext()
+
+    def locator(self, _selector): return FakeLocator(self)
+
+    def wait_for_url(self, _pattern, timeout=None): pass
+
+
+class FakeSession:
+    def __init__(self, page): self._page = page
+
+    def __enter__(self): return self
+
+    def __exit__(self, *_exc): return False
+
+    @contextlib.contextmanager
+    def page(self): yield self._page
+
+
+def _outcome(page):
+    return extend_via_ui(Settings(), FakeSession(page), parse_account_rows(FIXTURE).rows[0])
+
+
+def test_missing_extend_button_is_a_skip():
+    """연장할 수 있는 상태가 아니면 실패가 아니라 대상이 아닌 것이다."""
+    outcome = _outcome(FakeDetailPage(has_button=False))
+    assert outcome.action == "skipped"
+
+
+def test_extension_without_portal_confirmation_is_a_failure():
+    """버튼을 눌렀는데 완료 알림이 없으면 연장에 실패한 것이다.
+
+    건너뜀으로 묶으면 종료 코드가 0이 되어, 아무것도 연장되지 않은 실행이
+    성공으로 보고된다.
+    """
+    page = FakeDetailPage(dialog_message=None)
+    outcome = _outcome(page)
+    assert page.clicked is True
+    assert outcome.action == "failed"
+
+
+def test_success_dialog_marks_the_row_extended():
+    outcome = _outcome(FakeDetailPage(dialog_message="연장되었습니다."))
+    assert outcome.action == "extended"
+    assert outcome.portal_message == "연장되었습니다."
+
+
+def test_commit_run_that_confirms_nothing_exits_nonzero(monkeypatch):
+    """하나도 연장하지 못한 실제 제출 회차가 exit 0으로 끝나면 안 된다.
+
+    실행 관리자는 종료 코드로 completed/failed를 정한다. 0을 돌려주면 웹 UI가
+    작업을 성공으로 표시하고 사용자는 만료를 놓친다.
+    """
+    import argparse
+
+    import main as refresher_main
+
+    page = FakeDetailPage(dialog_message=None)
+    rows = parse_account_rows(FIXTURE).rows[:1]
+    monkeypatch.setattr(refresher_main, "BrowserSession", lambda *_a, **_k: FakeSession(page))
+    monkeypatch.setattr(refresher_main, "fetch_account_rows", lambda *_a, **_k: rows)
+    monkeypatch.setattr(extender_module, "BrowserSession", lambda *_a, **_k: FakeSession(page))
+
+    args = argparse.Namespace(commit=True, only=None, limit=None)
+    assert refresher_main.cmd_extend(args) == 1
+
+
+def test_commit_run_with_nothing_to_extend_exits_zero(monkeypatch):
+    """연장 대상이 아닌 행만 있으면 실패가 아니다."""
+    import argparse
+
+    import main as refresher_main
+
+    page = FakeDetailPage(has_button=False)
+    rows = parse_account_rows(FIXTURE).rows[:1]
+    monkeypatch.setattr(refresher_main, "BrowserSession", lambda *_a, **_k: FakeSession(page))
+    monkeypatch.setattr(refresher_main, "fetch_account_rows", lambda *_a, **_k: rows)
+    monkeypatch.setattr(extender_module, "BrowserSession", lambda *_a, **_k: FakeSession(page))
+
+    args = argparse.Namespace(commit=True, only=None, limit=None)
+    assert refresher_main.cmd_extend(args) == 0

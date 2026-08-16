@@ -15,7 +15,7 @@ class MetadataCsvReader:
         "key",
         "id",
     )
-    _CACHE: ClassVar[Dict[str, Tuple[int, int, Tuple[Tuple[str, List[str], List[Dict]], ...]]]] = {}
+    _CACHE: ClassVar[Dict[str, Tuple[int, int, str, List[str], List[Dict]]]] = {}
 
     def __init__(self, csv_path: str):
         self.csv_path = Path(csv_path)
@@ -63,6 +63,13 @@ class MetadataCsvReader:
         return [], {}
 
     def _read_candidates(self):
+        """인코딩 후보를 하나씩 지연 생성한다.
+
+        호출자는 쓸 만한 후보를 만나면 순회를 멈춘다. 후보를 미리 전부 만들면
+        100MB대 목록 CSV가 인코딩 수만큼 메모리에 겹쳐 남는다. 특히 포털 CSV는
+        utf-8-sig와 utf-8 양쪽으로 모두 디코딩되므로 최소 두 벌이 생긴다.
+        캐시도 마지막으로 넘긴 후보 하나만 들고 있는다.
+        """
         cache_key = str(self.csv_path.resolve())
         try:
             stat = self.csv_path.stat()
@@ -72,28 +79,27 @@ class MetadataCsvReader:
 
         cached = self._CACHE.get(cache_key)
         if cached and cached[:2] == cache_meta:
-            for candidate in cached[2]:
-                yield candidate
+            yield cached[2:]
             return
 
-        candidates = []
         for encoding in self.ENCODINGS:
+            # 다음 후보를 읽기 전에 앞 후보를 버린다. 캐시에 두 벌이 겹치지 않는다.
+            self._CACHE.pop(cache_key, None)
             try:
                 with self.csv_path.open("r", encoding=encoding, newline="") as f:
                     reader = csv.DictReader(f)
                     headers = reader.fieldnames or []
                     if not headers:
                         continue
-                    candidates.append((encoding, headers, list(reader)))
+                    rows = list(reader)
             except UnicodeDecodeError:
                 continue
             except Exception as exc:
                 print(f"Error reading CSV with {encoding}: {exc}")
                 continue
 
-        self._CACHE[cache_key] = (*cache_meta, tuple(candidates))
-        for candidate in candidates:
-            yield candidate
+            self._CACHE[cache_key] = (*cache_meta, encoding, headers, rows)
+            yield encoding, headers, rows
 
     def _find_id_column(self, headers: List[str]) -> Optional[str]:
         for header in headers:

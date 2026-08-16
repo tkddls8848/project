@@ -32,6 +32,7 @@
 import asyncio
 import csv
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional, TextIO
@@ -144,47 +145,78 @@ class MetadataUpdater:
                 return enc
         return first_ok or CSV_ENCODINGS[0]
 
+    def _verify_counts(self, counts: Dict[str, int]) -> None:
+        """분류 결과가 크롤러 입력으로 쓸 만한지 확인한다.
+
+        포털이 '목록유형' 값을 바꾸면 모든 행이 미분류로 빠져 대상 CSV가 헤더만
+        남는다. 그대로 교체하고 date.json까지 갱신하면 이후 실행은 '최신'으로
+        판단해 빈 입력으로 크롤한다. 조용히 비느니 갱신을 포기하고 기존 CSV를 둔다.
+        """
+        empty = [f"{key}->{self.type_map[key]}" for key in self.type_map if counts.get(key, 0) <= 0]
+        if empty:
+            raise ValueError(
+                f"'{TYPE_COLUMN}' 분류 결과가 비어 교체를 중단합니다: {', '.join(empty)} "
+                f"(미분류 {counts.get('_unknown', 0):,}행). 포털 CSV의 열 값이 바뀌었을 수 있습니다."
+            )
+
     def _split_by_type(self, source: Path) -> Dict[str, int]:
-        """마스터 CSV를 '목록유형' 열로 분류하여 대상 파일들로 저장. 유형별 행 수 반환."""
+        """마스터 CSV를 '목록유형' 열로 분류하여 대상 파일들로 저장. 유형별 행 수 반환.
+
+        임시 파일에 먼저 쓰고 행 수를 확인한 뒤에야 대상 CSV를 교체한다. 대상을
+        바로 열어 쓰면 분류 도중 실패했을 때 기존 CSV가 이미 잘려 있고, 호출부는
+        "기존 CSV로 계속 진행"한다고 보고하면서 실제로는 빈 파일을 쓰게 된다.
+        """
         encoding = self._detect_encoding(source)
         counts: Dict[str, int] = {key: 0 for key in self.type_map}
         counts["_unknown"] = 0
+        staged = {key: self.csv_dir / f"{name}.tmp" for key, name in self.type_map.items()}
 
-        with source.open("r", encoding=encoding, newline="") as src:
-            reader = csv.reader(src)
-            try:
-                header = next(reader)
-            except StopIteration:
-                return counts
+        try:
+            with source.open("r", encoding=encoding, newline="") as src:
+                reader = csv.reader(src)
+                try:
+                    header = next(reader)
+                except StopIteration:
+                    raise ValueError("master CSV is empty") from None
 
-            # BOM 잔재 제거 후 '목록유형' 열 위치 탐색 (정확 일치 우선, 없으면 '유형' 포함)
-            clean_header = [cell.lstrip("﻿").strip() for cell in header]
-            type_idx = next((i for i, h in enumerate(clean_header) if h == TYPE_COLUMN), None)
-            if type_idx is None:
-                type_idx = next((i for i, h in enumerate(clean_header) if "유형" in h), None)
-            if type_idx is None:
-                raise ValueError(f"'{TYPE_COLUMN}' column not found in master CSV header")
+                # BOM 잔재 제거 후 '목록유형' 열 위치 탐색 (정확 일치 우선, 없으면 '유형' 포함)
+                clean_header = [cell.lstrip("﻿").strip() for cell in header]
+                type_idx = next((i for i, h in enumerate(clean_header) if h == TYPE_COLUMN), None)
+                if type_idx is None:
+                    type_idx = next((i for i, h in enumerate(clean_header) if "유형" in h), None)
+                if type_idx is None:
+                    raise ValueError(f"'{TYPE_COLUMN}' column not found in master CSV header")
 
-            # 대상별 writer 준비 (헤더 먼저 기록)
-            files: Dict[str, TextIO] = {}
-            writers: Dict[str, "csv._writer"] = {}
-            try:
-                for key, name in self.type_map.items():
-                    fh = (self.csv_dir / name).open("w", encoding=OUTPUT_ENCODING, newline="")
-                    files[key] = fh
-                    writers[key] = csv.writer(fh)
-                    writers[key].writerow(header)
+                # 대상별 writer 준비 (헤더 먼저 기록)
+                files: Dict[str, TextIO] = {}
+                writers: Dict[str, "csv._writer"] = {}
+                try:
+                    for key in self.type_map:
+                        fh = staged[key].open("w", encoding=OUTPUT_ENCODING, newline="")
+                        files[key] = fh
+                        writers[key] = csv.writer(fh)
+                        writers[key].writerow(header)
 
-                for row in reader:
-                    value = row[type_idx].strip().upper() if type_idx < len(row) else ""
-                    if value in writers:
-                        writers[value].writerow(row)
-                        counts[value] += 1
-                    else:
-                        counts["_unknown"] += 1
-            finally:
-                for fh in files.values():
-                    fh.close()
+                    for row in reader:
+                        value = row[type_idx].strip().upper() if type_idx < len(row) else ""
+                        if value in writers:
+                            writers[value].writerow(row)
+                            counts[value] += 1
+                        else:
+                            counts["_unknown"] += 1
+                finally:
+                    for fh in files.values():
+                        fh.close()
+
+            self._verify_counts(counts)
+            # 같은 디렉터리 안의 교체라 한 건씩은 원자적이다. 세 건 중간에 끊기면
+            # date.json이 갱신되지 않으므로 다음 실행이 같은 갱신을 다시 시도한다.
+            for key, name in self.type_map.items():
+                os.replace(staged[key], self.csv_dir / name)
+        finally:
+            # 교체된 임시 파일은 이미 사라졌다. 남은 것은 실패한 회차의 잔해다.
+            for path in staged.values():
+                path.unlink(missing_ok=True)
 
         return counts
 
