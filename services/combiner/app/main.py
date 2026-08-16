@@ -13,6 +13,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from pydantic import ValidationError
 
 from .config import (
     MAX_SUGGESTION_CHARS,
@@ -26,7 +27,7 @@ from .config import (
 from .loader import get_services, load_all
 from .llm import generate, generate_stream
 from .prompts import build_prompt, detect_warning
-from .schemas import ComposeRequest, ComposeResponse
+from .schemas import DEFAULT_QUESTION, ComposeRequest, ComposeResponse
 
 TRUNCATION_MARKER = "\n\n…(길이 예산으로 이하 생략)"
 
@@ -71,8 +72,25 @@ async def index(request: Request):
 
 
 @app.get("/compose-stream")
-async def compose_stream(ids: str, q: str = "이 API들을 조합하면 어떤 행정 서비스 계획을 만들 수 있나?"):
-    service_ids = [x.strip() for x in ids.split(",") if x.strip()]
+async def compose_stream(ids: str, q: str = DEFAULT_QUESTION):
+    # 웹 UI가 실제로 쓰는 경로다. POST /compose와 같은 스키마로 검증해야
+    # 한쪽에만 걸린 제한이 다른 쪽으로 새지 않는다.
+    try:
+        request = ComposeRequest(
+            service_ids=[x.strip() for x in ids.split(",") if x.strip()],
+            question=q,
+        )
+    except ValidationError as exc:
+        detail = "; ".join(error["msg"] for error in exc.errors())
+
+        async def reject():
+            yield f"data: {json.dumps({'error': detail}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+
+        return StreamingResponse(reject(), media_type="text/event-stream")
+
+    service_ids = request.service_ids
+    q = request.question
     services, missing = get_services(service_ids)
 
     domains = sorted({s.domain for s in services})

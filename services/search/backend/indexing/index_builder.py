@@ -183,6 +183,19 @@ class BuildStatus:
         self.started_at: float | None  = None
         self.finished_at: float | None = None
 
+    def try_start(self) -> bool:
+        """idle일 때만 running으로 잡고 True를 준다.
+
+        검사와 예약이 한 잠금 안에서 끝나야 한다. 호출부가 state를 읽고 나서
+        스레드를 띄우면 running을 세우는 것은 그 스레드 안이므로, 그 사이에
+        들어온 요청도 idle을 본다. 빌드 두 개가 같은 인덱스 파일을 덮어쓴다.
+        """
+        with self._lock:
+            if self.state == "running":
+                return False
+            self.state = "running"
+            return True
+
     def update(self, **kwargs):
         with self._lock:
             for k, v in kwargs.items():

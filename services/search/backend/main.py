@@ -1,3 +1,4 @@
+import sys
 import threading
 from datetime import datetime
 from pathlib import Path
@@ -19,6 +20,22 @@ from .search.fusion import reciprocal_rank_fusion
 from .search.lexical_retriever import LexicalRetriever
 
 STATIC_DIR = config.BASE_DIR / "frontend"
+
+
+def _configure_stdio() -> None:
+    """콘솔이 리다이렉트돼도(cp949) 한글·기호 출력이 깨지지 않게 한다.
+
+    인덱스가 없을 때의 안내 메시지에는 cp949로 인코딩되지 않는 문자가 있다.
+    stdout이 파이프면 그 print가 UnicodeEncodeError를 내는데, 하필 예외 처리
+    안에서 터지므로 아래 FAISSRetriever() 한 줄에서 앱 import가 끊긴다.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            reconfigure(encoding="utf-8", errors="replace")
+
+
+_configure_stdio()
 
 retriever = FAISSRetriever()
 lexical_retriever = LexicalRetriever()
@@ -200,15 +217,18 @@ def search(request: SearchRequest):
 
 @app.post("/build")
 def trigger_build(request: BuildRequest | None = None):
-    if build_status.state == "running":
-        return {"ok": False, "message": "이미 빌드 중입니다."}
-
     device = (request.device if request else "cpu")
     # 빌드 스레드를 띄우기 전에 디바이스 가용성을 확인해 즉시 오류를 반환한다.
+    # 자리를 잡기 전에 확인해야 실패했을 때 running으로 붙잡아 두지 않는다.
     try:
         resolved = resolve_device(device)
     except (RuntimeError, ValueError) as exc:
         return {"ok": False, "message": str(exc)}
+
+    # 검사와 예약을 한 번에 한다. 나눠 두면 두 요청이 모두 idle을 보고 각자
+    # 스레드를 띄워 같은 FAISS·메타데이터 파일을 덮어쓴다.
+    if not build_status.try_start():
+        return {"ok": False, "message": "이미 빌드 중입니다."}
 
     def _on_complete():
         retriever.reload()
@@ -221,7 +241,12 @@ def trigger_build(request: BuildRequest | None = None):
         kwargs={"on_complete": _on_complete, "device": device},
         daemon=True,
     )
-    thread.start()
+    try:
+        thread.start()
+    except RuntimeError as exc:
+        # 스레드를 못 띄우면 잡아 둔 자리를 놓아준다.
+        build_status.update(state="error", message=f"빌드를 시작하지 못했습니다: {exc}")
+        return {"ok": False, "message": str(exc)}
     label = "GPU" if resolved == "cuda" else "CPU"
     return {"ok": True, "message": f"{label} 빌드를 시작했습니다.", "device": resolved}
 

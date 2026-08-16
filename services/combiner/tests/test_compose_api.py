@@ -138,6 +138,49 @@ def test_compose_truncates_long_suggestion(monkeypatch):
     assert body["suggestion"].endswith("생략)")
 
 
+# ── GET /compose-stream ─────────────────────────────────────────────────
+# 웹 UI가 실제로 쓰는 경로다. POST와 같은 제한이 걸려 있어야 한다.
+
+
+@pytest.fixture
+def fake_stream(monkeypatch):
+    async def _fake_generate_stream(prompt: str, model: str = "test-model"):
+        yield "조합 결과"
+
+    from app import main
+
+    monkeypatch.setattr(main, "generate_stream", _fake_generate_stream)
+    return _fake_generate_stream
+
+
+def test_compose_stream_rejects_too_many_ids():
+    response = _client().get("/compose-stream", params={"ids": "1,2,3,4"})
+    assert response.status_code == 200
+    assert "error" in response.text
+    assert "조합 결과" not in response.text
+
+
+def test_compose_stream_rejects_empty_ids():
+    response = _client().get("/compose-stream", params={"ids": " , "})
+    assert "error" in response.text
+
+
+def test_compose_stream_rejects_overlong_question():
+    response = _client().get(
+        "/compose-stream", params={"ids": "15000827", "q": "가" * 501}
+    )
+    assert "error" in response.text
+
+
+def test_compose_stream_accepts_the_post_limit(fake_stream):
+    response = _client().get(
+        "/compose-stream", params={"ids": "15000827,15000863", "q": "조합 방법?"}
+    )
+    assert response.status_code == 200
+    assert "조합 결과" in response.text
+    assert response.text.endswith("data: [DONE]\n\n")
+
+
 def test_health_reports_docs_loaded():
     response = _client().get("/health")
     assert response.status_code == 200
