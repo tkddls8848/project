@@ -10,6 +10,8 @@ from urllib.robotparser import RobotFileParser
 
 import aiohttp
 
+from utils.url_guard import rejection_reason_async
+
 
 @dataclass(frozen=True)
 class TransportConfig:
@@ -94,6 +96,14 @@ class SafeHttpTransport:
 
     async def robots_decision(self, url: str) -> RobotsDecision:
         origin = self._origin(url)
+        # robots.txt를 받는 것부터가 요청이다. 대상 확인은 그보다 먼저 해야 한다.
+        # robots는 SSRF 방어가 아니며, robots가 없는 호스트는 오히려 허용된다.
+        blocked = await rejection_reason_async(url)
+        if blocked is not None:
+            decision = RobotsDecision(False, f"blocked_target:{blocked}")
+            self._robots[origin] = decision
+            return decision
+
         cached = self._robots.get(origin)
         if cached is not None:
             return self._decision_for_url(origin, url, cached)

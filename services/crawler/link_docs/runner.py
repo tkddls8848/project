@@ -21,6 +21,7 @@ from typing import Any, Dict, Iterable, List, Optional
 from urllib.parse import urlsplit
 
 from portals.transport import SafeHttpTransport, TransportConfig
+from utils.url_guard import literal_rejection_reason
 
 from .extractor import ExtractionResult, extract_api_rules
 
@@ -64,6 +65,10 @@ def build_tasks(records: Iterable[Any]) -> List[LinkDocTask]:
             continue
         host = (urlsplit(url).hostname or "").lower()
         if not host or host in _SELF_HOSTS:
+            continue
+        # 내부망을 가리키는 주소는 작업으로 만들지 않는다. 이름으로 적힌 것은
+        # 요청 직전에 SafeHttpTransport가 이름을 풀어 다시 본다.
+        if literal_rejection_reason(url) is not None:
             continue
         api_id = str(record.get("api_id") or "").strip()
         key = (api_id, url)

@@ -1,8 +1,27 @@
 import asyncio
+import socket
 from collections import deque
+
+import pytest
 
 from profiling.fetcher import FetchPolicy, PoliteFileFetcher
 from profiling.schema_infer import infer_schema
+
+
+@pytest.fixture(autouse=True)
+def resolvable_fixture_hosts(monkeypatch):
+    """이 파일은 HTTP를 가짜로 막는다. 이름 해석도 같이 막아야 한다.
+
+    fetcher는 요청 전에 대상이 내부망인지 확인하려고 이름을 푼다. 픽스처가 쓰는
+    ``example.test``는 실제로 풀리지 않으므로 공인 주소를 돌려주도록 둔다.
+    """
+    monkeypatch.setattr(
+        socket,
+        "getaddrinfo",
+        lambda *_a, **_k: [
+            (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 443))
+        ],
+    )
 
 
 class FakeContent:

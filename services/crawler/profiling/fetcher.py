@@ -14,6 +14,8 @@ from urllib.robotparser import RobotFileParser
 
 import aiohttp
 
+from utils.url_guard import rejection_reason_async
+
 
 @dataclass(frozen=True)
 class FetchPolicy:
@@ -139,6 +141,14 @@ class PoliteFileFetcher:
         current_url = url
         try:
             for redirect_number in range(self.policy.max_redirects + 1):
+                # 홉마다 다시 본다. 처음만 확인하면 공개 호스트가 리다이렉트로
+                # 내부망을 가리켜도 그대로 따라간다.
+                blocked = await rejection_reason_async(current_url)
+                if blocked is not None:
+                    result.status = "blocked"
+                    result.error = f"요청 대상이 아닙니다: {blocked}"
+                    return result
+
                 decision = await self._robots_allowed(session, current_url)
                 result.robots_status = decision.status
                 if not decision.allowed:

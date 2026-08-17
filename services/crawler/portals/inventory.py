@@ -4,6 +4,8 @@ from collections import Counter
 from typing import Any, Dict, Iterable, List, Mapping
 from urllib.parse import urlsplit, urlunsplit
 
+from utils.url_guard import literal_rejection_reason
+
 from .models import CoverageReport, HostInventory, PortalResult
 
 
@@ -28,6 +30,10 @@ def build_host_inventory(records: Iterable[Any]) -> List[HostInventory]:
                 parsed = urlsplit(str(raw_url).strip())
                 host = (parsed.hostname or "").lower().rstrip(".")
                 if parsed.scheme.lower() not in {"http", "https"} or not host:
+                    continue
+                # 내부망을 가리키는 주소가 수집 대상 목록에 오르지 않게 한다.
+                # 이름으로 적힌 것은 요청 직전에 transport가 다시 본다.
+                if literal_rejection_reason(str(raw_url).strip()) is not None:
                     continue
                 port = parsed.port
             except (TypeError, ValueError):
