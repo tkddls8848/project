@@ -1,3 +1,9 @@
+"""이 서비스의 설정 기본값과 경로 배선만 본다.
+
+``find_project_root`` 자체의 동작은 라이브러리 옆(``tests/test_paths.py``)에서
+검증한다. 소비자마다 다시 확인하면 같은 함수를 네 번 테스트하게 된다.
+"""
+
 import importlib
 
 
@@ -18,21 +24,3 @@ def test_project_root_is_resolved_by_marker():
 
     # 루트는 디렉터리 깊이가 아니라 .nara-root 마커로 정해진다.
     assert (config.PROJECT_ROOT / ".nara-root").is_file()
-
-
-def test_find_project_root_falls_back_to_parent(tmp_path):
-    from backend.core.config import find_project_root
-
-    # 마커가 없는 트리에서는 예전 규약(모듈이 루트의 직계 자식)으로 폴백한다.
-    module_dir = tmp_path / "some_module"
-    module_dir.mkdir()
-    assert find_project_root(module_dir) == tmp_path
-
-
-def test_find_project_root_finds_marker_above_nested_module(tmp_path):
-    from backend.core.config import find_project_root
-
-    (tmp_path / ".nara-root").write_text("", encoding="utf-8")
-    nested = tmp_path / "services" / "search"
-    nested.mkdir(parents=True)
-    assert find_project_root(nested) == tmp_path

@@ -1,4 +1,9 @@
-"""POST /compose 응답 계약 테스트 (정상·일부 누락·전체 누락·LLM 장애·길이 예산)."""
+"""조합 API 계약 테스트.
+
+POST /compose는 응답 계약(정상·일부 누락·전체 누락·LLM 장애·길이 예산)을,
+GET /compose-stream은 같은 입력 제한이 걸려 있는지를 본다. 웹 UI가 실제로
+쓰는 것은 후자라 둘이 어긋나면 화면에서만 제한이 새어 나간다.
+"""
 from pathlib import Path
 
 import pytest

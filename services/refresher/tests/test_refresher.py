@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import argparse
 import contextlib
 import re
 from pathlib import Path
 
+import main as refresher_main
 from app import browser as browser_module
 from app import extender as extender_module
 from app.accounts import DETAIL_FIELDS, fetch_account_rows, parse_account_rows
@@ -106,8 +108,14 @@ class FakePage:
         self.visited.append(self.current)
 
 
-class FakeBrowser:
+class FakeBrowserSession:
+    """BrowserSession 대역. 목록 수집과 연장 제출 양쪽이 같은 것을 쓴다."""
+
     def __init__(self, page): self._page = page
+
+    def __enter__(self): return self
+
+    def __exit__(self, *_exc): return False
 
     @contextlib.contextmanager
     def page(self): yield self._page
@@ -122,7 +130,7 @@ def test_every_page_is_collected_not_just_the_first():
     }
     page = FakePage(pages)
 
-    rows = fetch_account_rows(Settings(), FakeBrowser(page))
+    rows = fetch_account_rows(Settings(), FakeBrowserSession(page))
 
     assert len(rows) == 6
     assert page.visited == [1, 2, 3]
@@ -138,7 +146,7 @@ def test_page_numbers_revealed_later_are_followed():
     }
     page = FakePage(pages)
 
-    rows = fetch_account_rows(Settings(), FakeBrowser(page))
+    rows = fetch_account_rows(Settings(), FakeBrowserSession(page))
 
     assert [row.name for row in rows] == ["[승인] 문서 A", "[승인] 문서 B", "[승인] 문서 C"]
     assert page.visited == [1, 2, 3]
@@ -147,7 +155,7 @@ def test_page_numbers_revealed_later_are_followed():
 def test_incomplete_collection_is_reported(capsys):
     """선언된 총건수와 모은 수가 다르면 조용히 넘어가지 않는다."""
     pages = {1: _list_page_html([1], [("a", "문서 A")], 63)}
-    fetch_account_rows(Settings(), FakeBrowser(FakePage(pages)))
+    fetch_account_rows(Settings(), FakeBrowserSession(FakePage(pages)))
     assert "전체 63건 중 1건만" in capsys.readouterr().out
 
 
@@ -162,12 +170,14 @@ def test_browser_session_starts_the_playwright_manager(tmp_path, monkeypatch):
     class FakeContext:
         def set_default_timeout(self, _ms): pass
 
-    class FakeBrowser:
+    class FakePlaywrightBrowser:
         def new_context(self, **_kwargs): return FakeContext()
         def close(self): started.append("browser-closed")
 
     class FakeChromium:
-        def launch(self, headless): started.append(f"launch headless={headless}"); return FakeBrowser()
+        def launch(self, headless):
+            started.append(f"launch headless={headless}")
+            return FakePlaywrightBrowser()
 
     class FakeDriver:
         chromium = FakeChromium()
@@ -237,19 +247,20 @@ class FakeDetailPage:
     def wait_for_url(self, _pattern, timeout=None): pass
 
 
-class FakeSession:
-    def __init__(self, page): self._page = page
-
-    def __enter__(self): return self
-
-    def __exit__(self, *_exc): return False
-
-    @contextlib.contextmanager
-    def page(self): yield self._page
-
-
 def _outcome(page):
-    return extend_via_ui(Settings(), FakeSession(page), parse_account_rows(FIXTURE).rows[0])
+    return extend_via_ui(Settings(), FakeBrowserSession(page), parse_account_rows(FIXTURE).rows[0])
+
+
+def _run_extend(monkeypatch, page):
+    """`cmd_extend`를 브라우저 없이 끝까지 돌리고 종료 코드를 돌려준다."""
+    rows = parse_account_rows(FIXTURE).rows[:1]
+    session = lambda *_a, **_k: FakeBrowserSession(page)  # noqa: E731
+    monkeypatch.setattr(refresher_main, "BrowserSession", session)
+    monkeypatch.setattr(refresher_main, "fetch_account_rows", lambda *_a, **_k: rows)
+    monkeypatch.setattr(extender_module, "BrowserSession", session)
+    return refresher_main.cmd_extend(
+        argparse.Namespace(commit=True, only=None, limit=None)
+    )
 
 
 def test_missing_extend_button_is_a_skip():
@@ -282,31 +293,9 @@ def test_commit_run_that_confirms_nothing_exits_nonzero(monkeypatch):
     실행 관리자는 종료 코드로 completed/failed를 정한다. 0을 돌려주면 웹 UI가
     작업을 성공으로 표시하고 사용자는 만료를 놓친다.
     """
-    import argparse
-
-    import main as refresher_main
-
-    page = FakeDetailPage(dialog_message=None)
-    rows = parse_account_rows(FIXTURE).rows[:1]
-    monkeypatch.setattr(refresher_main, "BrowserSession", lambda *_a, **_k: FakeSession(page))
-    monkeypatch.setattr(refresher_main, "fetch_account_rows", lambda *_a, **_k: rows)
-    monkeypatch.setattr(extender_module, "BrowserSession", lambda *_a, **_k: FakeSession(page))
-
-    args = argparse.Namespace(commit=True, only=None, limit=None)
-    assert refresher_main.cmd_extend(args) == 1
+    assert _run_extend(monkeypatch, FakeDetailPage(dialog_message=None)) == 1
 
 
 def test_commit_run_with_nothing_to_extend_exits_zero(monkeypatch):
     """연장 대상이 아닌 행만 있으면 실패가 아니다."""
-    import argparse
-
-    import main as refresher_main
-
-    page = FakeDetailPage(has_button=False)
-    rows = parse_account_rows(FIXTURE).rows[:1]
-    monkeypatch.setattr(refresher_main, "BrowserSession", lambda *_a, **_k: FakeSession(page))
-    monkeypatch.setattr(refresher_main, "fetch_account_rows", lambda *_a, **_k: rows)
-    monkeypatch.setattr(extender_module, "BrowserSession", lambda *_a, **_k: FakeSession(page))
-
-    args = argparse.Namespace(commit=True, only=None, limit=None)
-    assert refresher_main.cmd_extend(args) == 0
+    assert _run_extend(monkeypatch, FakeDetailPage(has_button=False)) == 0
