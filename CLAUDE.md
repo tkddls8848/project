@@ -11,7 +11,6 @@ data.go.kr -> services/crawler -> nara_storage/ (gitignore)
                                  -> services/combiner :8003
 
 apps/dashboard :5173   React Flow 편집기 (dev 서버가 Ollama :11434도 프록시)
-apps/workbench :8010   search/combiner 통합 UI
 apps/prometheus :8020  Hermes Gateway(:8642) + Nara MCP 오케스트레이터
 services/crawler       크롤링 CLI + 제어 UI :8004
 services/refresher     활용신청 연장 CLI + 제어 UI :8005
@@ -81,7 +80,7 @@ libs/nara_common       표준 라이브러리 기반 저장소 공통 유틸리�
 - 기준 환경: Windows PowerShell, 저장소 예시 경로 `C:\project`.
 - 각 모듈의 가상환경은 해당 디렉터리 `venv/`에 둔다.
 - 서비스 포트: search 8000, combiner 8003, crawler UI 8004, refresher UI 8005,
-  workbench 8010, prometheus 8020, Hermes Gateway 8642, dashboard 5173.
+  prometheus 8020, Hermes Gateway 8642, dashboard 5173.
 - dashboard의 dev 서버는 `/api`→search, `/combiner`→combiner와 함께
   `/ollama`→`localhost:11434`를 프록시한다. Ollama는 저장소 밖 런타임이며
   없으면 그 경로만 실패한다. 나머지 화면은 동작한다.

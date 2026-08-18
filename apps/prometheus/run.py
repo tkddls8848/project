@@ -1,6 +1,5 @@
 """Start the Nara Hermes orchestration service and its dependencies.
 
-This launcher never starts or modifies the existing Nara Workbench UI (:8010).
 Hermes is launched with a project-local profile that routes Cloudflare requests
 through the loopback compatibility proxy (:8643 by default).
 """
