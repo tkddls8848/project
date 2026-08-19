@@ -24,6 +24,11 @@ VECTOR_MAX_CHUNKS_PER_DOCUMENT = int(
 )
 VECTOR_RRF_WEIGHT = float(os.environ.get("NARA_SEARCH_VECTOR_RRF_WEIGHT", "0.9"))
 LEXICAL_RRF_WEIGHT = float(os.environ.get("NARA_SEARCH_LEXICAL_RRF_WEIGHT", "1.1"))
+# 커버리지 prior: 전국 단위 기관 문서에 더하는 RRF 가산점. RRF 상위 구간의 인접
+# 순위 간격이 약 0.0003이라 이 값은 열 순위 남짓을 밀어 올린다. 관측된 실패
+# (지방공기업 0.03125 vs 전국 기관 0.02930)를 뒤집으려면 최소 0.002가 필요하고,
+# 여유를 둬 0.004로 잡았다. 0으로 두면 기능이 꺼진다.
+COVERAGE_PRIOR_BONUS = float(os.environ.get("NARA_SEARCH_COVERAGE_PRIOR_BONUS", "0.004"))
 
 # ── 활성 런타임 경로 ─────────────────────────────────────────────────────────
 # 검색 파이프라인(index_builder + faiss_retriever)이 실제로 사용하는 경로.

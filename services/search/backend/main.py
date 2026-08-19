@@ -15,6 +15,7 @@ from .core import config
 from .core.service_id import ServiceIdError, normalize_service_id, to_canonical
 from .indexing.index_builder import build_status, resolve_device, run_build
 from .relations.extractor import derive_relations, signature_from_detail
+from .search.coverage import apply_coverage_prior
 from .search.faiss_retriever import FAISSRetriever
 from .search.fusion import reciprocal_rank_fusion
 from .search.lexical_retriever import LexicalRetriever
@@ -176,6 +177,10 @@ def search(request: SearchRequest):
                 "lexical": config.LEXICAL_RRF_WEIGHT,
             },
         )
+        # 두 채널 모두 "이 데이터가 전국을 포괄한다"는 신호를 갖고 있지 않다.
+        # RRF가 합의를 보상하는 탓에 양쪽에서 어중간한 지역 데이터가 1위가 되는
+        # 일이 있어, 융합 점수 위에서만 커버리지 prior를 더한다.
+        fused = apply_coverage_prior(fused, query, config.COVERAGE_PRIOR_BONUS)
         fusion = "rrf"
     elif vector_raw or lexical_raw:
         channel = "vector" if vector_raw else "lexical"
@@ -207,6 +212,7 @@ def search(request: SearchRequest):
             "vector_search":      retriever.search_diagnostics() if request.use_vector else {},
             "vector_rrf_weight":  config.VECTOR_RRF_WEIGHT,
             "lexical_rrf_weight": config.LEXICAL_RRF_WEIGHT,
+            "coverage_prior_bonus": config.COVERAGE_PRIOR_BONUS,
             "lexical_candidates": len(lexical_raw),
             "lexical_source":     lexical_retriever.corpus_source(),
             "fusion":             fusion,
