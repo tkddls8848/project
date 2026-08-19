@@ -121,6 +121,40 @@ def test_start_hermes_pins_profile_home_and_uses_python_process(monkeypatch):
         )
 
 
+def test_start_hermes_drops_inherited_environment_paths(monkeypatch):
+    """Hermes runs on another Python version; our venv must not reach it."""
+    captured: dict[str, object] = {}
+    environment = profile_environment()
+    environment["NARA_HERMES_PROFILE"] = "nara-cf"
+    environment["PYTHONPATH"] = str(launcher.BASE_DIR / "venv" / "Lib" / "site-packages")
+    environment["PYTHONHOME"] = str(launcher.BASE_DIR / "venv")
+    environment["VIRTUAL_ENV"] = str(launcher.BASE_DIR / "venv")
+    executable = launcher.hermes_executable()
+    config_path = (
+        launcher.HERMES_RUNTIME_ROOT / "profiles" / "nara-cf" / "config.yaml"
+    )
+
+    class DummyProcess:
+        pid = 1234
+
+    def fake_popen(command, **kwargs):
+        captured["kwargs"] = kwargs
+        return DummyProcess()
+
+    monkeypatch.setattr(launcher, "child_environment", lambda: environment.copy())
+    monkeypatch.setattr(launcher, "validate_proxy_configuration", lambda _: None)
+    monkeypatch.setattr(launcher, "ensure_hermes_runtime_profile", lambda *_: config_path)
+    monkeypatch.setattr(launcher, "hermes_executable", lambda: executable)
+    monkeypatch.setattr(launcher.subprocess, "Popen", fake_popen)
+
+    launcher.start_hermes("nara-cf", 9876)
+
+    child_env = captured["kwargs"]["env"]
+    assert "PYTHONPATH" not in child_env
+    assert "PYTHONHOME" not in child_env
+    assert "VIRTUAL_ENV" not in child_env
+
+
 def test_gateway_state_must_match_project_process(monkeypatch, tmp_path: Path):
     runtime_root = tmp_path / "hermes-runtime"
     state_dir = runtime_root / "profiles" / "nara-cf"

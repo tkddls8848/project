@@ -307,6 +307,17 @@ def start_hermes(profile: str, proxy_port: int) -> subprocess.Popen:
             f"{executable}"
         )
     environment = child_environment()
+    # Hermes runs on its own venv and its own Python version, which is not the
+    # one this launcher runs on. Three inherited variables cross that line.
+    # PYTHONPATH/PYTHONHOME are searched before a venv's own site-packages.
+    # VIRTUAL_ENV is worse: Hermes reads it on Windows and injects that venv's
+    # site-packages into its own sys.path ahead of its venv
+    # (gateway/run.py::_ensure_windows_gateway_venv_imports), so leaking ours
+    # makes Hermes import this project's packages -- including extensions built
+    # for the wrong Python version. Hermes resolves its own modules without any
+    # of them; __PYVENV_LAUNCHER__ is what pins its interpreter.
+    for name in ("PYTHONPATH", "PYTHONHOME", "VIRTUAL_ENV"):
+        environment.pop(name, None)
     validate_proxy_configuration(environment)
     config_path = ensure_hermes_runtime_profile(profile, proxy_port, environment)
     # Point at the profile itself and do not pass ``-p``. Hermes's -p
