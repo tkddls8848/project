@@ -18,7 +18,7 @@ DEFAULT_STORAGE_DIR = PROJECT_ROOT / "nara_storage"
 # Hermes profile and are never sent to browser clients.
 HERMES_ENV_DEFAULTS = {
     "NARA_HERMES_PROFILE": "nara-cf",
-    "NARA_HERMES_MODEL": "@cf/qwen/qwen3-30b-a3b-fp8",
+    "NARA_HERMES_MODEL": "@cf/meta/llama-4-scout-17b-16e-instruct",
     "NARA_CLOUDFLARE_PROXY_PORT": "8643",
     "NARA_CLOUDFLARE_PROXY_KEY": "change-me-local-proxy",
     "HERMES_API_URL": "http://127.0.0.1:8642",

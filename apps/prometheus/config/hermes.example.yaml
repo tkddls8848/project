@@ -27,10 +27,14 @@ model:
   provider: "custom:cloudflare_proxy"
   base_url: __NARA_CLOUDFLARE_PROXY_URL__
   api_mode: "chat_completions"
-  context_length: 128000
-  # The loop only has to name up to three service_id values, so a large output
-  # budget buys nothing and output tokens cost more per neuron than input.
-  max_tokens: 512
+  context_length: 131000
+  # The loop only has to name up to three service_id values, so most turns spend
+  # well under a hundred output tokens. The budget is still not cut to the
+  # measured minimum: one truncated turn loses the whole run, because a tool
+  # call cut mid-argument is unrepairable and its arguments become an empty
+  # object. Keep headroom, and keep the model non-reasoning -- a model that
+  # emits its chain of thought spends this budget before it calls anything.
+  max_tokens: 1024
 
 mcp_servers:
   nara:
