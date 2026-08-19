@@ -8,7 +8,7 @@ def test_qwen_generation_payload_is_bounded():
     assert payload["stream"] is False
     assert payload["think"] is True
     assert payload["options"]["num_ctx"] == 16384
-    assert payload["options"]["num_predict"] == 4096
+    assert payload["options"]["num_predict"] == 8192
     assert payload["keep_alive"] == "10m"
 
 
@@ -18,5 +18,5 @@ def test_streaming_payload_uses_same_generation_limits():
     assert payload["stream"] is True
     assert payload["options"] == {
         "num_ctx": 16384,
-        "num_predict": 4096,
+        "num_predict": 8192,
     }
