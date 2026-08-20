@@ -17,12 +17,14 @@ if __package__ in (None, ""):
     from app.hermes_client import HermesGatewayClient, HermesGatewayError
     from app.nara_client import NaraClient, NaraServiceError
     from app.schemas import AgentRunRequest, AgentRunResponse
+    from app.summary_image import design_to_summary_svg
 else:
     from .agent import AgentRunManager
     from .flow_export import design_to_flow
     from .hermes_client import HermesGatewayClient, HermesGatewayError
     from .nara_client import NaraClient, NaraServiceError
     from .schemas import AgentRunRequest, AgentRunResponse
+    from .summary_image import design_to_summary_svg
 
 app = FastAPI(
     title="Nara Hermes Orchestration Service",
@@ -135,6 +137,27 @@ async def export_agent_design_flow(run_id: str) -> JSONResponse:
     return JSONResponse(
         content=design_to_flow(run.result),
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@app.get(
+    "/agent/design-runs/{run_id}/summary.svg",
+    response_class=Response,
+    responses={200: {"content": {"image/svg+xml": {}}}},
+)
+async def export_agent_design_summary(run_id: str) -> Response:
+    """Render the finished plan as a one-page MVP presentation image."""
+    try:
+        run = agent_runs.snapshot(run_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Agent run not found") from exc
+    if run.status != "completed" or run.result is None:
+        raise HTTPException(status_code=409, detail="완료된 실행만 요약 이미지로 만들 수 있습니다.")
+    filename = f"nara-agent-{run_id[:8]}.summary.svg"
+    return Response(
+        content=design_to_summary_svg(run.result, critic=run.critic),
+        media_type="image/svg+xml",
+        headers={"Content-Disposition": f'inline; filename="{filename}"'},
     )
 
 

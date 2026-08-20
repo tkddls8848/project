@@ -2,7 +2,7 @@ from fastapi.testclient import TestClient
 
 from app.agent import _Run
 from app.main import agent_runs, app
-from app.schemas import AgentRunRequest, DesignResponse, StageRecord
+from app.schemas import AgentRunRequest, CriticReport, DesignResponse, StageRecord
 
 
 def make_completed_run(run_id: str) -> _Run:
@@ -95,3 +95,42 @@ def test_flow_export_downloads_a_dashboard_flow_json():
     assert flow["format"] == "nara-dashboard-flow"
     assert flow["version"] == 1
     assert [node["data"]["apiId"] for node in flow["nodes"]] == ["1"]
+
+
+def test_summary_image_requires_a_known_run():
+    response = TestClient(app).get("/agent/design-runs/unknown/summary.svg")
+
+    assert response.status_code == 404
+
+
+def test_summary_image_rejects_unfinished_runs():
+    run = make_completed_run("stillrunning02")
+    run.status = "running"
+    agent_runs._runs[run.run_id] = run
+    try:
+        response = TestClient(app).get(f"/agent/design-runs/{run.run_id}/summary.svg")
+    finally:
+        agent_runs._runs.pop(run.run_id, None)
+
+    assert response.status_code == 409
+
+
+def test_summary_image_renders_a_one_page_svg_with_the_run_evidence():
+    run = make_completed_run("abc123def456")
+    run.result.plan = {"suggestion": "대기오염 데이터를 알림 서비스로 연결한다."}
+    run.critic = CriticReport(verdict="pass", findings=[], deterministic=True)
+    agent_runs._runs[run.run_id] = run
+    try:
+        response = TestClient(app).get(f"/agent/design-runs/{run.run_id}/summary.svg")
+    finally:
+        agent_runs._runs.pop(run.run_id, None)
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("image/svg+xml")
+    assert response.headers["content-disposition"] == (
+        'inline; filename="nara-agent-abc123de.summary.svg"'
+    )
+    body = response.text
+    assert body.startswith("<svg")
+    assert "대기오염 데이터를 알림 서비스로 연결한다." in body
+    assert "근거 검증 통과" in body

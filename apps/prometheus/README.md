@@ -83,6 +83,18 @@ Invoke-RestMethod http://127.0.0.1:8643/health
 | `GET` | `/agent/design-runs/{id}/events` | 진행 이벤트 SSE |
 | `POST` | `/agent/design-runs/{id}/stop` | 실행 중단 |
 | `GET` | `/agent/design-runs/{id}/flow` | Dashboard flow 다운로드 |
+| `GET` | `/agent/design-runs/{id}/summary.svg` | MVP 발표용 1페이지 요약 이미지 |
+
+## 1페이지 요약 이미지
+
+완료된 실행은 텍스트 계획 초안과 함께 발표용 1페이지 요약 이미지를 제공합니다. UI의
+`1페이지 요약 이미지` 버튼 또는 `/agent/design-runs/{id}/summary.svg`로 받습니다.
+
+- 1280x720(16:9) SVG 한 장에 선택 문서·관계 근거·계획 초안·검증 결과·경고를 담습니다.
+- 이미지 내용은 완료된 실행 결과에서만 결정적으로 만들어집니다. LLM run을 새로
+  만들지 않으므로 화면에 없는 문장이 이미지에만 나타나지 않습니다.
+- 벡터 이미지라 발표 자료에 그대로 넣거나 브라우저에서 인쇄·PDF로 저장할 수 있습니다.
+- 계획이 없거나 관계 근거가 없으면 그 사실을 그대로 적습니다. 빈칸을 추측으로 채우지 않습니다.
 
 ## 안전 경계
 
@@ -92,7 +104,7 @@ Invoke-RestMethod http://127.0.0.1:8643/health
 - 요청이 `selected_service_ids`를 지정하면 Hermes run을 만들지 않는다
 - Gateway 승인 요청 자동 거부
 - terminal/file/browser/web/messaging/delegation 미노출
-- 실제 행정 처리 완료 주장 금지
+- 실제 행정 처리 완료 주장 금지 (요약 이미지에도 같은 문구를 명시)
 - Cloudflare 호환 프록시는 `127.0.0.1`에만 바인딩되고 한 개 API 경로만 전달
 
 ## 테스트
