@@ -139,6 +139,18 @@ def resolve_workers(data_type: str, workers: Optional[int]) -> int:
     return DEFAULT_WORKERS_BY_TYPE[data_type]
 
 
+def _raise_for_save_failures(saved_info: Dict) -> None:
+    failed_saves = int(saved_info.get("failed_saves", 0) or 0)
+    if failed_saves == 0:
+        return
+    errors = [str(error) for error in saved_info.get("save_errors", []) if error]
+    detail = "; ".join(errors[:3])
+    message = f"Failed to save {failed_saves} crawl result(s)."
+    if detail:
+        message += f" {detail}"
+    raise RuntimeError(message)
+
+
 async def crawl_single_type(
     data_type: str,
     start: int,
@@ -213,6 +225,10 @@ async def crawl_single_type(
 
     with summary_path.open("w", encoding="utf-8") as f:
         json.dump(summary, f, ensure_ascii=False, indent=2)
+
+    # Keep the summary as failure evidence, but fail the command so the control
+    # API cannot report `completed` when one or more documents were not saved.
+    _raise_for_save_failures(saved_info)
 
     manifest_part = {
         "data_type": data_type,

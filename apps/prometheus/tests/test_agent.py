@@ -360,3 +360,29 @@ def test_stage_messages_report_observed_tool_calls(monkeypatch):
         assert "get_api_detail 호출 기록 없음" in detail_stage.message
 
     asyncio.run(scenario())
+
+
+def test_completed_agent_run_history_is_bounded(monkeypatch):
+    monkeypatch.setattr("app.agent.NaraClient", lambda _: FakeNaraClient())
+
+    async def scenario():
+        manager = AgentRunManager(
+            Settings(critic_mode="disabled"),
+            gateway_factory=FakeGateway,
+            max_retained_runs=2,
+        )
+        run_ids = []
+        for _ in range(3):
+            created = await manager.create(
+                AgentRunRequest(
+                    query="history retention",
+                    selected_service_ids=["openapi_new:1"],
+                )
+            )
+            run_ids.append(created.run_id)
+            await manager._runs[created.run_id].task
+        return manager, run_ids
+
+    manager, run_ids = asyncio.run(scenario())
+    assert run_ids[0] not in manager._runs
+    assert list(manager._runs) == run_ids[1:]

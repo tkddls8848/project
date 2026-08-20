@@ -62,6 +62,16 @@ def test_data_types_stay_in_sync_with_the_cli():
     assert set(DATA_TYPES) == set(crawler_main.CRAWLER_CLASSES)
 
 
+def test_save_failures_make_the_crawl_command_fail():
+    with pytest.raises(RuntimeError, match="Failed to save 2 crawl result"):
+        crawler_main._raise_for_save_failures(
+            {
+                "failed_saves": 2,
+                "save_errors": ["JSON Save Error: disk full"],
+            }
+        )
+
+
 # ── 출력 파싱 ───────────────────────────────────────────────────────────
 
 def test_progress_is_parsed_from_tqdm_lines():

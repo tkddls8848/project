@@ -66,3 +66,27 @@ def test_non_openapi_saves_flat_in_given_dir(tmp_path):
     saved, errors = DataExporter.save_crawling_result(data, str(type_dir), "20000001")
     assert errors == []
     assert saved == [os.path.join(str(type_dir), "20000001.json")]
+
+
+def test_failed_recrawl_preserves_the_previous_json(tmp_path, monkeypatch):
+    storage = tmp_path / "nara_storage"
+    original = {"api_id": "15000001", "api_type": "openapi_new", "version": 1}
+    saved, errors = DataExporter.save_crawling_result(
+        original, str(storage), "15000001"
+    )
+    assert errors == []
+    target = storage / "openapi_new" / "15000001.json"
+
+    def fail_after_partial_write(_data, stream, **_kwargs):
+        stream.write('{"partial":')
+        raise OSError("disk full")
+
+    monkeypatch.setattr(json, "dump", fail_after_partial_write)
+    saved, errors = DataExporter.save_crawling_result(
+        {**original, "version": 2}, str(storage), "15000001"
+    )
+
+    assert saved == []
+    assert errors and "disk full" in errors[0]
+    assert json.loads(target.read_text(encoding="utf-8")) == original
+    assert list(target.parent.glob(f".{target.name}.*.tmp")) == []

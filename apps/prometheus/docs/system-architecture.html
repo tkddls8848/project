@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Prometheus Orchestrator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gothic+A1:wght@700;800;900&amp;family=IBM+Plex+Sans+KR:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #EEF1F5;
+    --surface: #FFFFFF;
+    --surface-2: #E4E9EF;
+    --ink: #16202C;
+    --ink-muted: #55606C;
+    --ink-faint: #7C8794;
+    --line: #C9D1D9;
+    --line-strong: #9AA7B4;
+    --accent: #B5491A;
+    --accent-strong: #93390F;
+    --accent-soft: rgba(196, 85, 29, 0.09);
+    --accent2: #1E7A73;
+    --accent2-soft: rgba(30, 122, 115, 0.09);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #10151C;
+      --surface: #171E27;
+      --surface-2: #1E2732;
+      --ink: #E7ECF2;
+      --ink-muted: #94A2B0;
+      --ink-faint: #6B7885;
+      --line: #2A343F;
+      --line-strong: #3C4956;
+      --accent: #E2874A;
+      --accent-strong: #F3A26C;
+      --accent-soft: rgba(226, 135, 74, 0.13);
+      --accent2: #4FB3AA;
+      --accent2-soft: rgba(79, 179, 170, 0.13);
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  html { text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans KR", "Apple SD Gothic Neo", sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--accent2); }
+  a:focus-visible, button:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent2);
+    outline-offset: 2px;
+  }
+
+  .wrap {
+    max-width: 1220px;
+    margin: 0 auto;
+    padding: 56px 32px 80px;
+  }
+
+  .prose { max-width: 760px; }
+
+  header.hero {
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 32px;
+    margin-bottom: 40px;
+  }
+
+  .eyebrow {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 14px;
+  }
+
+  h1 {
+    font-family: "Gothic A1", "IBM Plex Sans KR", sans-serif;
+    font-weight: 900;
+    font-size: clamp(30px, 4.4vw, 46px);
+    line-height: 1.08;
+    letter-spacing: -0.01em;
+    margin: 0 0 16px;
+    text-wrap: balance;
+  }
+
+  .dek {
+    font-size: 16.5px;
+    color: var(--ink-muted);
+    margin: 0 0 28px;
+    max-width: 700px;
+  }
+
+  .spec-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .spec-chip {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 7px 12px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: var(--surface);
+    font-size: 13px;
+  }
+
+  .spec-chip .name { color: var(--ink); font-weight: 600; }
+  .spec-chip .port {
+    font-family: "IBM Plex Mono", monospace;
+    color: var(--accent2);
+    font-size: 12.5px;
+  }
+  .spec-chip .tag {
+    font-family: "IBM Plex Mono", monospace;
+    color: var(--ink-faint);
+    font-size: 11px;
+  }
+  .spec-chip.external { border-style: dashed; }
+
+  section { margin: 56px 0; }
+
+  h2 {
+    font-family: "Gothic A1", "IBM Plex Sans KR", sans-serif;
+    font-weight: 800;
+    font-size: 24px;
+    letter-spacing: -0.005em;
+    margin: 0 0 6px;
+  }
+
+  .section-num {
+    font-family: "IBM Plex Mono", monospace;
+    color: var(--accent2);
+    font-size: 13px;
+    margin-right: 10px;
+  }
+
+  .section-lede {
+    color: var(--ink-muted);
+    font-size: 15px;
+    margin: 0 0 24px;
+    max-width: 700px;
+  }
+
+  figure {
+    margin: 0;
+  }
+
+  .diagram-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+    padding: 8px;
+  }
+
+  .diagram-scroll svg {
+    display: block;
+    min-width: 900px;
+    width: 100%;
+    height: auto;
+    color: var(--ink);
+  }
+
+  figcaption {
+    margin-top: 14px;
+    font-size: 14px;
+    color: var(--ink-muted);
+    max-width: 760px;
+  }
+
+  figcaption strong { color: var(--ink); font-weight: 600; }
+
+  .contracts {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+
+  @media (max-width: 720px) {
+    .contracts { grid-template-columns: 1fr; }
+  }
+
+  .contract-item {
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: var(--surface);
+    padding: 16px 18px;
+  }
+
+  .contract-item h3 {
+    font-family: "IBM Plex Sans KR", sans-serif;
+    font-size: 14.5px;
+    font-weight: 600;
+    margin: 0 0 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .contract-item h3 .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent2);
+    flex: none;
+  }
+
+  .contract-item p {
+    margin: 0;
+    font-size: 13.5px;
+    color: var(--ink-muted);
+  }
+
+  .contract-item code {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12px;
+    background: var(--surface-2);
+    padding: 1px 5px;
+    border-radius: 4px;
+    color: var(--ink);
+  }
+
+  footer {
+    margin-top: 64px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11.5px;
+    color: var(--ink-faint);
+    line-height: 1.8;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { scroll-behavior: auto !important; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <p class="eyebrow">apps/prometheus &middot; docs</p>
+    <h1>Prometheus 오케스트레이션 구조</h1>
+    <p class="dek prose">
+      Hermes Gateway의 LLM 루프와 Nara MCP를 결합해 공공 API 문서의 service_id를 고르고,
+      선택 이후의 검색·상세·관계·계획·최신성·검증은 전부 Nara 원본에서 다시 조회해 구성하는
+      읽기 전용 오케스트레이션 서비스다.
+    </p>
+    <div class="spec-strip">
+      <span class="spec-chip"><span class="name">Prometheus Orchestrator</span><span class="port">:8020</span><span class="tag">app/main.py</span></span>
+      <span class="spec-chip"><span class="name">Cloudflare 호환 프록시</span><span class="port">:8643</span><span class="tag">app/cloudflare_proxy.py</span></span>
+      <span class="spec-chip external"><span class="name">Hermes Gateway</span><span class="port">:8642</span><span class="tag">외부 설치</span></span>
+      <span class="spec-chip external"><span class="name">Nara Search</span><span class="port">:8000</span><span class="tag">services/search</span></span>
+      <span class="spec-chip external"><span class="name">Nara Combiner</span><span class="port">:8003</span><span class="tag">services/combiner</span></span>
+    </div>
+  </header>
+
+  <section>
+    <h2><span class="section-num">01</span>프로세스 구조</h2>
+    <p class="section-lede">
+      Prometheus 앱이 직접 실행하는 프로세스(실선)와 이 앱이 호출만 하는 외부 의존 서비스(점선)를
+      구분해 보여준다. Hermes Gateway는 Nara MCP를 stdio 서브프로세스로 띄워 두 개의 도구만 노출한다.
+    </p>
+    <figure>
+      <div class="diagram-scroll">
+        <svg viewBox="0 0 1180 740" role="img" aria-label="Prometheus 오케스트레이션 서비스와 주변 프로세스의 구조도. 브라우저가 Orchestrator(:8020)를 호출하고, Orchestrator는 Hermes Gateway(:8642, 외부)에 선택을 위임하는 동시에 Nara Search(:8000)와 Nara Combiner(:8003)를 직접 호출해 데이터를 재구성한다. Hermes Gateway는 Nara MCP를 stdio 서브프로세스로 실행하고, LLM 추론은 Cloudflare 호환 프록시(:8643)를 거쳐 Cloudflare Workers AI로 나간다.">
+          <defs>
+            <marker id="arrow1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+            </marker>
+          </defs>
+
+          <!-- Client -->
+          <rect x="30" y="100" width="200" height="90" rx="8" fill="var(--surface)" stroke="var(--line-strong)" stroke-width="1.6"/>
+          <text x="130" y="140" text-anchor="middle" font-size="14.5" font-weight="600" fill="var(--ink)">브라우저 / API 클라이언트</text>
+          <text x="130" y="160" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--ink-muted)">GET / &middot; POST design-runs</text>
+          <text x="130" y="176" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--ink-muted)">GET .../events (SSE)</text>
+
+          <!-- Orchestrator (owned) -->
+          <rect x="280" y="30" width="560" height="270" rx="10" fill="var(--surface)" stroke="var(--ink)" stroke-width="2"/>
+          <text x="300" y="58" font-size="16" font-weight="700" fill="var(--ink)">Prometheus Orchestrator</text>
+          <text x="820" y="58" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="12" fill="var(--accent2)">:8020</text>
+
+          <rect x="300" y="90" width="250" height="80" rx="7" fill="var(--surface-2)" stroke="var(--line)"/>
+          <text x="325" y="118" font-size="13" font-weight="600" fill="var(--ink)">라우트 &middot; 실행 관리</text>
+          <text x="325" y="138" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--ink-muted)">main.py &middot; agent.py</text>
+
+          <rect x="570" y="90" width="250" height="80" rx="7" fill="var(--surface-2)" stroke="var(--line)"/>
+          <text x="595" y="118" font-size="13" font-weight="600" fill="var(--ink)">Hermes 클라이언트</text>
+          <text x="595" y="138" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--ink-muted)">hermes_client.py</text>
+
+          <rect x="300" y="190" width="250" height="80" rx="7" fill="var(--surface-2)" stroke="var(--line)"/>
+          <text x="325" y="218" font-size="13" font-weight="600" fill="var(--ink)">Nara 클라이언트</text>
+          <text x="325" y="238" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--ink-muted)">nara_client.py</text>
+
+          <rect x="570" y="190" width="250" height="80" rx="7" fill="var(--surface-2)" stroke="var(--line)"/>
+          <text x="595" y="218" font-size="13" font-weight="600" fill="var(--ink)">검증 &middot; 최신성</text>
+          <text x="595" y="238" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--ink-muted)">critic.py &middot; freshness.py</text>
+
+          <text x="300" y="288" font-size="11" fill="var(--ink-faint)">static/index.html &mdash; 제어 UI 정적 서빙</text>
+
+          <!-- Hermes Gateway (external) -->
+          <rect x="900" y="30" width="280" height="270" rx="10" fill="var(--surface)" stroke="var(--line-strong)" stroke-width="1.8" stroke-dasharray="6 4"/>
+          <text x="920" y="58" font-size="16" font-weight="700" fill="var(--ink)">Hermes Gateway</text>
+          <text x="1160" y="58" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="12" fill="var(--ink-muted)">:8642</text>
+          <text x="920" y="74" font-size="10.5" fill="var(--ink-faint)">외부 설치 &middot; hermes-agent</text>
+
+          <rect x="920" y="100" width="240" height="80" rx="7" fill="var(--surface-2)" stroke="var(--line)"/>
+          <text x="940" y="128" font-size="13" font-weight="600" fill="var(--ink)">LLM 루프</text>
+          <text x="940" y="146" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-muted)">NARA_HERMES_MODEL</text>
+          <text x="940" y="162" font-size="10" fill="var(--ink-faint)">도구 호출 최대 4회</text>
+
+          <rect x="920" y="200" width="240" height="80" rx="7" fill="var(--surface-2)" stroke="var(--line)"/>
+          <text x="940" y="228" font-size="13" font-weight="600" fill="var(--ink)">Nara MCP (stdio)</text>
+          <text x="940" y="246" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-muted)">search_api_docs</text>
+          <text x="940" y="262" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-muted)">get_api_detail</text>
+
+          <!-- Cloudflare compat proxy (owned) -->
+          <rect x="900" y="350" width="280" height="90" rx="10" fill="var(--surface)" stroke="var(--ink)" stroke-width="2"/>
+          <text x="920" y="378" font-size="14.5" font-weight="700" fill="var(--ink)">Cloudflare 호환 프록시</text>
+          <text x="1160" y="378" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="12" fill="var(--accent2)">:8643</text>
+          <text x="920" y="398" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--ink-muted)">cloudflare_proxy.py</text>
+          <text x="920" y="416" font-size="10.5" fill="var(--ink-faint)">문자열 필드 정규화</text>
+
+          <!-- Cloudflare Workers AI (external) -->
+          <rect x="900" y="470" width="280" height="90" rx="10" fill="var(--surface)" stroke="var(--line-strong)" stroke-width="1.8" stroke-dasharray="6 4"/>
+          <text x="920" y="498" font-size="14.5" font-weight="700" fill="var(--ink)">Cloudflare Workers AI</text>
+          <text x="920" y="518" font-size="10.5" fill="var(--ink-faint)">외부 LLM 추론</text>
+          <text x="920" y="536" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-faint)">CLOUDFLARE_ACCOUNT_ID</text>
+
+          <!-- Nara services (external) -->
+          <rect x="280" y="560" width="180" height="90" rx="10" fill="var(--surface)" stroke="var(--line-strong)" stroke-width="1.8" stroke-dasharray="6 4"/>
+          <text x="300" y="588" font-size="14" font-weight="700" fill="var(--ink)">Nara Search</text>
+          <text x="440" y="588" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="11.5" fill="var(--ink-muted)">:8000</text>
+          <text x="300" y="608" font-size="10.5" fill="var(--ink-faint)">services/search (외부)</text>
+          <text x="300" y="626" font-size="10.5" fill="var(--ink-faint)">/search /services /relations</text>
+
+          <rect x="490" y="560" width="180" height="90" rx="10" fill="var(--surface)" stroke="var(--line-strong)" stroke-width="1.8" stroke-dasharray="6 4"/>
+          <text x="510" y="588" font-size="14" font-weight="700" fill="var(--ink)">Nara Combiner</text>
+          <text x="650" y="588" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="11.5" fill="var(--ink-muted)">:8003</text>
+          <text x="510" y="608" font-size="10.5" fill="var(--ink-faint)">services/combiner (외부)</text>
+          <text x="510" y="626" font-size="10.5" fill="var(--ink-faint)">POST /compose</text>
+
+          <rect x="700" y="560" width="180" height="90" rx="10" fill="var(--surface)" stroke="var(--line-strong)" stroke-width="1.8" stroke-dasharray="6 4"/>
+          <text x="720" y="588" font-size="14" font-weight="700" fill="var(--ink)">nara_storage/</text>
+          <text x="720" y="608" font-size="10.5" fill="var(--ink-faint)">manifests &middot; openapi_new</text>
+          <text x="720" y="626" font-size="10.5" fill="var(--ink-faint)">파일시스템 (gitignore)</text>
+
+          <!-- Arrows -->
+          <line x1="230" y1="150" x2="279" y2="112" stroke="currentColor" stroke-width="1.6" marker-end="url(#arrow1)"/>
+          <text x="255" y="100" text-anchor="middle" font-size="11" fill="var(--ink-muted)">HTTP / SSE</text>
+
+          <line x1="820" y1="130" x2="899" y2="140" stroke="currentColor" stroke-width="1.6" marker-end="url(#arrow1)"/>
+          <text x="862" y="115" text-anchor="middle" font-size="11" fill="var(--ink-muted)">Gateway Runs API</text>
+
+          <line x1="1040" y1="181" x2="1040" y2="199" stroke="currentColor" stroke-width="1.6" marker-end="url(#arrow1)"/>
+          <text x="1170" y="194" text-anchor="end" font-size="10.5" fill="var(--ink-muted)">stdio &middot; &le;4</text>
+
+          <polyline points="920,140 905,140 905,395 899,395" fill="none" stroke="currentColor" stroke-width="1.6" marker-end="url(#arrow1)"/>
+          <text x="1040" y="332" text-anchor="middle" font-size="11" fill="var(--ink-muted)">HTTPS &middot; chat/completions</text>
+
+          <line x1="1040" y1="441" x2="1040" y2="469" stroke="currentColor" stroke-width="1.6" marker-end="url(#arrow1)"/>
+          <text x="1170" y="459" text-anchor="end" font-size="10.5" fill="var(--ink-muted)">HTTPS</text>
+
+          <line x1="390" y1="271" x2="372" y2="559" stroke="currentColor" stroke-width="1.6" marker-end="url(#arrow1)"/>
+          <text x="248" y="422" font-size="11" fill="var(--ink-muted)">HTTP &middot; search / detail / relations</text>
+
+          <line x1="490" y1="271" x2="582" y2="559" stroke="currentColor" stroke-width="1.6" marker-end="url(#arrow1)"/>
+          <text x="520" y="470" font-size="11" fill="var(--ink-muted)">HTTP &middot; compose</text>
+
+          <line x1="700" y1="271" x2="792" y2="559" stroke="currentColor" stroke-width="1.6" marker-end="url(#arrow1)"/>
+          <text x="760" y="422" font-size="11" fill="var(--ink-muted)">파일 읽기 &middot; manifests</text>
+
+          <!-- legend -->
+          <rect x="360" y="700" width="26" height="13" rx="2" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.6"/>
+          <text x="396" y="710" font-size="11.5" fill="var(--ink-muted)">이 앱이 실행 (owned)</text>
+          <rect x="600" y="700" width="26" height="13" rx="2" fill="var(--surface)" stroke="var(--line-strong)" stroke-width="1.6" stroke-dasharray="5 3"/>
+          <text x="636" y="710" font-size="11.5" fill="var(--ink-muted)">외부 의존 서비스 (external)</text>
+        </svg>
+      </div>
+      <figcaption>
+        <strong>그림 1.</strong> Prometheus는 Orchestrator(:8020)와 Cloudflare 호환 프록시(:8643)만 소유한다.
+        Hermes Gateway는 Nara MCP를 stdio 서브프로세스로 실행해 두 도구만 노출하고, LLM 추론은 호환 프록시를 거쳐
+        Cloudflare Workers AI로 나간다. Orchestrator는 Hermes와 별개로 Nara Search &middot; Combiner &middot;
+        nara_storage를 직접 호출한다 &mdash; 이 흐름의 순서는 그림 2에서 다룬다.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <h2><span class="section-num">02</span>실행 흐름 &mdash; 선택과 재구성의 분리</h2>
+    <p class="section-lede">
+      한 번의 실행(run)은 두 단계로 나뉜다. Hermes는 도구 호출 4회 이내에서 service_id만 고르고,
+      그 이후의 모든 데이터는 Orchestrator가 Nara 원본에서 처음부터 다시 조회해 만든다.
+      Hermes 출력은 선택 신호일 뿐 최종 데이터의 근거가 아니다.
+    </p>
+    <figure>
+      <div class="diagram-scroll">
+        <svg viewBox="0 0 1180 780" role="img" aria-label="Prometheus 실행 흐름 시퀀스도. 클라이언트, Orchestrator, Hermes Gateway, Nara 네 개의 레인으로 나뉜다. 선택 단계(1~5)에서 Hermes는 도구 호출 4회 이내로 search_api_docs와 get_api_detail만 호출해 service_id 후보를 고른다. 이 단계가 끝나면 재구성 단계(6~9)에서 Orchestrator가 search, detail, relations, compose를 Nara에서 직접 다시 조회하고 freshness와 critic으로 검증한다. 마지막으로 Orchestrator가 SSE 이벤트와 최종 DesignResponse를 클라이언트에 전달한다.">
+          <defs>
+            <marker id="arrow2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+            </marker>
+          </defs>
+
+          <!-- lane headers -->
+          <rect x="30" y="20" width="220" height="46" rx="7" fill="var(--surface-2)" stroke="var(--line)"/>
+          <text x="140" y="40" text-anchor="middle" font-size="14" font-weight="700" fill="var(--ink)">클라이언트</text>
+          <text x="140" y="57" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-muted)">browser / curl</text>
+
+          <rect x="320" y="20" width="220" height="46" rx="7" fill="var(--surface-2)" stroke="var(--line)"/>
+          <text x="430" y="40" text-anchor="middle" font-size="14" font-weight="700" fill="var(--ink)">Orchestrator</text>
+          <text x="430" y="57" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-muted)">:8020</text>
+
+          <rect x="630" y="20" width="220" height="46" rx="7" fill="var(--surface-2)" stroke="var(--line)"/>
+          <text x="740" y="40" text-anchor="middle" font-size="14" font-weight="700" fill="var(--ink)">Hermes Gateway</text>
+          <text x="740" y="57" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-muted)">:8642 &middot; Nara MCP</text>
+
+          <rect x="930" y="20" width="220" height="46" rx="7" fill="var(--surface-2)" stroke="var(--line)"/>
+          <text x="1040" y="40" text-anchor="middle" font-size="14" font-weight="700" fill="var(--ink)">Nara</text>
+          <text x="1040" y="57" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-muted)">Search :8000 &middot; Combiner :8003</text>
+
+          <!-- lifelines -->
+          <line x1="140" y1="66" x2="140" y2="780" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 4" stroke-opacity="0.35"/>
+          <line x1="430" y1="66" x2="430" y2="780" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 4" stroke-opacity="0.35"/>
+          <line x1="740" y1="66" x2="740" y2="780" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 4" stroke-opacity="0.35"/>
+          <line x1="1040" y1="66" x2="1040" y2="780" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 4" stroke-opacity="0.35"/>
+
+          <!-- Phase A band -->
+          <rect x="10" y="95" width="1160" height="245" fill="var(--accent-soft)"/>
+          <text x="25" y="112" font-size="12.5" font-weight="700" fill="var(--accent-strong)">선택 단계 &middot; 근거 요약만 &middot; 도구 호출 &le;4회</text>
+
+          <!-- Step 1 -->
+          <g style="color: var(--accent);">
+            <circle cx="25" cy="120" r="11" fill="var(--surface)" stroke="currentColor" stroke-width="1.6"/>
+            <text x="25" y="124" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor">1</text>
+            <line x1="140" y1="120" x2="429" y2="120" stroke="currentColor" stroke-width="1.6" marker-end="url(#arrow2)"/>
+          </g>
+          <text x="285" y="110" text-anchor="middle" font-size="11" fill="var(--ink-muted)">POST /agent/design-runs { query, top_k, compose }</text>
+
+          <!-- Step 2 -->
+          <g style="color: var(--accent);">
+            <circle cx="25" cy="170" r="11" fill="var(--surface)" stroke="currentColor" stroke-width="1.6"/>
+            <text x="25" y="174" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor">2</text>
+            <line x1="430" y1="170" x2="739" y2="170" stroke="currentColor" stroke-width="1.6" marker-end="url(#arrow2)"/>
+          </g>
+          <text x="585" y="160" text-anchor="middle" font-size="11" fill="var(--ink-muted)">create_run(instructions, session=nara-{run_id})</text>
+
+          <!-- Step 3 -->
+          <g style="color: var(--accent);">
+            <circle cx="25" cy="220" r="11" fill="var(--surface)" stroke="currentColor" stroke-width="1.6"/>
+            <text x="25" y="224" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor">3</text>
+            <line x1="740" y1="220" x2="1039" y2="220" stroke="currentColor" stroke-width="1.6" marker-end="url(#arrow2)"/>
+          </g>
+          <text x="890" y="210" text-anchor="middle" font-size="11" fill="var(--ink-muted)">search_api_docs &times;1 &rarr; 후보 요약</text>
+
+          <!-- Step 4 -->
+          <g style="color: var(--accent);">
+            <circle cx="25" cy="270" r="11" fill="var(--surface)" stroke="currentColor" stroke-width="1.6"/>
+            <text x="25" y="274" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor">4</text>
+            <line x1="740" y1="270" x2="1039" y2="270" stroke="currentColor" stroke-width="1.6" marker-end="url(#arrow2)"/>
+          </g>
+          <text x="890" y="260" text-anchor="middle" font-size="11" fill="var(--ink-muted)">get_api_detail &times;&le;3 &rarr; 엔드포인트&middot;필드명</text>
+
+          <!-- Step 5 -->
+          <g style="color: var(--accent);">
+            <circle cx="25" cy="320" r="11" fill="var(--surface)" stroke="currentColor" stroke-width="1.6"/>
+            <text x="25" y="324" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor">5</text>
+            <line x1="740" y1="320" x2="431" y2="320" stroke="currentColor" stroke-width="1.6" marker-end="url(#arrow2)"/>
+          </g>
+          <text x="585" y="310" text-anchor="middle" font-size="11" fill="var(--ink-muted)">run.completed &middot; output(service_id 추정, 근거 아님)</text>
+
+          <!-- divider -->
+          <line x1="10" y1="352" x2="1170" y2="352" stroke="currentColor" stroke-width="1" stroke-opacity="0.5"/>
+          <text x="590" y="347" text-anchor="middle" font-size="11" font-style="italic" fill="var(--ink-faint)">Hermes 출력은 여기서 멈춘다 &mdash; 이후 전부 Nara 원본에서 재구성</text>
+
+          <!-- Phase B band -->
+          <rect x="10" y="365" width="1160" height="250" fill="var(--accent2-soft)"/>
+          <text x="25" y="382" font-size="12.5" font-weight="700" fill="var(--accent2)">재구성 단계 &middot; Nara 원본 재조회 &middot; 권위 있는 데이터</text>
+
+          <!-- Step 6 -->
+          <g style="color: var(--accent2);">
+            <circle cx="25" cy="395" r="11" fill="var(--surface)" stroke="currentColor" stroke-width="1.6"/>
+            <text x="25" y="399" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor">6</text>
+            <line x1="430" y1="395" x2="1039" y2="395" stroke="currentColor" stroke-width="1.6" marker-end="url(#arrow2)"/>
+          </g>
+          <text x="735" y="385" text-anchor="middle" font-size="11" fill="var(--ink-muted)">search + get_api_detail&times;N + relations (원본 재조회)</text>
+
+          <!-- Step 7 -->
+          <g style="color: var(--accent2);">
+            <circle cx="25" cy="445" r="11" fill="var(--surface)" stroke="currentColor" stroke-width="1.6"/>
+            <text x="25" y="449" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor">7</text>
+            <line x1="430" y1="445" x2="1039" y2="445" stroke="currentColor" stroke-width="1.6" marker-end="url(#arrow2)"/>
+          </g>
+          <text x="735" y="435" text-anchor="middle" font-size="11" fill="var(--ink-muted)">compose(service_ids, question) &mdash; compose=true</text>
+
+          <!-- Step 8 self-loop -->
+          <g style="color: var(--accent2);">
+            <circle cx="25" cy="512" r="11" fill="var(--surface)" stroke="currentColor" stroke-width="1.6"/>
+            <text x="25" y="516" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor">8</text>
+            <polyline points="430,500 500,500 500,525 431,525" fill="none" stroke="currentColor" stroke-width="1.6" marker-end="url(#arrow2)"/>
+          </g>
+          <text x="510" y="517" font-size="11" fill="var(--ink-muted)">freshness: manifests 체크섬 vs index_built_at</text>
+
+          <!-- Step 9 self-loop -->
+          <g style="color: var(--accent2);">
+            <circle cx="25" cy="572" r="11" fill="var(--surface)" stroke="currentColor" stroke-width="1.6"/>
+            <text x="25" y="576" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor">9</text>
+            <polyline points="430,560 500,560 500,585 431,585" fill="none" stroke="currentColor" stroke-width="1.6" marker-end="url(#arrow2)"/>
+          </g>
+          <text x="510" y="577" font-size="11" fill="var(--ink-muted)">critic: 결정형 재검증 (새 LLM run 없음)</text>
+
+          <!-- Step 10 -->
+          <g>
+            <circle cx="25" cy="655" r="11" fill="var(--surface)" stroke="currentColor" stroke-width="1.6"/>
+            <text x="25" y="659" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor">10</text>
+            <line x1="430" y1="655" x2="141" y2="655" stroke="currentColor" stroke-width="1.6" marker-end="url(#arrow2)"/>
+          </g>
+          <text x="285" y="645" text-anchor="middle" font-size="11" fill="var(--ink-muted)">SSE progress events (단계별)</text>
+
+          <!-- Step 11 -->
+          <g>
+            <circle cx="25" cy="705" r="11" fill="var(--surface)" stroke="currentColor" stroke-width="1.6"/>
+            <text x="25" y="709" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor">11</text>
+            <line x1="430" y1="705" x2="141" y2="705" stroke="currentColor" stroke-width="1.6" marker-end="url(#arrow2)"/>
+          </g>
+          <text x="285" y="693" text-anchor="middle" font-size="11" fill="var(--ink-muted)">DesignResponse</text>
+          <text x="285" y="708" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--ink-faint)">selected_ids &middot; search &middot; details &middot; relations &middot; plan &middot; warnings</text>
+        </svg>
+      </div>
+      <figcaption>
+        <strong>그림 2.</strong> 1&ndash;5는 Hermes가 도구 호출 4회(검색 1 + 상세 3) 안에서 service_id만 고르는 선택 단계다.
+        5에서 넘어온 출력은 힌트일 뿐이며, 6부터는 Orchestrator가 선택된 id로 Nara Search &middot; Combiner를 처음부터
+        다시 호출해 검색·상세·관계·계획을 만든다. 8&ndash;9는 새 LLM 호출 없이 로컬에서만 도는 검증이고,
+        10&ndash;11에서 그 결과를 클라이언트로 스트리밍한다.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <h2><span class="section-num">03</span>계약과 한계</h2>
+    <p class="section-lede">이 서비스가 스스로에게 강제하는 경계다. 코드가 지침을 벗어나면 여기부터 어긋난다.</p>
+    <div class="contracts">
+      <div class="contract-item">
+        <h3><span class="dot"></span>도구 호출 상한</h3>
+        <p>검색 1회 + 상세 최대 3회, 총 <code>NARA_HERMES_MAX_TOOL_CALLS=4</code>. 초과하면 Gateway가 run을 중단시켜 결과를 얻지 못한다.</p>
+      </div>
+      <div class="contract-item">
+        <h3><span class="dot"></span>선택 문서 상한</h3>
+        <p>한 번의 실행에서 최대 3개 <code>service_id</code>만 선택한다 (<code>selected_service_ids</code>, max_length=3).</p>
+      </div>
+      <div class="contract-item">
+        <h3><span class="dot"></span>데이터 권위는 Nara에만</h3>
+        <p>검색·상세·관계·계획은 항상 Nara 원본에서 재조회한다. Hermes 출력은 <code>service_id</code> 선택에만 쓰인다.</p>
+      </div>
+      <div class="contract-item">
+        <h3><span class="dot"></span>Critic은 로컬 결정형</h3>
+        <p>완료된 결과를 재검증할 때 새 LLM run을 만들지 않는다. 실패해도 fail-soft로 결과 자체는 유지한다.</p>
+      </div>
+      <div class="contract-item">
+        <h3><span class="dot"></span>Freshness는 읽기 전용</h3>
+        <p>크롤러 매니페스트와 검색 인덱스 빌드 시각을 비교만 하고, 데이터를 다시 크롤링하거나 갱신하지 않는다.</p>
+      </div>
+      <div class="contract-item">
+        <h3><span class="dot"></span>지침은 한 곳에만</h3>
+        <p>루프 지침은 <code>HERMES_INSTRUCTIONS_TEMPLATE</code> 하나뿐이다. 로드 여부를 확인할 수 없는 별도 skill 문서로 나누지 않는다.</p>
+      </div>
+      <div class="contract-item">
+        <h3><span class="dot"></span>진행 근거는 Gateway 로그만</h3>
+        <p>단계·critic 보고는 Gateway가 보고한 <code>tool_calls</code> 기록만 근거로 삼는다. 모델 출력의 자기보고는 쓰지 않는다.</p>
+      </div>
+      <div class="contract-item">
+        <h3><span class="dot"></span>행정 처리 주장 금지</h3>
+        <p>실제 외부 시스템 변경을 수행했다고 보고하지 않는다. 이 서비스는 읽기·계획까지만 한다.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    출처: app/main.py &middot; app/agent.py &middot; app/hermes_client.py &middot; app/nara_client.py &middot;
+    app/critic.py &middot; app/freshness.py &middot; app/config.py &middot; app/cloudflare_proxy.py &middot;
+    mcp_server/server.py &middot; run.py &middot; app/schemas.py<br>
+    2026-08-20 기준 코드로 생성한 정적 구조도. 코드가 바뀌면 이 문서도 다시 생성해야 한다.
+  </footer>
+
+</div>
+</body>
+</html>

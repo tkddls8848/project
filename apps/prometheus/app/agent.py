@@ -227,16 +227,19 @@ class _Run:
 
 
 GatewayFactory = Callable[[Settings], HermesGatewayClient]
+MAX_RETAINED_AGENT_RUNS = 20
 
 
 class AgentRunManager:
     """Own application runs backed one-to-one by Hermes Gateway runs."""
 
     def __init__(self, settings: Settings | None = None,
-                 gateway_factory: GatewayFactory = HermesGatewayClient):
+                 gateway_factory: GatewayFactory = HermesGatewayClient,
+                 max_retained_runs: int = MAX_RETAINED_AGENT_RUNS):
         self.settings = settings or get_settings()
         self.gateway_factory = gateway_factory
         self._runs: dict[str, _Run] = {}
+        self._max_retained_runs = max(1, int(max_retained_runs))
 
     async def create(self, request: AgentRunRequest) -> AgentRunResponse:
         run = _Run(run_id=uuid.uuid4().hex, request=request)
@@ -336,6 +339,17 @@ class AgentRunManager:
         finally:
             run.done.set()
             run.changed.set()
+            self._prune_terminal_runs()
+
+    def _prune_terminal_runs(self) -> None:
+        terminal_ids = [
+            run_id
+            for run_id, run in self._runs.items()
+            if run.done.is_set()
+            and run.status in {"completed", "failed", "cancelled"}
+        ]
+        for run_id in terminal_ids[: -self._max_retained_runs]:
+            self._runs.pop(run_id, None)
 
     def _apply_hermes_result(self, run: _Run, result: HermesRunResult) -> None:
         run.hermes.update({
@@ -434,6 +448,7 @@ class AgentRunManager:
 
 __all__ = [
     "AgentRunManager",
+    "MAX_RETAINED_AGENT_RUNS",
     "HERMES_INSTRUCTIONS_TEMPLATE",
     "build_instructions",
     "materialize_design_result",

@@ -8,6 +8,7 @@ CORS를 열지 않는다. 이 서비스는 크롤을 *시작*시킬 수 있으�
 from __future__ import annotations
 
 import json
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 
@@ -28,6 +29,17 @@ app = FastAPI(
     description="data.go.kr 크롤러를 브라우저에서 실행·중단·관찰하는 제어 서비스",
 )
 runs = CrawlRunManager()
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    try:
+        yield
+    finally:
+        await runs.shutdown()
+
+
+app.router.lifespan_context = lifespan
 
 if STATIC_DIR.is_dir():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")

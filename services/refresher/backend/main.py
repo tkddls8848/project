@@ -8,6 +8,7 @@ UI는 같은 출처에서 제공되므로 CORS가 필요 없다.
 from __future__ import annotations
 
 import json
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 
@@ -28,6 +29,17 @@ app = FastAPI(
     description="data.go.kr 활용신청 연장을 브라우저에서 보고 실행하는 제어 서비스",
 )
 runs = RefreshRunManager()
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    try:
+        yield
+    finally:
+        await runs.shutdown()
+
+
+app.router.lifespan_context = lifespan
 
 if STATIC_DIR.is_dir():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")

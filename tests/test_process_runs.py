@@ -68,3 +68,70 @@ def test_stream_resumes_from_the_requested_sequence():
     delivered = asyncio.run(scenario())
 
     assert [event["sequence"] for event in delivered] == [4, 5]
+
+
+def test_cancelled_watcher_terminates_its_child_process(tmp_path):
+    script = tmp_path / "sleep.py"
+    script.write_text("import time; time.sleep(30)", encoding="utf-8")
+
+    async def scenario():
+        manager = ProcessRunManager(sys.executable, script)
+        created = await manager.create(["run"], "python sleep.py run")
+        run = manager._runs[created["run_id"]]
+        for _ in range(100):
+            if run.process is not None:
+                break
+            await asyncio.sleep(0.01)
+        assert run.process is not None
+        run.task.cancel()
+        try:
+            await run.task
+        except asyncio.CancelledError:
+            pass
+        return run
+
+    run = asyncio.run(scenario())
+    assert run.process.returncode is not None
+    assert run.status == "cancelled"
+    assert run.done.is_set()
+
+
+def test_shutdown_stops_and_waits_for_active_process(tmp_path):
+    script = tmp_path / "sleep.py"
+    script.write_text("import time; time.sleep(30)", encoding="utf-8")
+
+    async def scenario():
+        manager = ProcessRunManager(sys.executable, script)
+        created = await manager.create(["run"], "python sleep.py run")
+        run = manager._runs[created["run_id"]]
+        for _ in range(100):
+            if run.process is not None:
+                break
+            await asyncio.sleep(0.01)
+        await manager.shutdown()
+        return run
+
+    run = asyncio.run(scenario())
+    assert run.process is not None and run.process.returncode is not None
+    assert run.status == "cancelled"
+    assert run.done.is_set()
+
+
+def test_completed_run_history_is_bounded(tmp_path):
+    script = tmp_path / "quick.py"
+    script.write_text("print('done')", encoding="utf-8")
+
+    async def scenario():
+        manager = ProcessRunManager(
+            sys.executable, script, max_retained_runs=2
+        )
+        run_ids = []
+        for _ in range(3):
+            created = await manager.create(["run"], "python quick.py run")
+            run_ids.append(created["run_id"])
+            await manager._runs[created["run_id"]].task
+        return manager, run_ids
+
+    manager, run_ids = asyncio.run(scenario())
+    assert run_ids[0] not in manager._runs
+    assert list(manager._runs) == run_ids[1:]

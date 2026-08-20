@@ -13,6 +13,8 @@ from __future__ import annotations
 import asyncio
 import os
 import re
+import signal
+import subprocess
 import uuid
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
@@ -25,6 +27,8 @@ KST = timezone(timedelta(hours=9))
 # 전체 크롤은 수십만 줄을 뿜는다. 메모리에 들고 있을 양을 제한한다.
 MAX_LOG_LINES = 400
 MAX_EVENTS = 2000
+MAX_RETAINED_RUNS = 20
+PROCESS_STOP_TIMEOUT = 5.0
 
 TERMINAL_STATUSES = frozenset({"completed", "failed", "cancelled"})
 
@@ -109,12 +113,19 @@ class ProcessRunManager:
     돌리면 상대 사이트에 부담을 주고 산출물이 서로를 덮어쓴다.
     """
 
-    def __init__(self, python_executable: str, script: Path, cwd: Path | None = None):
+    def __init__(
+        self,
+        python_executable: str,
+        script: Path,
+        cwd: Path | None = None,
+        max_retained_runs: int = MAX_RETAINED_RUNS,
+    ):
         self._python = python_executable
         self._script = Path(script)
         self._cwd = Path(cwd) if cwd else self._script.parent
         self._runs: dict[str, _Run] = {}
         self._active_id: str | None = None
+        self._max_retained_runs = max(1, int(max_retained_runs))
 
     # ── 조회 ────────────────────────────────────────────────────────────
     def active_run_id(self) -> str | None:
@@ -176,11 +187,24 @@ class ProcessRunManager:
         self._emit(run, "stopping", "중단을 요청했습니다.")
         process = run.process
         if process is not None and process.returncode is None:
-            try:
-                process.terminate()
-            except ProcessLookupError:
-                pass
+            await self._terminate_process_tree(process)
         return run.snapshot()
+
+    async def shutdown(self) -> None:
+        """Stop every active child and wait for its watcher task."""
+        tasks: list[asyncio.Task[None]] = []
+        for run in list(self._runs.values()):
+            if run.done.is_set():
+                continue
+            if run.process is None:
+                if run.task is not None and not run.task.done():
+                    run.task.cancel()
+            else:
+                await self.stop(run.run_id)
+            if run.task is not None:
+                tasks.append(run.task)
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
 
     async def send_stdin(self, run_id: str, text: str = "\n") -> dict[str, Any]:
         """실행 중인 프로세스의 stdin으로 한 줄 보낸다.
@@ -226,6 +250,11 @@ class ProcessRunManager:
         )
         child_env.update(environment or {})
         try:
+            process_options: dict[str, Any] = {}
+            if os.name == "nt":
+                process_options["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+            else:
+                process_options["start_new_session"] = True
             run.process = await asyncio.create_subprocess_exec(
                 self._python, "-u", str(self._script), *run.argv,
                 cwd=str(self._cwd),
@@ -233,6 +262,7 @@ class ProcessRunManager:
                 stdin=asyncio.subprocess.PIPE if run.accepts_stdin else None,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.STDOUT,
+                **process_options,
             )
             await self._pump(run)
             run.exit_code = await run.process.wait()
@@ -247,6 +277,8 @@ class ProcessRunManager:
                 run.error = f"명령이 코드 {run.exit_code}로 종료했습니다."
                 self._emit(run, "failed", run.error)
         except asyncio.CancelledError:
+            if run.process is not None and run.process.returncode is None:
+                await self._terminate_process_tree(run.process)
             run.status = "cancelled"
             self._emit(run, "cancelled", "실행이 취소되었습니다.")
             raise
@@ -265,6 +297,54 @@ class ProcessRunManager:
             run.changed.set()
             if self._active_id == run.run_id:
                 self._active_id = None
+            self._prune_terminal_runs()
+
+    async def _terminate_process_tree(
+        self, process: asyncio.subprocess.Process
+    ) -> None:
+        if process.returncode is not None:
+            return
+        try:
+            if os.name == "nt":
+                killer = await asyncio.create_subprocess_exec(
+                    "taskkill",
+                    "/PID",
+                    str(process.pid),
+                    "/T",
+                    "/F",
+                    stdout=asyncio.subprocess.DEVNULL,
+                    stderr=asyncio.subprocess.DEVNULL,
+                )
+                if await killer.wait() != 0:
+                    process.terminate()
+            else:
+                os.killpg(process.pid, signal.SIGTERM)
+        except (OSError, ProcessLookupError):
+            try:
+                process.terminate()
+            except ProcessLookupError:
+                return
+
+        try:
+            await asyncio.wait_for(process.wait(), timeout=PROCESS_STOP_TIMEOUT)
+        except TimeoutError:
+            try:
+                if os.name == "nt":
+                    process.kill()
+                else:
+                    os.killpg(process.pid, signal.SIGKILL)
+            except (OSError, ProcessLookupError):
+                pass
+            await process.wait()
+
+    def _prune_terminal_runs(self) -> None:
+        terminal_ids = [
+            run_id
+            for run_id, run in self._runs.items()
+            if run.done.is_set() and run.status in TERMINAL_STATUSES
+        ]
+        for run_id in terminal_ids[: -self._max_retained_runs]:
+            self._runs.pop(run_id, None)
 
     async def _pump(self, run: _Run) -> None:
         assert run.process is not None and run.process.stdout is not None
@@ -317,6 +397,7 @@ def _now_iso() -> str:
 __all__ = [
     "MAX_EVENTS",
     "MAX_LOG_LINES",
+    "MAX_RETAINED_RUNS",
     "ProcessRunManager",
     "TERMINAL_STATUSES",
     "parse_progress",

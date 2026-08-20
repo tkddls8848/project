@@ -1,6 +1,8 @@
 ﻿import os
 import json
 import re
+import tempfile
+from pathlib import Path
 from typing import Dict, List, Tuple, Any
 
 class DataExporter:
@@ -75,9 +77,22 @@ class DataExporter:
 
     @staticmethod
     def _save_as_json(data: Dict, file_path: str) -> Tuple[bool, str]:
+        target = Path(file_path)
+        temporary: Path | None = None
         try:
-            with open(file_path, 'w', encoding='utf-8') as f:
+            fd, temporary_name = tempfile.mkstemp(
+                prefix=f".{target.name}.", suffix=".tmp", dir=target.parent
+            )
+            os.close(fd)
+            temporary = Path(temporary_name)
+            with temporary.open('w', encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(temporary, target)
             return True, ""
         except Exception as e:
             return False, f"JSON Save Error: {str(e)}"
+        finally:
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
