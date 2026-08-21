@@ -1,0 +1,5 @@
+{"model":"qwen3.5:4b","created_at":"2026-08-22T01:00:00Z","response":"조합","thinking":"","done":false}
+
+   
+{"model":"qwen3.5:4b","created_at":"2026-08-22T01:00:01Z","response":" 결과","thinking":"","done":false}
+{"model":"qwen3.5:4b","created_at":"2026-08-22T01:00:02Z","response":"","thinking":"","done":true,"done_reason":"stop"}

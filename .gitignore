@@ -104,7 +104,8 @@ desktop.ini
 .tmp/
 
 # Generated Nara data
-nara_storage/
+api_storage/*
+!api_storage/.gitkeep
 **/raw_data/
 **/refine_data/
 **/refine_data_dev/

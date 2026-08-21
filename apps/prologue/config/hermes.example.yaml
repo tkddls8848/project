@@ -1,0 +1,66 @@
+# Managed template used by run.py for the project-local Hermes profile.
+# Values wrapped in __...__ are rendered at startup; do not put provider
+# credentials in this file. Cloudflare credentials stay in apps/prologue/.env
+# and are consumed only by the loopback compatibility proxy.
+
+providers:
+  cloudflare_proxy:
+    base_url: __NARA_CLOUDFLARE_PROXY_URL__
+    key_env: NARA_CLOUDFLARE_PROXY_KEY
+    default_model: __NARA_HERMES_MODEL__
+    transport: "chat_completions"
+
+gateway:
+  platforms:
+    api_server:
+      enabled: true
+      extra:
+        host: "127.0.0.1"
+        port: 8642
+        model_routes:
+          __NARA_HERMES_MODEL__:
+            model: __NARA_HERMES_MODEL__
+            provider: "custom:cloudflare_proxy"
+
+model:
+  default: __NARA_HERMES_MODEL__
+  provider: "custom:cloudflare_proxy"
+  base_url: __NARA_CLOUDFLARE_PROXY_URL__
+  api_mode: "chat_completions"
+  context_length: 131000
+  # The loop only has to name up to three service_id values, so most turns spend
+  # well under a hundred output tokens. The budget is still not cut to the
+  # measured minimum: one truncated turn loses the whole run, because a tool
+  # call cut mid-argument is unrepairable and its arguments become an empty
+  # object. Keep headroom, and keep the model non-reasoning -- a model that
+  # emits its chain of thought spends this budget before it calls anything.
+  max_tokens: 1024
+
+mcp_servers:
+  nara:
+    command: __NARA_PROLOGUE_PYTHON__
+    args:
+      - "-m"
+      - "mcp_server.server"
+    env:
+      PYTHONPATH: __NARA_PROLOGUE_DIR__
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: "utf-8"
+      NARA_SEARCH_URL: __NARA_SEARCH_URL__
+    connect_timeout: 30.0
+    enabled: true
+    supports_parallel_tool_calls: false
+    tools:
+      include:
+        - search_api_docs
+        - get_api_detail
+      resources: false
+      prompts: false
+
+# The orchestrator denies every approval request from the client side
+# (hermes_client.deny_approval), so no run can reach an interactive prompt.
+approvals:
+  mode: smart
+
+memory:
+  write_approval: true

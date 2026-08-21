@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Hermes Gateway와 Nara MCP로 공공 API를 오케스트레이션하는 읽기·계획 전용 서비스">
+  <title>Nara Hermes Orchestrator</title>
+  <link rel="stylesheet" href="/static/styles.css?v=agent-runs-3">
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="/" aria-label="Nara Hermes Orchestrator 홈"><span class="brand-mark">N</span><span><strong>Nara Hermes Orchestrator</strong><small>HERMES MCP SERVICE</small></span></a>
+      <nav class="site-nav" aria-label="주요 영역"><a href="#search-area">문서 탐색</a><a href="#workspace">에이전트 실행</a></nav>
+      <div class="header-actions">
+        <button class="rebuild-button" id="rebuild-data" type="button" aria-describedby="rebuild-help"><span class="rebuild-icon" aria-hidden="true">↻</span><span id="rebuild-label">데이터 리빌드</span></button>
+        <button class="system-state" id="refresh-health" type="button"><span class="status-dot"></span><span id="system-state">상태 확인 중</span></button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="search-hero" id="search-area">
+      <div class="search-hero__inner">
+        <div class="search-copy"><p class="eyebrow">READ-ONLY HERMES AGENT</p><h1>필요한 API를 찾고<br>근거 있는 서비스 계획으로 연결합니다.</h1><p>Hermes가 Nara MCP 검색 도구를 호출하고, 구조화된 문서·관계·계획 결과를 단계별로 보여 줍니다.</p></div>
+        <form class="search-form" id="design-form" role="search">
+          <label for="query">어떤 공공 서비스를 설계하려 하나요?</label>
+          <div class="search-row"><input id="query" name="query" minlength="2" maxlength="500" required autocomplete="off" placeholder="예: 미세먼지 정보를 활용한 취약계층 알림 서비스"><button class="primary-button" id="submit-button" type="submit">에이전트 실행</button></div>
+          <div class="search-options"><div class="examples"><span>빠른 검색</span><button type="button" data-example="청년 주거와 취업 지원 서비스">청년 주거·취업</button><button type="button" data-example="미세먼지 알림 서비스">미세먼지 알림</button><button type="button" data-example="교통약자 복지 이동 지원">교통약자 지원</button></div><label class="switch"><input id="use-vector" type="checkbox" checked><span></span>벡터 검색 사용</label><label class="switch"><input id="compose" type="checkbox" checked><span></span>계획 초안 생성</label></div>
+          <details class="advanced"><summary>검색 및 선택 옵션</summary><div><label>검색 결과 수 <select id="top-k"><option value="3" selected>3개</option><option value="5">5개</option><option value="10">10개</option></select></label><label>직접 선택 service_id (쉼표 구분, 최대 3개)<input id="service-ids" placeholder="openapi_new:15000827, openapi_new:15000863"></label></div></details>
+          <p class="rebuild-help" id="rebuild-help" role="status" aria-live="polite">리빌드는 현재 <code>api_storage</code> 데이터로 검색 인덱스를 다시 만듭니다.</p>
+        </form>
+      </div>
+    </section>
+
+    <section class="workflow-band" aria-label="에이전트 진행 단계"><div class="workflow-band__inner"><div class="workflow-step active" data-step="search"><span>01</span><div><strong>문서 탐색</strong><small>Hermes MCP 검색 호출</small></div></div><i></i><div class="workflow-step" data-step="detail"><span>02</span><div><strong>근거 분석</strong><small>상세 문서와 관계 확인</small></div></div><i></i><div class="workflow-step" data-step="compose"><span>03</span><div><strong>계획 생성</strong><small>읽기 전용 초안 생성</small></div></div></div></section>
+
+    <section class="workbench" id="workspace">
+      <header class="workbench-header"><div><p>WORKSPACE</p><h2>실행 결과와 도구 호출 상태</h2></div><div><span class="run-badge" id="run-mode">대기</span><button class="text-button" id="stop-button" type="button" disabled>실행 중단</button><button class="text-button hidden" id="export-flow" type="button">대시보드로 내보내기</button><button class="text-button" id="reset-button" type="button">초기화</button></div></header>
+      <div class="workspace-grid">
+        <section class="panel results-panel"><header class="panel-header"><span>01</span><div><h3>API 문서</h3><p id="search-summary">요청을 입력하면 검색된 문서가 표시됩니다.</p></div></header><div class="panel-body results-list" id="document-list"><div class="empty-state">검색 결과가 여기에 표시됩니다.</div></div></section>
+        <section class="panel agent-panel"><header class="panel-header"><span>02</span><div><h3>Hermes 실행 흐름</h3><p id="agent-summary">아직 실행된 도구 호출이 없습니다.</p></div></header><div class="agent-progress" id="agent-progress"><div class="empty-state">에이전트 실행 시 MCP 호출과 각 처리 단계가 실시간으로 표시됩니다.</div></div><div class="relation-block"><strong>관계 근거</strong><pre id="relation-result">선택된 문서가 두 개 이상이면 관계 분석 결과가 표시됩니다.</pre></div></section>
+        <section class="panel compose-panel"><header class="panel-header"><span>03</span><div><h3>서비스 계획 초안</h3><p>실제 행정 처리를 실행하지 않는 검토용 결과입니다.</p></div></header><div class="selection-row"><strong>선택 API</strong><span id="selected-count">0 / 3</span></div><div class="selected-list" id="selected-list">선택된 API가 없습니다.</div><div class="plan-result" id="plan-result">계획 초안이 여기에 표시됩니다.</div><div class="critic-report hidden" id="critic-report"></div><div class="warnings hidden" id="warnings"></div></section>
+      </div>
+    </section>
+  </main>
+  <footer class="site-footer"><strong>Nara Hermes Orchestrator</strong><p>Hermes Gateway 기반 읽기·분석·계획 전용 MCP 서비스입니다.</p></footer>
+  <script src="/static/run_summary.js?v=agent-runs-4" defer></script>
+  <script src="/static/app.js?v=agent-runs-4" defer></script>
+</body>
+</html>
